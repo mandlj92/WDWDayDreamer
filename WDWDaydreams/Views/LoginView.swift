@@ -49,7 +49,8 @@ struct LoginView: View {
                         color: DisneyColors.magicBlue,
                         isLoading: authViewModel.isLoading
                     ) {
-                        authViewModel.login(email: "jon@example.com", password: "password123")
+                        // Use real email from AccountSetupHelper
+                        authViewModel.login(email: "jonathanfmandl@gmail.com", password: "Yunchie309!")
                     }
 
                     UserLoginButton(
@@ -58,7 +59,8 @@ struct LoginView: View {
                         color: DisneyColors.fantasyPurple,
                         isLoading: authViewModel.isLoading
                     ) {
-                        authViewModel.login(email: "carolyn@example.com", password: "password123")
+                        // Use real email from AccountSetupHelper
+                        authViewModel.login(email: "carolnyingrid9@gmail.com", password: "Dancing006!!!")
                     }
                 }
 
@@ -79,6 +81,15 @@ struct LoginView: View {
                         .padding()
                         .multilineTextAlignment(.center)
                 }
+                
+                // Debug: Add account creation button (remove after testing)
+                Button("Create Accounts (Debug)") {
+                    AccountSetupHelper.createAccounts { success, message in
+                        print("Account creation result: \(success), message: \(message ?? "none")")
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(.gray)
             }
             .padding()
         }

@@ -3,9 +3,8 @@ import FirebaseCore
 
 @main
 struct WDWDaydreamsApp: App {
-    @StateObject var manager = ScenarioManager()
-    @StateObject var weatherManager = WDWWeatherManager()
     @StateObject private var authViewModel: AuthViewModel
+    @StateObject var weatherManager = WDWWeatherManager()
     let notificationManager = NotificationManager.shared
     @Environment(\.scenePhase) var scenePhase
 
@@ -28,13 +27,12 @@ struct WDWDaydreamsApp: App {
         WindowGroup {
             Group {
                 if authViewModel.isAuthenticated {
-                    ContentView()
+                    AuthenticatedView()
                 } else {
                     LoginView()
                 }
             }
             .environmentObject(authViewModel)
-            .environmentObject(manager)
             .environmentObject(weatherManager)
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -45,5 +43,20 @@ struct WDWDaydreamsApp: App {
                 weatherManager.fetchWeather()
             }
         }
+    }
+}
+
+// Separate view that only creates ScenarioManager AFTER authentication
+struct AuthenticatedView: View {
+    @StateObject private var manager = ScenarioManager()
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var weatherManager: WDWWeatherManager
+    
+    var body: some View {
+        ContentView()
+            .environmentObject(manager)
+            .onAppear {
+                print("🔐 ✅ User is authenticated, ScenarioManager can now safely initialize")
+            }
     }
 }
