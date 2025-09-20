@@ -68,7 +68,17 @@ class FirebaseDataService {
                 return
             }
 
-            guard snapshot?.exists != true else {
+            if let data = snapshot?.data(),
+               let rawCategories = data["enabledCategories"] as? [String] {
+                let categories = rawCategories.compactMap { Category(rawValue: $0) }
+                let sanitized = Category.sanitizedEnabledCategories(from: categories)
+                let sanitizedRaw = sanitized.map { $0.rawValue }
+
+                if sanitizedRaw != rawCategories {
+                    print("⚠️ Found legacy categories, updating to sanitized set: \(sanitizedRaw)")
+                    userSettingsRef.setData(["enabledCategories": sanitizedRaw], merge: true)
+                }
+
                 DispatchQueue.main.async {
                     completion(true)
                 }
@@ -115,7 +125,15 @@ class FirebaseDataService {
                 // Manual parsing of user settings
                 if let categoryStrings = data["enabledCategories"] as? [String] {
                     let categories = categoryStrings.compactMap { Category(rawValue: $0) }
-                    completion(Category.sanitizedEnabledCategories(from: categories))
+                    let sanitized = Category.sanitizedEnabledCategories(from: categories)
+                    let sanitizedStrings = sanitized.map { $0.rawValue }
+
+                    if sanitizedStrings != categoryStrings {
+                        print("⚠️ Sanitizing stored categories to: \(sanitizedStrings)")
+                        ref.setData(["enabledCategories": sanitizedStrings], merge: true)
+                    }
+
+                    completion(sanitized)
                     return
                 }
             }
@@ -135,16 +153,16 @@ class FirebaseDataService {
 
         // Convert enabledCategories to string array for Firestore
         let categoryStrings = sanitized.map { $0.rawValue }
-        
+
         // Create data dictionary
         let data: [String: Any] = [
             "enabledCategories": categoryStrings
         ]
-        
+
         // Save to Firestore
         db.collection("userSettings")
            .document(userId)
-           .setData(data) { error in
+           .setData(data, merge: true) { error in
                if let error = error {
                    print("Error saving user settings: \(error.localizedDescription)")
                    completion(false)
