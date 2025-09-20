@@ -1,0 +1,654 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A25BB1B32DB5C01700201F87 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B22DB5C01700201F87 /* FirebaseAnalytics */; };
+		A25BB1B82DB5C11D00201F87 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B72DB5C11D00201F87 /* FirebaseAppCheck */; };
+		A25BB1BA2DB5C11D00201F87 /* FirebaseAppDistribution-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B92DB5C11D00201F87 /* FirebaseAppDistribution-Beta */; };
+		A25BB1BC2DB5C11D00201F87 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1BB2DB5C11D00201F87 /* FirebaseAuth */; };
+		A25BB1BE2DB5C11D00201F87 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1BD2DB5C11D00201F87 /* FirebaseAuthCombine-Community */; };
+		A25BB1C02DB5C34C00201F87 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1BF2DB5C34C00201F87 /* FirebaseFirestore */; };
+		A25BB1C22DB5C42200201F87 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1C12DB5C42200201F87 /* FirebaseFirestoreCombine-Community */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A25BB1732DB5ACD300201F87 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A25BB1552DB5ACD000201F87 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A25BB15C2DB5ACD000201F87;
+			remoteInfo = WDWDaydreams;
+		};
+		A25BB17D2DB5ACD300201F87 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A25BB1552DB5ACD000201F87 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A25BB15C2DB5ACD000201F87;
+			remoteInfo = WDWDaydreams;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A25BB15D2DB5ACD000201F87 /* WDWDaydreams.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WDWDaydreams.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A25BB1722DB5ACD300201F87 /* WDWDaydreamsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WDWDaydreamsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A25BB17C2DB5ACD300201F87 /* WDWDaydreamsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WDWDaydreamsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A25EC5EC2DB6A84F00C550BC /* Exceptions for "WDWDaydreams" folder in "WDWDaydreams" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A25BB15C2DB5ACD000201F87 /* WDWDaydreams */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A25BB15F2DB5ACD000201F87 /* WDWDaydreams */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A25EC5EC2DB6A84F00C550BC /* Exceptions for "WDWDaydreams" folder in "WDWDaydreams" target */,
+			);
+			path = WDWDaydreams;
+			sourceTree = "<group>";
+		};
+		A25BB1752DB5ACD300201F87 /* WDWDaydreamsTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WDWDaydreamsTests;
+			sourceTree = "<group>";
+		};
+		A25BB17F2DB5ACD300201F87 /* WDWDaydreamsUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WDWDaydreamsUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A25BB15A2DB5ACD000201F87 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A25BB1B82DB5C11D00201F87 /* FirebaseAppCheck in Frameworks */,
+				A25BB1B32DB5C01700201F87 /* FirebaseAnalytics in Frameworks */,
+				A25BB1BA2DB5C11D00201F87 /* FirebaseAppDistribution-Beta in Frameworks */,
+				A25BB1BC2DB5C11D00201F87 /* FirebaseAuth in Frameworks */,
+				A25BB1BE2DB5C11D00201F87 /* FirebaseAuthCombine-Community in Frameworks */,
+				A25BB1C02DB5C34C00201F87 /* FirebaseFirestore in Frameworks */,
+				A25BB1C22DB5C42200201F87 /* FirebaseFirestoreCombine-Community in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB16F2DB5ACD300201F87 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB1792DB5ACD300201F87 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A25BB1542DB5ACD000201F87 = {
+			isa = PBXGroup;
+			children = (
+				A25BB15F2DB5ACD000201F87 /* WDWDaydreams */,
+				A25BB1752DB5ACD300201F87 /* WDWDaydreamsTests */,
+				A25BB17F2DB5ACD300201F87 /* WDWDaydreamsUITests */,
+				A25BB15E2DB5ACD000201F87 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A25BB15E2DB5ACD000201F87 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A25BB15D2DB5ACD000201F87 /* WDWDaydreams.app */,
+				A25BB1722DB5ACD300201F87 /* WDWDaydreamsTests.xctest */,
+				A25BB17C2DB5ACD300201F87 /* WDWDaydreamsUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A25BB15C2DB5ACD000201F87 /* WDWDaydreams */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A25BB1862DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreams" */;
+			buildPhases = (
+				A25BB1592DB5ACD000201F87 /* Sources */,
+				A25BB15A2DB5ACD000201F87 /* Frameworks */,
+				A25BB15B2DB5ACD000201F87 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A25BB15F2DB5ACD000201F87 /* WDWDaydreams */,
+			);
+			name = WDWDaydreams;
+			packageProductDependencies = (
+				A25BB1B22DB5C01700201F87 /* FirebaseAnalytics */,
+				A25BB1B72DB5C11D00201F87 /* FirebaseAppCheck */,
+				A25BB1B92DB5C11D00201F87 /* FirebaseAppDistribution-Beta */,
+				A25BB1BB2DB5C11D00201F87 /* FirebaseAuth */,
+				A25BB1BD2DB5C11D00201F87 /* FirebaseAuthCombine-Community */,
+				A25BB1BF2DB5C34C00201F87 /* FirebaseFirestore */,
+				A25BB1C12DB5C42200201F87 /* FirebaseFirestoreCombine-Community */,
+			);
+			productName = WDWDaydreams;
+			productReference = A25BB15D2DB5ACD000201F87 /* WDWDaydreams.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A25BB1712DB5ACD300201F87 /* WDWDaydreamsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A25BB1892DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreamsTests" */;
+			buildPhases = (
+				A25BB16E2DB5ACD300201F87 /* Sources */,
+				A25BB16F2DB5ACD300201F87 /* Frameworks */,
+				A25BB1702DB5ACD300201F87 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A25BB1742DB5ACD300201F87 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A25BB1752DB5ACD300201F87 /* WDWDaydreamsTests */,
+			);
+			name = WDWDaydreamsTests;
+			packageProductDependencies = (
+			);
+			productName = WDWDaydreamsTests;
+			productReference = A25BB1722DB5ACD300201F87 /* WDWDaydreamsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A25BB17B2DB5ACD300201F87 /* WDWDaydreamsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A25BB18C2DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreamsUITests" */;
+			buildPhases = (
+				A25BB1782DB5ACD300201F87 /* Sources */,
+				A25BB1792DB5ACD300201F87 /* Frameworks */,
+				A25BB17A2DB5ACD300201F87 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A25BB17E2DB5ACD300201F87 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A25BB17F2DB5ACD300201F87 /* WDWDaydreamsUITests */,
+			);
+			name = WDWDaydreamsUITests;
+			packageProductDependencies = (
+			);
+			productName = WDWDaydreamsUITests;
+			productReference = A25BB17C2DB5ACD300201F87 /* WDWDaydreamsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A25BB1552DB5ACD000201F87 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					A25BB15C2DB5ACD000201F87 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					A25BB1712DB5ACD300201F87 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = A25BB15C2DB5ACD000201F87;
+					};
+					A25BB17B2DB5ACD300201F87 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = A25BB15C2DB5ACD000201F87;
+					};
+				};
+			};
+			buildConfigurationList = A25BB1582DB5ACD000201F87 /* Build configuration list for PBXProject "WDWDaydreams" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A25BB1542DB5ACD000201F87;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A25BB15E2DB5ACD000201F87 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A25BB15C2DB5ACD000201F87 /* WDWDaydreams */,
+				A25BB1712DB5ACD300201F87 /* WDWDaydreamsTests */,
+				A25BB17B2DB5ACD300201F87 /* WDWDaydreamsUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A25BB15B2DB5ACD000201F87 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB1702DB5ACD300201F87 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB17A2DB5ACD300201F87 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A25BB1592DB5ACD000201F87 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB16E2DB5ACD300201F87 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A25BB1782DB5ACD300201F87 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A25BB1742DB5ACD300201F87 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A25BB15C2DB5ACD000201F87 /* WDWDaydreams */;
+			targetProxy = A25BB1732DB5ACD300201F87 /* PBXContainerItemProxy */;
+		};
+		A25BB17E2DB5ACD300201F87 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A25BB15C2DB5ACD000201F87 /* WDWDaydreams */;
+			targetProxy = A25BB17D2DB5ACD300201F87 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A25BB1842DB5ACD300201F87 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A25BB1852DB5ACD300201F87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A25BB1872DB5ACD300201F87 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"WDWDaydreams/Preview Content\"";
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WDWDaydreams/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.JonathanMandl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A25BB1882DB5ACD300201F87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"WDWDaydreams/Preview Content\"";
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WDWDaydreams/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.JonathanMandl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A25BB18A2DB5ACD300201F87 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Jonathan-Mandl.WDWDaydreamsTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WDWDaydreams.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WDWDaydreams";
+			};
+			name = Debug;
+		};
+		A25BB18B2DB5ACD300201F87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Jonathan-Mandl.WDWDaydreamsTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WDWDaydreams.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WDWDaydreams";
+			};
+			name = Release;
+		};
+		A25BB18D2DB5ACD300201F87 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Jonathan-Mandl.WDWDaydreamsUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = WDWDaydreams;
+			};
+			name = Debug;
+		};
+		A25BB18E2DB5ACD300201F87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KU4UK33C2W;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Jonathan-Mandl.WDWDaydreamsUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = WDWDaydreams;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A25BB1582DB5ACD000201F87 /* Build configuration list for PBXProject "WDWDaydreams" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A25BB1842DB5ACD300201F87 /* Debug */,
+				A25BB1852DB5ACD300201F87 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A25BB1862DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreams" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A25BB1872DB5ACD300201F87 /* Debug */,
+				A25BB1882DB5ACD300201F87 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A25BB1892DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreamsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A25BB18A2DB5ACD300201F87 /* Debug */,
+				A25BB18B2DB5ACD300201F87 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A25BB18C2DB5ACD300201F87 /* Build configuration list for PBXNativeTarget "WDWDaydreamsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A25BB18D2DB5ACD300201F87 /* Debug */,
+				A25BB18E2DB5ACD300201F87 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A25BB1B22DB5C01700201F87 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		A25BB1B72DB5C11D00201F87 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		A25BB1B92DB5C11D00201F87 /* FirebaseAppDistribution-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAppDistribution-Beta";
+		};
+		A25BB1BB2DB5C11D00201F87 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		A25BB1BD2DB5C11D00201F87 /* FirebaseAuthCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAuthCombine-Community";
+		};
+		A25BB1BF2DB5C34C00201F87 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		A25BB1C12DB5C42200201F87 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A25BB1552DB5ACD000201F87 /* Project object */;
+}
