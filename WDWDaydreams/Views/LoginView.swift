@@ -3,6 +3,11 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var showPassword: Bool = false
+    @FocusState private var emailFocused: Bool
+    @FocusState private var passwordFocused: Bool
 
     var body: some View {
         ZStack {
@@ -14,124 +19,225 @@ struct LoginView: View {
             )
             .edgesIgnoringSafeArea(.all)
 
-            VStack(spacing: 30) {
-                // App title with Disney font
-                Text("Disney Daydreams")
-                    .font(.disneyTitle(32))
-                    .foregroundColor(DisneyColors.magicBlue)
-                    .padding(.top, 40)
+            ScrollView {
+                VStack(spacing: 30) {
+                    // App title with Disney font
+                    Text("Disney Daydreams")
+                        .font(.disneyTitle(32))
+                        .foregroundColor(DisneyColors.magicBlue)
+                        .padding(.top, 40)
 
-                Spacer()
+                    // Disney-themed icon with sparkles effect
+                    ZStack {
+                        Circle()
+                            .fill(DisneyColors.backgroundCream)
+                            .frame(width: 120, height: 120)
+                            .shadow(color: .black.opacity(0.1), radius: 5)
 
-                // Disney-themed icon with sparkles effect
-                ZStack {
-                    Circle()
-                        .fill(DisneyColors.backgroundCream)
-                        .frame(width: 120, height: 120)
-                        .shadow(color: .black.opacity(0.1), radius: 5)
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 50))
-                        .foregroundColor(DisneyColors.mainStreetGold)
-                }
-                .padding(.bottom, 20)
-
-                Text("Who's daydreaming today?")
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundColor(DisneyColors.magicBlue)
-                    .padding()
-
-                // User buttons with themed styling
-                VStack(spacing: 20) {
-                    UserLoginButton(
-                        name: "Jonathan",
-                        icon: "person.fill",
-                        color: DisneyColors.magicBlue,
-                        isLoading: authViewModel.isLoading
-                    ) {
-                        // Use real email from AccountSetupHelper
-                        authViewModel.login(email: "jonathanfmandl@gmail.com", password: "Yunchie309!")
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 50))
+                            .foregroundColor(DisneyColors.mainStreetGold)
                     }
+                    .padding(.bottom, 20)
 
-                    UserLoginButton(
-                        name: "Carolyn",
-                        icon: "person.fill",
-                        color: DisneyColors.fantasyPurple,
-                        isLoading: authViewModel.isLoading
-                    ) {
-                        // Use real email from AccountSetupHelper
-                        authViewModel.login(email: "carolnyingrid9@gmail.com", password: "Dancing006!!!")
-                    }
-                }
-
-                if authViewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: DisneyColors.magicBlue))
-                        .scaleEffect(1.2)
-                        .padding()
-                }
-
-                Spacer()
-
-                // Error message display
-                if !authViewModel.errorMessage.isEmpty {
-                    Text(authViewModel.errorMessage)
-                        .foregroundColor(DisneyColors.mickeyRed)
-                        .font(.caption)
-                        .padding()
+                    Text("Sign in to continue your magical journey")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundColor(DisneyColors.magicBlue)
                         .multilineTextAlignment(.center)
-                }
-                
-                // Debug: Add account creation button (remove after testing)
-                Button("Create Accounts (Debug)") {
-                    AccountSetupHelper.createAccounts { success, message in
-                        print("Account creation result: \(success), message: \(message ?? "none")")
+                        .padding(.horizontal)
+
+                    // Login form
+                    VStack(spacing: 20) {
+                        // Email field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Email")
+                                .font(.subheadline)
+                                .foregroundColor(DisneyColors.magicBlue)
+                                .fontWeight(.medium)
+                            
+                            TextField("Enter your email", text: $email)
+                                .textFieldStyle(DisneyTextFieldStyle())
+                                .keyboardType(.emailAddress)
+                                .textContentType(.emailAddress)
+                                .autocapitalization(.none)
+                                .focused($emailFocused)
+                                .onSubmit {
+                                    passwordFocused = true
+                                }
+                        }
+
+                        // Password field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password")
+                                .font(.subheadline)
+                                .foregroundColor(DisneyColors.magicBlue)
+                                .fontWeight(.medium)
+                            
+                            HStack {
+                                Group {
+                                    if showPassword {
+                                        TextField("Enter your password", text: $password)
+                                    } else {
+                                        SecureField("Enter your password", text: $password)
+                                    }
+                                }
+                                .textFieldStyle(DisneyTextFieldStyle())
+                                .textContentType(.password)
+                                .focused($passwordFocused)
+                                .onSubmit {
+                                    signIn()
+                                }
+                                
+                                Button(action: {
+                                    showPassword.toggle()
+                                }) {
+                                    Image(systemName: showPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(DisneyColors.magicBlue)
+                                        .padding(.trailing, 12)
+                                }
+                            }
+                        }
+
+                        // Sign in button
+                        Button(action: signIn) {
+                            HStack {
+                                if authViewModel.isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "person.fill")
+                                    Text("Sign In")
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                DisneyColors.magicBlue.opacity(isSignInEnabled ? 1.0 : 0.6)
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.white, lineWidth: 2)
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+                        }
+                        .disabled(!isSignInEnabled || authViewModel.isLoading)
+                        
+                        // Quick sign-in helpers (optional)
+                        VStack(spacing: 12) {
+                            Text("Quick Sign In")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            HStack(spacing: 20) {
+                                QuickSignInButton(
+                                    name: "Jon",
+                                    color: DisneyColors.magicBlue,
+                                    isLoading: authViewModel.isLoading
+                                ) {
+                                    email = "jon@example.com"
+                                    emailFocused = false
+                                    passwordFocused = true
+                                }
+                                
+                                QuickSignInButton(
+                                    name: "Carolyn",
+                                    color: DisneyColors.fantasyPurple,
+                                    isLoading: authViewModel.isLoading
+                                ) {
+                                    email = "carolyn@example.com"
+                                    emailFocused = false
+                                    passwordFocused = true
+                                }
+                            }
+                        }
+                        .padding(.top, 10)
                     }
+                    .padding(.horizontal, 30)
+
+                    // Error message display
+                    if !authViewModel.errorMessage.isEmpty {
+                        Text(authViewModel.errorMessage)
+                            .foregroundColor(DisneyColors.mickeyRed)
+                            .font(.caption)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(DisneyColors.mickeyRed.opacity(0.1))
+                            )
+                            .multilineTextAlignment(.center)
+                    }
+
+                    Spacer(minLength: 50)
                 }
-                .font(.caption)
-                .foregroundColor(.gray)
+                .padding()
             }
-            .padding()
         }
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside
+            emailFocused = false
+            passwordFocused = false
+        }
+    }
+    
+    private var isSignInEnabled: Bool {
+        !email.isEmpty && !password.isEmpty && email.contains("@")
+    }
+    
+    private func signIn() {
+        guard isSignInEnabled else { return }
+        
+        emailFocused = false
+        passwordFocused = false
+        
+        authViewModel.login(email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                          password: password)
     }
 }
 
-struct UserLoginButton: View {
+// Custom text field style
+struct DisneyTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding()
+            .background(Color.white)
+            .cornerRadius(15)
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+// Quick sign-in helper buttons (only fill email, user still needs to enter password)
+struct QuickSignInButton: View {
     let name: String
-    let icon: String
     let color: Color
     let isLoading: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                Text(name)
-            }
-            .frame(minWidth: 200)
-            .padding()
-            .background(color)
-            .foregroundColor(.white)
-            .cornerRadius(25)
-            .overlay(
-                RoundedRectangle(cornerRadius: 25)
-                    .stroke(Color.white, lineWidth: 2)
-            )
-            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+            Text(name)
+                .font(.caption)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(color.opacity(0.1))
+                .foregroundColor(color)
+                .cornerRadius(15)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
         }
         .disabled(isLoading)
     }
 }
 
 // Preview providers
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        SettingsView()
-            .environmentObject(ScenarioManager())
-    }
-}
-
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
         LoginView()

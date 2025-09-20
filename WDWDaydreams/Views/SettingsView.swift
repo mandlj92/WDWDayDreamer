@@ -37,11 +37,21 @@ struct SettingsView: View {
                             ForEach(Category.allCases) { category in
                                 CategoryToggleRow(
                                     category: category,
-                                    isEnabled: Binding(
-                                        get: { viewModel.isCategoryEnabled(category) },
-                                        set: { viewModel.toggleCategory(category, isEnabled: $0) }
-                                    )
+                                    viewModel: viewModel
                                 )
+                            }
+                            
+                            // Show warning if only one category is enabled
+                            let enabledCount = Category.allCases.filter { viewModel.isCategoryEnabled($0) }.count
+                            if enabledCount == 1 {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                    Text("At least one category must be enabled")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+                                .padding(.top, 4)
                             }
                         }
                         .listRowBackground(Color.white)
@@ -140,18 +150,49 @@ struct SectionHeader: View {
 
 struct CategoryToggleRow: View {
     let category: Category
-    @Binding var isEnabled: Bool
+    let viewModel: SettingsViewModel
+    
+    private var isEnabled: Binding<Bool> {
+        Binding(
+            get: { viewModel.isCategoryEnabled(category) },
+            set: { newValue in
+                // Prevent disabling all categories
+                let currentlyEnabled = Category.allCases.filter { viewModel.isCategoryEnabled($0) }
+                
+                if !newValue && currentlyEnabled.count <= 1 {
+                    // Don't allow disabling the last category
+                    print("⚠️ Cannot disable last category")
+                    return
+                }
+                
+                viewModel.toggleCategory(category, isEnabled: newValue)
+            }
+        )
+    }
+    
+    private var isLastEnabled: Bool {
+        let currentlyEnabled = Category.allCases.filter { viewModel.isCategoryEnabled($0) }
+        return currentlyEnabled.count == 1 && viewModel.isCategoryEnabled(category)
+    }
     
     var body: some View {
-        Toggle(isOn: $isEnabled) {
+        Toggle(isOn: isEnabled) {
             HStack {
                 Image(systemName: CategoryHelper.icon(for: category))
                     .foregroundColor(CategoryHelper.color(for: category))
                 
                 Text(category.rawValue.capitalized)
+                
+                if isLastEnabled {
+                    Spacer()
+                    Image(systemName: "lock.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                }
             }
         }
         .toggleStyle(SwitchToggleStyle(tint: CategoryHelper.color(for: category)))
+        .disabled(isLastEnabled) // Disable toggle if it's the last enabled category
     }
 }
 
