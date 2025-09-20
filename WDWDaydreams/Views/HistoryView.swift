@@ -76,3 +76,25 @@ private struct EmptyHistoryView: View {
         .listRowBackground(Color.clear)
     }
 }
+
+private struct EmptyHistoryView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 40))
+                .foregroundColor(DisneyColors.magicBlue)
+
+            Text("Your history is clear")
+                .font(.headline)
+                .foregroundColor(DisneyColors.midnightBlue)
+
+            Text("Come back after generating a few daydreams to revisit them here.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(DisneyColors.midnightBlue.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 40)
+        .listRowBackground(Color.clear)
+    }
+}
