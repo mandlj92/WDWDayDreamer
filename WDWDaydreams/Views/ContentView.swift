@@ -17,13 +17,21 @@ struct ContentView: View {
             DisneyColors.backgroundCream
                 .edgesIgnoringSafeArea(.all)
 
-            // Subtle castle silhouette at the bottom (optional)
+            // Subtle sparkle decoration at the bottom (replacing the missing castle image)
             VStack {
                 Spacer()
-                Image("DisneyCastleArt") // Replace with your own castle image if possible
-                    .font(.system(size: 100))
-                    .foregroundColor(DisneyColors.mainStreetGold.opacity(0.05))
-                    .offset(y: 20)
+                HStack {
+                    Spacer()
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 80))
+                        .foregroundColor(DisneyColors.mainStreetGold.opacity(0.1))
+                    Spacer()
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 60))
+                        .foregroundColor(DisneyColors.magicBlue.opacity(0.1))
+                    Spacer()
+                }
+                .offset(y: 20)
             }
             .edgesIgnoringSafeArea(.bottom)
 

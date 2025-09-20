@@ -26,6 +26,7 @@ class ScenarioManager: ObservableObject {
     // MARK: - Initialization & Setup
     
     init() {
+        print("🚀 ScenarioManager initializing...")
         fetchUserSettings()
         rebuildDeck()
         fetchStoryHistory()
@@ -54,6 +55,7 @@ class ScenarioManager: ObservableObject {
     // MARK: - Deck Management
     
     private func rebuildDeck() {
+        print("🔄 Rebuilding deck with categories: \(enabledCategories.map { $0.rawValue })")
         let cats = enabledCategories
         let lists = cats.map { DataModel.shared.list(for: $0) }
         let combos = cartesianProduct(lists)
@@ -73,6 +75,7 @@ class ScenarioManager: ObservableObject {
         
         deck.shuffle()
         deckIndex = 0
+        print("🎯 Deck rebuilt with \(deck.count) combinations")
     }
     
     private func cartesianProduct<T>(_ arrays: [[T]]) -> [[T]] {
@@ -84,9 +87,19 @@ class ScenarioManager: ObservableObject {
     
     /// Generate a new prompt and move to the next item in the deck
     func next() {
-        guard !deck.isEmpty else { return }
+        print("🎲 Generating new prompt...")
+        guard !deck.isEmpty else {
+            print("❌ Deck is empty, rebuilding...")
+            rebuildDeck()
+            guard !deck.isEmpty else {
+                print("❌ Still no deck after rebuild")
+                return
+            }
+            return
+        }
         
         if deckIndex >= deck.count {
+            print("🔄 Reached end of deck, shuffling...")
             deck.shuffle()
             deckIndex = 0
         }
@@ -97,27 +110,38 @@ class ScenarioManager: ObservableObject {
         // Set the current date
         story.dateAssigned = Date()
         
+        print("🎯 Generated story with items: \(story.items)")
+        
         // Determine whose turn it is next
         firebaseService.determineNextAuthor { nextAuthor in
             story.assignedAuthor = nextAuthor
+            print("👤 Assigned to: \(nextAuthor.displayName)")
             
             // Update the current prompt and local history
             DispatchQueue.main.async {
                 self.currentStoryPrompt = story
-                self.storyHistory.insert(story, at: 0)
+                // Only add to history if it's not already there
+                if !self.storyHistory.contains(where: { $0.isToday }) {
+                    self.storyHistory.insert(story, at: 0)
+                }
+                print("✅ Current prompt updated: \(story.promptText)")
             }
             
             // Save to Firebase
             self.firebaseService.saveDailyPrompt(story) { success in
                 if !success {
-                    print("Failed to save daily prompt")
+                    print("❌ Failed to save daily prompt")
+                } else {
+                    print("✅ Daily prompt saved to Firebase")
                 }
             }
             
             // Save to history collection
             self.firebaseService.saveStory(story, toCollection: "history") { success in
                 if !success {
-                    print("Failed to save story to history")
+                    print("❌ Failed to save story to history")
+                } else {
+                    print("✅ Story saved to history collection")
                 }
             }
         }
@@ -126,9 +150,11 @@ class ScenarioManager: ObservableObject {
     // MARK: - User Settings
     
     private func fetchUserSettings() {
+        print("⚙️ Fetching user settings...")
         firebaseService.fetchUserSettings { categories in
             DispatchQueue.main.async {
                 self.enabledCategories = categories
+                print("✅ User settings loaded: \(categories.map { $0.rawValue })")
             }
         }
     }
@@ -136,7 +162,9 @@ class ScenarioManager: ObservableObject {
     private func saveUserSettings() {
         firebaseService.saveUserSettings(enabledCategories: enabledCategories) { success in
             if !success {
-                print("Failed to save user settings")
+                print("❌ Failed to save user settings")
+            } else {
+                print("✅ User settings saved")
             }
         }
     }
@@ -147,6 +175,7 @@ class ScenarioManager: ObservableObject {
         firebaseService.fetchStoryHistory { stories in
             DispatchQueue.main.async {
                 self.storyHistory = stories
+                print("📚 Loaded \(stories.count) stories from history")
             }
         }
     }
@@ -155,6 +184,7 @@ class ScenarioManager: ObservableObject {
         firebaseService.fetchFavorites { favStories in
             DispatchQueue.main.async {
                 self.favorites = favStories
+                print("⭐ Loaded \(favStories.count) favorite stories")
             }
         }
     }
@@ -242,17 +272,22 @@ class ScenarioManager: ObservableObject {
     // MARK: - Daily Prompt Management
     
     func generateOrUpdateDailyPrompt() {
+        print("🔍 Checking for today's prompt...")
+        
         // First check locally if we already have today's prompt
         if let existingPrompt = storyHistory.first(where: { $0.isToday }) {
+            print("✅ Found existing prompt locally: \(existingPrompt.promptText)")
             DispatchQueue.main.async {
                 self.currentStoryPrompt = existingPrompt
             }
             return
         }
         
+        print("🔍 No local prompt, checking Firestore...")
         // If not found locally, check Firestore
         firebaseService.fetchDailyPrompt { prompt in
             if let prompt = prompt {
+                print("✅ Found prompt in Firestore: \(prompt.promptText)")
                 // Found today's prompt
                 DispatchQueue.main.async {
                     self.currentStoryPrompt = prompt
@@ -262,6 +297,7 @@ class ScenarioManager: ObservableObject {
                     }
                 }
             } else {
+                print("🆕 No prompt for today, creating new one...")
                 // No prompt for today, create a new one
                 self.next()
             }
@@ -272,6 +308,8 @@ class ScenarioManager: ObservableObject {
     
     func saveStoryText(_ text: String, for storyId: UUID) {
         guard !text.isEmpty else { return }
+        
+        print("💾 Saving story text for story: \(storyId)")
         
         // Update in-memory models
         if let index = storyHistory.firstIndex(where: { $0.id == storyId }) {
@@ -289,10 +327,13 @@ class ScenarioManager: ObservableObject {
             let story = storyHistory[index]
             firebaseService.markStoryAsCompleted(story) { success in
                 if success {
+                    print("✅ Story marked as completed")
                     // Force a refresh of the story history
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         self.fetchStoryHistory()
                     }
+                } else {
+                    print("❌ Failed to mark story as completed")
                 }
             }
         }

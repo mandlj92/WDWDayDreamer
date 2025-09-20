@@ -3,6 +3,15 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 
+// Add DateFormatter extension for the shared instance
+extension DateFormatter {
+    static let shared: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+}
+
 /// A service class responsible for handling Firebase operations
 class FirebaseDataService {
     static let shared = FirebaseDataService()
@@ -28,7 +37,7 @@ class FirebaseDataService {
     // MARK: - Initial Setup
     
     func ensureDatabaseSetup(completion: @escaping (Bool) -> Void) {
-        guard let currentUser = Auth.auth().currentUser else {
+        guard Auth.auth().currentUser != nil else {
             print("No user logged in")
             completion(false)
             return
