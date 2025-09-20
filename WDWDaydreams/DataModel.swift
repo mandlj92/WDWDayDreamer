@@ -73,6 +73,18 @@ enum Category: String, CaseIterable, Codable, Identifiable {
         case .event: return "Attending"
         }
     }
+
+    /// Categories that can be toggled on/off for random prompts.
+    static let settingsCategories: [Category] = [.hotel, .park, .ride, .food]
+
+    /// Default categories used when no custom selection is available.
+    static let defaultEnabledCategories: [Category] = [.park, .ride, .food]
+
+    /// Ensures an enabled list only includes supported categories and never returns empty.
+    static func sanitizedEnabledCategories(from categories: [Category]) -> [Category] {
+        let filtered = categories.filter { settingsCategories.contains($0) }
+        return filtered.isEmpty ? defaultEnabledCategories : filtered
+    }
 }
 
 // DataModel remains the same structure

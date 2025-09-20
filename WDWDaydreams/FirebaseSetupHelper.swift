@@ -14,7 +14,9 @@ class FirebaseSetupHelper {
         
         guard let currentUser = Auth.auth().currentUser else {
             print("No user logged in")
-            completion(false)
+            DispatchQueue.main.async {
+                completion(false)
+            }
             return
         }
         
@@ -25,65 +27,33 @@ class FirebaseSetupHelper {
         userSettingsRef.getDocument { snapshot, error in
             if let error = error {
                 print("Error checking user settings: \(error.localizedDescription)")
-                completion(false)
+                DispatchQueue.main.async {
+                    completion(false)
+                }
                 return
             }
-            
-            if snapshot?.exists != true {
-                // Create default user settings
-                let settings: [String: Any] = [
-                    "enabledCategories": ["park", "ride", "food"] // Default categories
-                ]
-                
-                userSettingsRef.setData(settings) { error in
-                    if let error = error {
-                        print("Error creating user settings: \(error.localizedDescription)")
-                    } else {
-                        print("Created default user settings")
-                    }
+
+            guard snapshot?.exists != true else {
+                DispatchQueue.main.async {
+                    completion(true)
                 }
+                return
             }
-            
-            // 2. Ensure collections for user stories exist
-            // We don't need to create documents here, just ensure the structure
-            
-            // This is a test document we'll delete right after to ensure the collection exists
-            let historyRef = self.db.collection("userStories")
-                .document(userId)
-                .collection("history")
-                .document("test")
-            
-            historyRef.setData(["test": true]) { error in
+
+            // Create default user settings
+            let settings: [String: Any] = [
+                "enabledCategories": Category.defaultEnabledCategories.map { $0.rawValue } // Default categories
+            ]
+
+            userSettingsRef.setData(settings, merge: true) { error in
                 if let error = error {
-                    print("Error creating test history document: \(error.localizedDescription)")
-                } else {
-                    // Delete the test document
-                    historyRef.delete()
-                }
-                
-                // Create test favorites document
-                let favoritesRef = self.db.collection("userStories")
-                    .document(userId)
-                    .collection("favorites")
-                    .document("test")
-                
-                favoritesRef.setData(["test": true]) { error in
-                    if let error = error {
-                        print("Error creating test favorites document: \(error.localizedDescription)")
-                    } else {
-                        // Delete the test document
-                        favoritesRef.delete()
+                    print("Error creating user settings: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        completion(false)
                     }
-                    
-                    // Ensure daily prompts collection
-                    let dailyPromptRef = self.db.collection("dailyPrompts").document(userId)
-                    
-                    // Check if there's already a daily prompt
-                    dailyPromptRef.getDocument { snapshot, error in
-                        // We don't need to create it here, the ScenarioManager will do that
-                        // We just need to make sure the structure exists
-                        
-                        print("Firebase database structure verified")
+                } else {
+                    print("Created default user settings")
+                    DispatchQueue.main.async {
                         completion(true)
                     }
                 }

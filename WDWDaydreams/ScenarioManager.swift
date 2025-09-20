@@ -8,15 +8,20 @@ class ScenarioManager: ObservableObject {
     @Published var currentStoryPrompt: DaydreamStory?
     @Published var storyHistory: [DaydreamStory] = []
     @Published var favorites: [DaydreamStory] = []
-    @Published var enabledCategories: [Category] = [.park, .ride, .food] {
+    @Published var enabledCategories: [Category] = Category.defaultEnabledCategories {
         didSet {
+            let sanitized = Category.sanitizedEnabledCategories(from: enabledCategories)
+            if sanitized != enabledCategories {
+                enabledCategories = sanitized
+                return
+            }
             // Prevent infinite loops and ensure we always have at least one category
             if enabledCategories.isEmpty {
                 print("⚠️ No categories enabled, reverting to defaults")
-                enabledCategories = [.park, .ride, .food]
+                enabledCategories = Category.defaultEnabledCategories
                 return
             }
-            
+
             // Only rebuild if categories actually changed
             if enabledCategories != oldValue {
                 print("📝 Categories changed from \(oldValue.map{$0.rawValue}) to \(enabledCategories.map{$0.rawValue})")
@@ -190,9 +195,10 @@ class ScenarioManager: ObservableObject {
         firebaseService.fetchUserSettings { [weak self] categories in
             DispatchQueue.main.async {
                 // Prevent triggering didSet during initialization
-                if self?.enabledCategories != categories {
-                    self?.enabledCategories = categories
-                    print("✅ User settings loaded: \(categories.map { $0.rawValue })")
+                let sanitized = Category.sanitizedEnabledCategories(from: categories)
+                if self?.enabledCategories != sanitized {
+                    self?.enabledCategories = sanitized
+                    print("✅ User settings loaded: \(sanitized.map { $0.rawValue })")
                 }
             }
         }

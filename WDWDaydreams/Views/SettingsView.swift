@@ -34,15 +34,15 @@ struct SettingsView: View {
                         
                         // Category section
                         Section(header: SectionHeader(title: "Enable Categories For Prompts")) {
-                            ForEach(Category.allCases) { category in
+                            ForEach(Category.settingsCategories) { category in
                                 CategoryToggleRow(
                                     category: category,
                                     viewModel: viewModel
                                 )
                             }
-                            
+
                             // Show warning if only one category is enabled
-                            let enabledCount = Category.allCases.filter { viewModel.isCategoryEnabled($0) }.count
+                            let enabledCount = Category.settingsCategories.filter { viewModel.isCategoryEnabled($0) }.count
                             if enabledCount == 1 {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -157,7 +157,7 @@ struct CategoryToggleRow: View {
             get: { viewModel.isCategoryEnabled(category) },
             set: { newValue in
                 // Prevent disabling all categories
-                let currentlyEnabled = Category.allCases.filter { viewModel.isCategoryEnabled($0) }
+                let currentlyEnabled = Category.settingsCategories.filter { viewModel.isCategoryEnabled($0) }
                 
                 if !newValue && currentlyEnabled.count <= 1 {
                     // Don't allow disabling the last category
@@ -171,7 +171,7 @@ struct CategoryToggleRow: View {
     }
     
     private var isLastEnabled: Bool {
-        let currentlyEnabled = Category.allCases.filter { viewModel.isCategoryEnabled($0) }
+        let currentlyEnabled = Category.settingsCategories.filter { viewModel.isCategoryEnabled($0) }
         return currentlyEnabled.count == 1 && viewModel.isCategoryEnabled(category)
     }
     

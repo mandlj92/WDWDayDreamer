@@ -142,15 +142,11 @@ struct ContentView: View {
 
                 // Set up notification
                 NotificationManager.shared.updateScheduledNotification(basedOn: manager)
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    // Give a slight delay to avoid UI flicker
-                    isInitializing = false
-                }
             } else {
                 errorMessage = "Error setting up database. Please try again."
-                isInitializing = false
             }
+
+            isInitializing = false
         }
     }
 }
