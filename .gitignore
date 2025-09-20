@@ -3,4 +3,29 @@ xcuserdata/
 DerivedData/
 build/
 GoogleService-Info.plist
+
+# Security - Never commit these files
 AccountSetupHelper.swift
+**/Config.plist
+**/Secrets.plist
+**/credentials.json
+**/*-key.json
+**/*.p12
+**/*.mobileprovision
+
+# API Keys and sensitive configuration
+**/APIKeys.swift
+**/Secrets.swift
+**/Config.swift
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+
+# macOS
+.DS_Store
