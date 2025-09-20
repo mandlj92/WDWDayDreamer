@@ -3,21 +3,14 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var manager: ScenarioManager
-    // Change to @ObservedObject
-    @ObservedObject private var viewModel: HistoryViewModel
-    
-    init() {
-        // Create the initial view model with a placeholder manager
-        self._viewModel = ObservedObject(wrappedValue: HistoryViewModel(manager: ScenarioManager()))
-    }
-    
+    @State private var isRefreshing = false
+
     var body: some View {
         List {
-            if viewModel.isEmpty {
-                EmptyHistoryView()
+            if manager.storyHistory.isEmpty {
+                HistoryEmptyStateView()
             } else {
-                // Display history items
-                ForEach(viewModel.storyHistory) { story in
+                ForEach(manager.storyHistory) { story in
                     StoryCardView(story: story, previewMode: true)
                 }
             }
@@ -29,29 +22,57 @@ struct HistoryView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
-                    viewModel.refreshHistory()
+                    refreshHistory()
                 }) {
-                    Image(systemName: viewModel.isRefreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                    Image(systemName: isRefreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
                         .foregroundColor(DisneyColors.magicBlue)
-                        .rotationEffect(viewModel.isRefreshing ? .degrees(360) : .degrees(0))
-                        .animation(viewModel.isRefreshing ? Animation.linear(duration: 1.0).repeatForever(autoreverses: false) : .default, value: viewModel.isRefreshing)
+                        .rotationEffect(isRefreshing ? .degrees(360) : .degrees(0))
+                        .animation(isRefreshing ? Animation.linear(duration: 1.0).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                 }
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Clear All") {
                     // Add confirmation alert here for safety
-                    viewModel.clearHistory()
+                    manager.clearHistory()
                 }
                 .foregroundColor(DisneyColors.mickeyRed)
             }
         }
         .onAppear {
-            // Create a new viewModel with the real manager from environment
-            viewModel = HistoryViewModel(manager: manager)
-            
             // Refresh the history when the view appears
-            viewModel.refreshHistory()
+            refreshHistory()
         }
+    }
+
+    private func refreshHistory() {
+        isRefreshing = true
+        manager.fetchStoryHistory()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isRefreshing = false
+        }
+    }
+}
+
+private struct HistoryEmptyStateView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 40))
+                .foregroundColor(DisneyColors.magicBlue)
+
+            Text("Your history is clear")
+                .font(.headline)
+                .foregroundColor(DisneyColors.magicBlue)
+
+            Text("Come back after generating a few daydreams to revisit them here.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(DisneyColors.magicBlue.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 40)
+        .listRowBackground(Color.clear)
     }
 }
