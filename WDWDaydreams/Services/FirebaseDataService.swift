@@ -52,70 +52,44 @@ class FirebaseDataService {
     func ensureDatabaseSetup(completion: @escaping (Bool) -> Void) {
         guard Auth.auth().currentUser != nil else {
             print("No user logged in")
-            completion(false)
+            DispatchQueue.main.async {
+                completion(false)
+            }
             return
         }
-        
-        // 1. Check and create user settings
+
         let userSettingsRef = db.collection("userSettings").document(userId)
         userSettingsRef.getDocument { snapshot, error in
             if let error = error {
                 print("Error checking user settings: \(error.localizedDescription)")
-                completion(false)
+                DispatchQueue.main.async {
+                    completion(false)
+                }
                 return
             }
-            
-            if snapshot?.exists != true {
-                // Create default user settings
-                let settings: [String: Any] = [
-                    "enabledCategories": ["park", "ride", "food"] // Default categories
-                ]
-                
-                userSettingsRef.setData(settings) { error in
-                    if let error = error {
-                        print("Error creating user settings: \(error.localizedDescription)")
-                    } else {
-                        print("Created default user settings")
-                    }
+
+            guard snapshot?.exists != true else {
+                DispatchQueue.main.async {
+                    completion(true)
                 }
+                return
             }
-            
-            // 2. Ensure collections for user stories exist
-            self.ensureCollectionExists("userStories/\(self.userId)/history") { success in
-                guard success else {
-                    completion(false)
-                    return
-                }
-                
-                self.ensureCollectionExists("userStories/\(self.userId)/favorites") { success in
-                    guard success else {
+
+            let settings: [String: Any] = [
+                "enabledCategories": ["park", "ride", "food"]
+            ]
+
+            userSettingsRef.setData(settings, merge: true) { error in
+                if let error = error {
+                    print("Error creating user settings: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
                         completion(false)
-                        return
                     }
-                    
-                    // Complete setup
-                    print("Firebase database structure verified")
-                    completion(true)
-                }
-            }
-        }
-    }
-    
-    private func ensureCollectionExists(_ path: String, completion: @escaping (Bool) -> Void) {
-        // Create a test document we'll delete right after to ensure the collection exists
-        let testDocRef = db.document("\(path)/test")
-        
-        testDocRef.setData(["test": true]) { error in
-            if let error = error {
-                print("Error creating test document: \(error.localizedDescription)")
-                completion(false)
-            } else {
-                // Delete the test document
-                testDocRef.delete { error in
-                    if let error = error {
-                        print("Error deleting test document: \(error.localizedDescription)")
+                } else {
+                    print("Created default user settings")
+                    DispatchQueue.main.async {
+                        completion(true)
                     }
-                    completion(true)
                 }
             }
         }
