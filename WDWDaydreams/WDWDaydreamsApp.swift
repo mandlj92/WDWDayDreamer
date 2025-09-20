@@ -4,10 +4,11 @@ import FirebaseCore
 @main
 struct WDWDaydreamsApp: App {
     @StateObject var manager = ScenarioManager()
-    @StateObject var weatherManager = WDWWeatherManager() // Add weather manager
+    @StateObject var weatherManager = WDWWeatherManager()
+    @StateObject private var authViewModel: AuthViewModel
     let notificationManager = NotificationManager.shared
     @Environment(\.scenePhase) var scenePhase
-    
+
     init() {
         print("=== Loaded fonts ===")
         for family in UIFont.familyNames.sorted() {
@@ -16,33 +17,33 @@ struct WDWDaydreamsApp: App {
             }
         }
 
-        // Initialize Firebase
         FirebaseApp.configure()
-        
-        // Initialize notifications
+        _authViewModel = StateObject(wrappedValue: AuthViewModel())
+
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
     }
 
     var body: some Scene {
         WindowGroup {
-            LoginView()
-                .environmentObject(manager)
-                .environmentObject(weatherManager) // Add weather manager to environment
-                .onAppear {
-                    // We'll handle prompt generation after login in ContentView
-                    // to ensure user is authenticated first
+            Group {
+                if authViewModel.isAuthenticated {
+                    ContentView()
+                } else {
+                    LoginView()
                 }
+            }
+            .environmentObject(authViewModel)
+            .environmentObject(manager)
+            .environmentObject(weatherManager)
         }
-        // --- Updated onChange syntax ---
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-             if newPhase == .background {
-                 print("App entered background.")
-             } else if newPhase == .active {
-                 print("App became active.")
-                 weatherManager.fetchWeather() // Fetch weather when app becomes active
-             }
-         }
-        // --- End of update ---
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                print("App entered background.")
+            } else if newPhase == .active {
+                print("App became active.")
+                weatherManager.fetchWeather()
+            }
+        }
     }
 }
