@@ -43,3 +43,25 @@ struct FavoritesView: View {
         }
     }
 }
+
+private struct EmptyFavoritesView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 40))
+                .foregroundColor(DisneyColors.magicBlue)
+
+            Text("No favorites yet")
+                .font(.headline)
+                .foregroundColor(DisneyColors.midnightBlue)
+
+            Text("Tap the heart on a daydream to save it here for easy access later.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(DisneyColors.midnightBlue.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 40)
+        .listRowBackground(Color.clear)
+    }
+}
