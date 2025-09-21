@@ -62,15 +62,17 @@ class WDWWeatherManager: ObservableObject {
                 }
                 
                 // Get the API key from Remote Config
-                self.apiKey = self.remoteConfig["weather_api_key"].stringValue ?? ""
+                let configValue = self.remoteConfig["weather_api_key"].stringValue
                 
-                if self.apiKey.isEmpty {
+                if configValue.isEmpty {
                     print("⚠️ Weather API key not found in Remote Config")
+                    self.apiKey = ""
                     DispatchQueue.main.async {
                         self.errorMessage = "Weather service not configured"
                     }
                 } else {
-                    print("✅ Weather API key loaded from Remote Config")
+                    print("✅ Weather API key loaded from Remote Config: \(configValue.prefix(8))...")
+                    self.apiKey = configValue
                     // Clear any previous configuration errors
                     DispatchQueue.main.async {
                         if self.errorMessage == "Configuration error. Please check your connection." ||
