@@ -546,8 +546,8 @@ class FirebaseDataService {
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error determining next author: \(error.localizedDescription)")
-                    // Default to alternating from user if there's an error
-                    completion(StoryAuthor.user == .user ? .wife : .user)
+                    // Default based on which user is signed in to keep turn order stable
+                    completion(self.isCurrentUserJon ? .user : .wife)
                     return
                 }
                 
