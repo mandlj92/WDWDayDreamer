@@ -12,11 +12,16 @@ final class AuthViewModel: NSObject, ObservableObject {
 
     private let firebaseService: FirebaseDataService
     private var authStateHandle: AuthStateDidChangeListenerHandle?
-    private var idTokenHandle: AuthStateDidChangeListenerHandle?
+    
+    // MARK: - Authorized Users (Hardcoded for simplicity)
+    private let authorizedEmails = [
+        "jonathanfmandl@gmail.com",
+        "carolyningrid9@gmail.com"
+    ]
     
     // MARK: - User Authorization Properties
     var isAdmin: Bool {
-        userRole == "admin"
+        currentUserEmail.lowercased() == authorizedEmails[0].lowercased()
     }
     
     var currentUserEmail: String {
@@ -37,6 +42,7 @@ final class AuthViewModel: NSObject, ObservableObject {
         print("🔐 AuthViewModel init - isAuthenticated: \(isAuthenticated)")
         if let user = Auth.auth().currentUser {
             print("🔐 Current user: \(user.email ?? "no email") - UID: \(user.uid)")
+            checkUserAuthorization()
         } else {
             print("🔐 No current user found")
         }
@@ -49,25 +55,12 @@ final class AuthViewModel: NSObject, ObservableObject {
                 
                 if let user = user {
                     print("🔐 User authenticated: \(user.email ?? "no email") - UID: \(user.uid)")
-                    
-                    // Force refresh ID token to get latest custom claims
-                    user.getIDTokenForcingRefresh(true) { [weak self] _, error in
-                        if let error = error {
-                            print("🔐 Error refreshing ID token: \(error.localizedDescription)")
-                        } else {
-                            self?.checkUserAuthorization()
-                        }
-                    }
+                    self?.checkUserAuthorization()
                 } else {
                     self?.isAuthorized = false
                     self?.userRole = ""
                 }
             }
-        }
-        
-        // Check authorization if already authenticated
-        if isAuthenticated {
-            checkUserAuthorization()
         }
     }
 
@@ -75,12 +68,9 @@ final class AuthViewModel: NSObject, ObservableObject {
         if let handle = authStateHandle {
             Auth.auth().removeStateDidChangeListener(handle)
         }
-        if let handle = idTokenHandle {
-            Auth.auth().removeStateDidChangeListener(handle)
-        }
     }
     
-    // MARK: - Authorization Check
+    // MARK: - Authorization Check (Simplified)
     private func checkUserAuthorization() {
         guard let user = Auth.auth().currentUser else {
             DispatchQueue.main.async {
@@ -90,47 +80,20 @@ final class AuthViewModel: NSObject, ObservableObject {
             return
         }
         
-        // Get ID token to access custom claims
-        user.getIDTokenResult { [weak self] result, error in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("🔐 Error getting ID token: \(error.localizedDescription)")
-                    self.isAuthorized = false
-                    self.userRole = ""
-                    return
-                }
-                
-                guard let result = result else {
-                    self.isAuthorized = false
-                    self.userRole = ""
-                    return
-                }
-                
-                // Check custom claims
-                let claims = result.claims
-                let isAuthorizedClaim = claims["authorized"] as? Bool ?? false
-                let roleClaim = claims["role"] as? String ?? ""
-                
-                // Check if user is in authorized email list (fallback)
-                let authorizedEmails = [
-                    "jonathanfmandl@gmail.com",
-                    "carolyningrid9@gmail.com"
-                ]
-                let isAuthorizedEmail = authorizedEmails.contains(user.email?.lowercased() ?? "")
-                
-                self.isAuthorized = isAuthorizedClaim || isAuthorizedEmail
-                self.userRole = roleClaim.isEmpty ? (isAuthorizedEmail ? "user" : "") : roleClaim
-                
-                print("🔐 Authorization check - Authorized: \(self.isAuthorized), Role: \(self.userRole)")
-                
-                // If user is not authorized, show error
-                if !self.isAuthorized {
-                    self.errorMessage = "This app is private and only available to authorized users."
-                    // Sign out unauthorized user
-                    self.signOut()
-                }
+        let email = user.email?.lowercased() ?? ""
+        let isAuthorizedEmail = authorizedEmails.contains(email)
+        let isFirstUser = email == authorizedEmails[0].lowercased()
+        
+        DispatchQueue.main.async {
+            self.isAuthorized = isAuthorizedEmail
+            self.userRole = isAuthorizedEmail ? (isFirstUser ? "admin" : "user") : ""
+            
+            print("🔐 Authorization check - Email: \(email), Authorized: \(self.isAuthorized), Role: \(self.userRole)")
+            
+            // If user is not authorized, show error and sign out
+            if !self.isAuthorized {
+                self.errorMessage = "This app is private and only available to authorized users."
+                // Don't auto-sign out, let them try different account
             }
         }
     }
@@ -158,7 +121,7 @@ final class AuthViewModel: NSObject, ObservableObject {
                     print("🔐 Login successful!")
                     if let user = Auth.auth().currentUser {
                         print("🔐 Authenticated user: \(user.email ?? "no email") - UID: \(user.uid)")
-                        // Authorization check will be triggered by auth state listener
+                        self.checkUserAuthorization()
                     }
                 }
             }
@@ -208,7 +171,7 @@ final class AuthViewModel: NSObject, ObservableObject {
                             print("🔐 Firebase Google auth error: \(error)")
                         } else if let user = authResult?.user {
                             print("🔐 Google Sign-In successful for user: \(user.email ?? "no email")")
-                            // Authorization check will be triggered by auth state listener
+                            self.checkUserAuthorization()
                         }
                     }
                 }
@@ -228,20 +191,6 @@ final class AuthViewModel: NSObject, ObservableObject {
         // Reset authorization state
         isAuthorized = false
         userRole = ""
-    }
-    
-    // MARK: - Admin Functions
-    func refreshUserClaims() {
-        guard let user = Auth.auth().currentUser else { return }
-        
-        user.getIDTokenForcingRefresh(true) { [weak self] _, error in
-            if let error = error {
-                print("🔐 Error refreshing claims: \(error.localizedDescription)")
-            } else {
-                print("🔐 User claims refreshed")
-                self?.checkUserAuthorization()
-            }
-        }
     }
     
     // MARK: - Helper Methods

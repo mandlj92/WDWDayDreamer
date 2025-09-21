@@ -6,7 +6,6 @@ struct ContentView: View {
     @EnvironmentObject var weatherManager: WDWWeatherManager
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var showSettings = false
-    @State private var showAdminPanel = false
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
@@ -45,45 +44,31 @@ struct ContentView: View {
                     // Main content
                     NavigationView {
                         VStack {
-                            // Tab selector
+                            // Tab selector (removed Admin tab)
                             Picker("View", selection: $currentView) {
                                 Text("Today").tag("Today")
                                 Text("History").tag("History")
                                 Text("Favorites").tag("Favorites")
-                                if authViewModel.isAdmin {
-                                    Text("Admin").tag("Admin")
-                                }
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .padding()
                             .background(DisneyColors.backgroundCream)
 
-                            // Content based on selected tab
+                            // Content based on selected tab (removed Admin case)
                             if currentView == "Today" {
                                 TodayView()
                             } else if currentView == "History" {
                                 HistoryView()
                             } else if currentView == "Favorites" {
                                 FavoritesView()
-                            } else if currentView == "Admin" && authViewModel.isAdmin {
-                                AdminPanelView()
                             }
                         }
                         .navigationTitle("Disney Daydreams")
                         .toolbar {
                             ToolbarItem(placement: .principal) {
-                                HStack {
-                                    Text("Disney Daydreams")
-                                        .font(.disneyTitle(24))
-                                        .foregroundColor(DisneyColors.magicBlue)
-                                    
-                                    // Show role indicator
-                                    if authViewModel.isAdmin {
-                                        Image(systemName: "crown.fill")
-                                            .foregroundColor(DisneyColors.mainStreetGold)
-                                            .font(.caption)
-                                    }
-                                }
+                                Text("Disney Daydreams")
+                                    .font(.disneyTitle(24))
+                                    .foregroundColor(DisneyColors.magicBlue)
                             }
 
                             // Add weather widget in the toolbar
@@ -105,16 +90,6 @@ struct ContentView: View {
                                             .foregroundColor(DisneyColors.magicBlue)
                                     }
                                     
-                                    // Admin panel button (admin only)
-                                    if authViewModel.isAdmin {
-                                        Button(action: {
-                                            showAdminPanel = true
-                                        }) {
-                                            Image(systemName: "person.3.fill")
-                                                .foregroundColor(DisneyColors.mickeyRed)
-                                        }
-                                    }
-                                    
                                     // Logout button
                                     Button(action: {
                                         showLogoutAlert = true
@@ -127,9 +102,6 @@ struct ContentView: View {
                         }
                         .sheet(isPresented: $showSettings) {
                             SettingsView()
-                        }
-                        .sheet(isPresented: $showAdminPanel) {
-                            AdminPanelView()
                         }
                         .alert(isPresented: $showLogoutAlert) {
                             Alert(
@@ -189,7 +161,7 @@ struct ContentView: View {
     }
 }
 
-// Unauthorized user view
+// Unauthorized user view (unchanged)
 struct UnauthorizedView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     
