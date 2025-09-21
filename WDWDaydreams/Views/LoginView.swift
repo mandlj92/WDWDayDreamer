@@ -1,4 +1,4 @@
-// Views/LoginView.swift
+// Views/LoginView.swift - Secure version with no hardcoded credentials
 import SwiftUI
 
 struct LoginView: View {
@@ -172,36 +172,6 @@ struct LoginView: View {
                             .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
                         }
                         .disabled(!isSignInEnabled || authViewModel.isLoading)
-                        
-                        // Quick sign-in helpers (optional)
-                        VStack(spacing: 12) {
-                            Text("Quick Sign In")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            HStack(spacing: 20) {
-                                QuickSignInButton(
-                                    name: "Jon",
-                                    color: DisneyColors.magicBlue,
-                                    isLoading: authViewModel.isLoading
-                                ) {
-                                    email = "jon@example.com"
-                                    emailFocused = false
-                                    passwordFocused = true
-                                }
-                                
-                                QuickSignInButton(
-                                    name: "Carolyn",
-                                    color: DisneyColors.fantasyPurple,
-                                    isLoading: authViewModel.isLoading
-                                ) {
-                                    email = "carolyn@example.com"
-                                    emailFocused = false
-                                    passwordFocused = true
-                                }
-                            }
-                        }
-                        .padding(.top, 10)
                     }
                     .padding(.horizontal, 30)
 
@@ -257,31 +227,6 @@ struct DisneyTextFieldStyle: TextFieldStyle {
                     .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-    }
-}
-
-// Quick sign-in helper buttons (only fill email, user still needs to enter password)
-struct QuickSignInButton: View {
-    let name: String
-    let color: Color
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(name)
-                .font(.caption)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(color.opacity(0.1))
-                .foregroundColor(color)
-                .cornerRadius(15)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(color.opacity(0.3), lineWidth: 1)
-                )
-        }
-        .disabled(isLoading)
     }
 }
 

@@ -693,39 +693,7 @@ class FirebaseDataService {
         }
     }
     
-    func createTestAccounts(completion: @escaping (Bool, String?) -> Void) {
-        // Create first test account
-        Auth.auth().createUser(withEmail: "jon@example.com", password: "password123") { result, error in
-            if let error = error {
-                if error.localizedDescription.contains("already in use") {
-                    print("Jon's account already exists")
-                    self.createSecondAccount(completion: completion)
-                } else {
-                    print("Error creating first account: \(error.localizedDescription)")
-                    completion(false, "Error creating accounts: \(error.localizedDescription)")
-                }
-            } else {
-                print("First account created successfully")
-                self.createSecondAccount(completion: completion)
-            }
-        }
-    }
-    
-    private func createSecondAccount(completion: @escaping (Bool, String?) -> Void) {
-        // Create second test account
-        Auth.auth().createUser(withEmail: "carolyn@example.com", password: "password123") { result, error in
-            if let error = error {
-                if error.localizedDescription.contains("already in use") {
-                    print("Carolyn's account already exists")
-                    completion(true, "Accounts already exist")
-                } else {
-                    print("Error creating second account: \(error.localizedDescription)")
-                    completion(false, "Error creating second account: \(error.localizedDescription)")
-                }
-            } else {
-                print("Second account created successfully")
-                completion(true, "Accounts created successfully")
-            }
-        }
-    }
+    // MARK: - Test account creation methods removed for security
+    // Note: No longer creating test accounts programmatically
+    // All user accounts should be created through proper authentication flows
 }
