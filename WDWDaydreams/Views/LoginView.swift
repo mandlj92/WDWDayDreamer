@@ -1,5 +1,6 @@
 // Views/LoginView.swift
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
@@ -46,7 +47,77 @@ struct LoginView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
-                    // Login form
+                    // Social Sign-In Section
+                    VStack(spacing: 16) {
+                        Text("Sign in with")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        // Apple Sign-In Button
+                        Button(action: {
+                            authViewModel.signInWithApple()
+                        }) {
+                            HStack {
+                                Image(systemName: "applelogo")
+                                    .font(.system(size: 18, weight: .medium))
+                                Text("Continue with Apple")
+                                    .fontWeight(.medium)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black)
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .disabled(authViewModel.isLoading)
+                        
+                        // Google Sign-In Button
+                        Button(action: {
+                            authViewModel.signInWithGoogle()
+                        }) {
+                            HStack {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 18, weight: .medium))
+                                Text("Continue with Google")
+                                    .fontWeight(.medium)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .cornerRadius(25)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        .disabled(authViewModel.isLoading)
+                    }
+                    .padding(.horizontal, 30)
+
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 1)
+                        
+                        Text("or")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 12)
+                        
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 1)
+                    }
+                    .padding(.horizontal, 30)
+
+                    // Email/Password Login form
                     VStack(spacing: 20) {
                         // Email field
                         VStack(alignment: .leading, spacing: 8) {
@@ -137,7 +208,7 @@ struct LoginView: View {
                                     color: DisneyColors.magicBlue,
                                     isLoading: authViewModel.isLoading
                                 ) {
-                                    email = "jon@example.com"
+                                    email = "jonathanfmandl@gmail.com"
                                     emailFocused = false
                                     passwordFocused = true
                                 }
@@ -147,7 +218,7 @@ struct LoginView: View {
                                     color: DisneyColors.fantasyPurple,
                                     isLoading: authViewModel.isLoading
                                 ) {
-                                    email = "carolyn@example.com"
+                                    email = "carolyningrid9@gmail.com"
                                     emailFocused = false
                                     passwordFocused = true
                                 }

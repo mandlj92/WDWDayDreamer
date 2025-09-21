@@ -1,5 +1,7 @@
 import SwiftUI
 import FirebaseCore
+import GoogleSignIn
+import AuthenticationServices
 
 @main
 struct WDWDaydreamsApp: App {
@@ -16,11 +18,39 @@ struct WDWDaydreamsApp: App {
             }
         }
 
+        // Configure Firebase first
         FirebaseApp.configure()
+        
+        // Configure Google Sign-In with better error handling
+        Self.configureGoogleSignIn()
+        
+        // Initialize AuthViewModel after configuration
         _authViewModel = StateObject(wrappedValue: AuthViewModel())
 
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
+    }
+    
+    // Made static so it can be called before instance initialization
+    private static func configureGoogleSignIn() {
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") else {
+            print("⚠️ GoogleService-Info.plist not found in bundle")
+            return
+        }
+        
+        guard let plist = NSDictionary(contentsOfFile: path) else {
+            print("⚠️ Could not read GoogleService-Info.plist")
+            return
+        }
+        
+        guard let clientId = plist["CLIENT_ID"] as? String else {
+            print("⚠️ CLIENT_ID not found in GoogleService-Info.plist")
+            print("Available keys: \(plist.allKeys)")
+            return
+        }
+        
+        print("✅ Configuring Google Sign-In with CLIENT_ID: \(clientId)")
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
     }
 
     var body: some Scene {
@@ -34,6 +64,10 @@ struct WDWDaydreamsApp: App {
             }
             .environmentObject(authViewModel)
             .environmentObject(weatherManager)
+            .onOpenURL { url in
+                // Handle Google Sign-In URL
+                GIDSignIn.sharedInstance.handle(url)
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background {

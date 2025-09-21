@@ -99,7 +99,7 @@ class FirebaseDataService {
     
     func fetchUserSettings(completion: @escaping ([Category]) -> Void) {
         guard ensureAuthenticated() else {
-            completion(Category.allCases)
+            completion([.park, .ride, .food]) // Default categories
             return
         }
         
@@ -107,7 +107,7 @@ class FirebaseDataService {
         ref.getDocument { snap, error in
             if let error = error {
                 print("Error fetching user settings: \(error.localizedDescription)")
-                completion(Category.allCases)
+                completion([.park, .ride, .food]) // Default categories
                 return
             }
             
@@ -115,13 +115,13 @@ class FirebaseDataService {
                 // Manual parsing of user settings
                 if let categoryStrings = data["enabledCategories"] as? [String] {
                     let categories = categoryStrings.compactMap { Category(rawValue: $0) }
-                    completion(categories.isEmpty ? Category.allCases : categories)
+                    completion(categories.isEmpty ? [.park, .ride, .food] : categories)
                     return
                 }
             }
             
             // Default if no settings found
-            completion(Category.allCases)
+            completion([.park, .ride, .food])
         }
     }
     
@@ -131,8 +131,11 @@ class FirebaseDataService {
             return
         }
         
+        // Ensure we have at least one category enabled
+        let categoriesToSave = enabledCategories.isEmpty ? [.park, .ride, .food] : enabledCategories
+        
         // Convert enabledCategories to string array for Firestore
-        let categoryStrings = enabledCategories.map { $0.rawValue }
+        let categoryStrings = categoriesToSave.map { $0.rawValue }
         
         // Create data dictionary
         let data: [String: Any] = [

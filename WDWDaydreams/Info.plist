@@ -2,9 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>waltographUI.ttf</string>
-	</array>
+    <key>UIAppFonts</key>
+    <array>
+        <string>waltographUI.ttf</string>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>GoogleSignIn</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.457077840315-1868cca7cf29d202dbcc9e</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
