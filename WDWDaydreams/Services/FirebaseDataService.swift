@@ -176,46 +176,41 @@ class FirebaseDataService {
            }
     }
     
-    // MARK: - Stories Management
+    // MARK: - Stories Management (NOW REAL-TIME)
     
-    func fetchStoryHistory(completion: @escaping ([DaydreamStory]) -> Void) {
+    func listenForStoryHistory(completion: @escaping ([DaydreamStory]) -> Void) -> ListenerRegistration {
         guard ensureAuthenticated() else {
-            completion([])
-            return
+            // Return a dummy listener that does nothing
+            return db.collection("dummy").addSnapshotListener { _, _ in }
         }
         
-        print("📚 Fetching shared stories from Firestore...")
-        let ref = db.collection("sharedStories")
-            .order(by: "date", descending: true)
+        print("👂 [Real-Time] Listening for shared stories...")
+        let ref = db.collection("sharedStories").order(by: "date", descending: true)
         
-        ref.getDocuments { snap, error in
+        return ref.addSnapshotListener { snapshot, error in
             if let error = error {
-                print("❌ Error fetching shared stories: \(error.localizedDescription)")
+                print("❌ Error listening for shared stories: \(error.localizedDescription)")
                 completion([])
                 return
             }
             
-            guard let documents = snap?.documents else {
+            guard let documents = snapshot?.documents else {
                 print("❌ No documents found in sharedStories collection")
                 completion([])
                 return
             }
             
-            print("📄 Found \(documents.count) shared story documents")
+            print("📄 [Real-Time] Received \(documents.count) shared story documents")
             
-            var stories: [DaydreamStory] = []
-            
-            for doc in documents {
+            let stories = documents.compactMap { doc -> DaydreamStory? in
                 let data = doc.data()
-                print("📝 Processing document: \(doc.documentID) with data: \(data)")
-                
                 guard let dateTimestamp = data["date"] as? Timestamp,
                       let itemsDict = data["items"] as? [String: String],
                       let authorString = data["author"] as? String,
                       let author = StoryAuthor(rawValue: authorString)
                 else {
                     print("⚠️ Missing required fields in document: \(doc.documentID)")
-                    continue
+                    return nil
                 }
                 
                 var items: [Category: String] = [:]
@@ -225,22 +220,20 @@ class FirebaseDataService {
                     }
                 }
                 
-                let story = DaydreamStory(
-                    id: UUID(),
+                return DaydreamStory(
+                    id: UUID(), // Or use a persistent ID if you have one
                     dateAssigned: dateTimestamp.dateValue(),
                     items: items,
                     assignedAuthor: author,
                     storyText: data["text"] as? String,
-                    isFavorite: false
+                    isFavorite: false // Favorite status is managed per-user
                 )
-                
-                stories.append(story)
-                print("✅ Added story to history: \(story.promptText)")
             }
             
             completion(stories)
         }
     }
+
     
     func fetchFavorites(completion: @escaping ([DaydreamStory]) -> Void) {
         guard ensureAuthenticated() else {
@@ -425,63 +418,61 @@ class FirebaseDataService {
     
     // MARK: - Daily Prompt Management
     
-    func fetchDailyPrompt(completion: @escaping (DaydreamStory?) -> Void) {
+    func listenForDailyPrompt(completion: @escaping (DaydreamStory?) -> Void) -> ListenerRegistration {
         guard ensureAuthenticated() else {
             completion(nil)
-            return
+            // Return a dummy listener that does nothing
+            return db.collection("dummy").addSnapshotListener { _, _ in }
         }
         
         let docRef = db.collection("dailyPrompts").document(userId)
-        docRef.getDocument { snap, error in
+        
+        return docRef.addSnapshotListener { snapshot, error in
             if let error = error {
-                print("Error fetching daily prompt: \(error.localizedDescription)")
+                print("❌ Error listening for daily prompt: \(error.localizedDescription)")
                 completion(nil)
                 return
             }
             
-            if let data = snap?.data(),
-               let dateTimestamp = data["date"] as? Timestamp {
-                
-                // Get the date value first
-                let date = dateTimestamp.dateValue()
-                
-                if Calendar.current.isDateInToday(date) {
-                    // Found today's prompt in Firestore, convert to DaydreamStory
-                    // Extract items
-                    var items: [Category: String] = [:]
-                    if let itemsDict = data["items"] as? [String: String] {
-                        for (key, value) in itemsDict {
-                            if let category = Category(rawValue: key) {
-                                items[category] = value
-                            }
+            guard let data = snapshot?.data(), let dateTimestamp = data["date"] as? Timestamp else {
+                // No document exists for today
+                completion(nil)
+                return
+            }
+            
+            let date = dateTimestamp.dateValue()
+            
+            if Calendar.current.isDateInToday(date) {
+                // Found today's prompt, convert to DaydreamStory
+                var items: [Category: String] = [:]
+                if let itemsDict = data["items"] as? [String: String] {
+                    for (key, value) in itemsDict {
+                        if let category = Category(rawValue: key) {
+                            items[category] = value
                         }
                     }
-                    
-                    // Get author
-                    let authorString = data["author"] as? String ?? StoryAuthor.user.rawValue
-                    let author = StoryAuthor(rawValue: authorString) ?? .user
-                    
-                    // Create DaydreamStory
-                    let prompt = DaydreamStory(
-                        id: UUID(),
-                        dateAssigned: date,
-                        items: items,
-                        assignedAuthor: author,
-                        storyText: data["text"] as? String,
-                        isFavorite: data["isFavorite"] as? Bool ?? false
-                    )
-                    
-                    completion(prompt)
-                } else {
-                    // No prompt for today
-                    completion(nil)
                 }
+                
+                let authorString = data["author"] as? String ?? StoryAuthor.user.rawValue
+                let author = StoryAuthor(rawValue: authorString) ?? .user
+                
+                let prompt = DaydreamStory(
+                    id: UUID(),
+                    dateAssigned: date,
+                    items: items,
+                    assignedAuthor: author,
+                    storyText: data["text"] as? String,
+                    isFavorite: data["isFavorite"] as? Bool ?? false
+                )
+                
+                completion(prompt)
             } else {
-                // No document exists
+                // The prompt is from a previous day
                 completion(nil)
             }
         }
     }
+
     
     func saveDailyPrompt(_ prompt: DaydreamStory, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated() else {
@@ -566,54 +557,33 @@ class FirebaseDataService {
     // MARK: - Story Completion Tracking
     
     func markStoryAsCompleted(_ story: DaydreamStory, completion: @escaping (Bool) -> Void) {
-        guard ensureAuthenticated() else {
+        guard ensureAuthenticated(), let storyText = story.storyText else {
             completion(false)
             return
         }
         
-        // Mark story as completed in Firestore
-        let completeRef = db.collection("completedStories").document(userId)
-        completeRef.setData([
-            "date": Timestamp(date: Date()),
+        // Update the shared story document with the new text
+        let dateKey = DateFormatter.shared.string(from: story.dateAssigned)
+        let sharedRef = db.collection("sharedStories").document(dateKey)
+        
+        let updateData: [String: Any] = [
+            "text": storyText,
             "author": story.assignedAuthor.rawValue
-        ]) { error in
+        ]
+        
+        sharedRef.setData(updateData, merge: true) { error in
             if let error = error {
-                print("Error saving story completion info: \(error.localizedDescription)")
+                print("❌ Error updating shared story: \(error.localizedDescription)")
                 completion(false)
             } else {
-                print("Marked story as completed for user \(self.userId)")
-                
-                // Update in shared stories
-                let dateKey = DateFormatter.shared.string(from: story.dateAssigned)
-                let sharedRef = self.db.collection("sharedStories").document(dateKey)
-                
-                var sharedData: [String: Any] = [
-                    "date": Timestamp(date: story.dateAssigned),
-                    "author": story.assignedAuthor.rawValue
-                ]
-                
-                if let text = story.storyText {
-                    sharedData["text"] = text
-                }
-                
-                var sharedItems: [String: String] = [:]
-                for (category, value) in story.items {
-                    sharedItems[category.rawValue] = value
-                }
-                sharedData["items"] = sharedItems
-                
-                sharedRef.setData(sharedData, merge: true) { error in
-                    if let error = error {
-                        print("❌ Error saving shared story: \(error.localizedDescription)")
-                        completion(false)
-                    } else {
-                        print("✅ Shared story saved for both users")
-                        completion(true)
-                    }
-                }
+                print("✅ Shared story updated for both users")
+                // ** NEW: Trigger a local notification for the other user **
+                NotificationManager.shared.sendLocalCompletionNotification(from: story.assignedAuthor.displayName)
+                completion(true)
             }
         }
     }
+
     
     // MARK: - Listeners
     

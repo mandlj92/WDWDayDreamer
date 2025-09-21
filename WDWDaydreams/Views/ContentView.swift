@@ -13,113 +13,103 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // Background
+            // Background color
             DisneyColors.backgroundCream
                 .edgesIgnoringSafeArea(.all)
+
+            // --- FIX: Background sparkle decoration moved here ---
+            // This now sits behind the main content instead of pushing it down.
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 80))
+                        .foregroundColor(DisneyColors.mainStreetGold.opacity(0.1))
+                    Spacer()
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 60))
+                        .foregroundColor(DisneyColors.magicBlue.opacity(0.1))
+                    Spacer()
+                }
+                .offset(y: 20)
+            }
+            .edgesIgnoringSafeArea(.bottom)
 
             // Check if user is authorized
             if !authViewModel.isAuthorized {
                 UnauthorizedView()
             } else {
                 // Main authorized content
-                VStack {
-                    // Subtle sparkle decoration at the bottom
+                NavigationView {
                     VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 80))
-                                .foregroundColor(DisneyColors.mainStreetGold.opacity(0.1))
-                            Spacer()
-                            Image(systemName: "wand.and.stars")
-                                .font(.system(size: 60))
-                                .foregroundColor(DisneyColors.magicBlue.opacity(0.1))
-                            Spacer()
+                        // Tab selector
+                        Picker("View", selection: $currentView) {
+                            Text("Today").tag("Today")
+                            Text("History").tag("History")
+                            Text("Favorites").tag("Favorites")
                         }
-                        .offset(y: 20)
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding()
+                        .background(DisneyColors.backgroundCream)
+
+                        // Content based on selected tab
+                        if currentView == "Today" {
+                            TodayView()
+                        } else if currentView == "History" {
+                            HistoryView()
+                        } else if currentView == "Favorites" {
+                            FavoritesView()
+                        }
                     }
-                    .edgesIgnoringSafeArea(.bottom)
-
-                    // Main content
-                    NavigationView {
-                        VStack {
-                            // Tab selector (removed Admin tab)
-                            Picker("View", selection: $currentView) {
-                                Text("Today").tag("Today")
-                                Text("History").tag("History")
-                                Text("Favorites").tag("Favorites")
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .padding()
-                            .background(DisneyColors.backgroundCream)
-
-                            // Content based on selected tab (removed Admin case)
-                            if currentView == "Today" {
-                                TodayView()
-                            } else if currentView == "History" {
-                                HistoryView()
-                            } else if currentView == "Favorites" {
-                                FavoritesView()
-                            }
+                    .navigationTitle("Disney Daydreams")
+                    .toolbar {
+                        ToolbarItem(placement: .principal) {
+                            Text("Disney Daydreams")
+                                .font(.disneyTitle(24))
+                                .foregroundColor(DisneyColors.magicBlue)
                         }
-                        .navigationTitle("Disney Daydreams")
-                        .toolbar {
-                            ToolbarItem(placement: .principal) {
-                                Text("Disney Daydreams")
-                                    .font(.disneyTitle(24))
-                                    .foregroundColor(DisneyColors.magicBlue)
-                            }
 
-                            // Add weather widget in the toolbar
-                            ToolbarItem(placement: .navigationBarLeading) {
-                                WeatherWidget(weatherManager: weatherManager, showRefreshButton: false)
-                                    .onTapGesture {
-                                        // Refresh weather on tap
-                                        weatherManager.fetchWeather()
-                                    }
-                            }
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            WeatherWidget(weatherManager: weatherManager, showRefreshButton: false)
+                                .onTapGesture {
+                                    weatherManager.fetchWeather()
+                                }
+                        }
 
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                HStack {
-                                    // Settings button
-                                    Button(action: {
-                                        showSettings = true
-                                    }) {
-                                        Image(systemName: "gear")
-                                            .foregroundColor(DisneyColors.magicBlue)
-                                    }
-                                    
-                                    // Logout button
-                                    Button(action: {
-                                        showLogoutAlert = true
-                                    }) {
-                                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                                            .foregroundColor(DisneyColors.magicBlue)
-                                    }
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            HStack {
+                                Button(action: { showSettings = true }) {
+                                    Image(systemName: "gear")
+                                        .foregroundColor(DisneyColors.magicBlue)
+                                }
+                                
+                                Button(action: { showLogoutAlert = true }) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .foregroundColor(DisneyColors.magicBlue)
                                 }
                             }
                         }
-                        .sheet(isPresented: $showSettings) {
-                            SettingsView()
-                        }
-                        .alert(isPresented: $showLogoutAlert) {
-                            Alert(
-                                title: Text("Sign Out"),
-                                message: Text("Are you sure you want to sign out?"),
-                                primaryButton: .destructive(Text("Sign Out")) {
-                                    authViewModel.signOut()
-                                },
-                                secondaryButton: .cancel()
-                            )
-                        }
+                    }
+                    .sheet(isPresented: $showSettings) {
+                        SettingsView()
+                    }
+                    .alert(isPresented: $showLogoutAlert) {
+                        Alert(
+                            title: Text("Sign Out"),
+                            message: Text("Are you sure you want to sign out?"),
+                            primaryButton: .destructive(Text("Sign Out")) {
+                                authViewModel.signOut()
+                            },
+                            secondaryButton: .cancel()
+                        )
                     }
                 }
+            }
 
-                // Loading overlay
-                if isInitializing {
-                    LoadingOverlayView()
-                }
+            // Loading overlay
+            if isInitializing {
+                LoadingOverlayView()
             }
 
             // Error toast
@@ -128,10 +118,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Set up Firebase database structure and generate initial prompt
             setupApp()
-
-            // Fetch weather data
             weatherManager.fetchWeather()
         }
         .onReceive(authViewModel.$errorMessage) { message in
@@ -143,25 +130,18 @@ struct ContentView: View {
 
     private func setupApp() {
         isInitializing = true
-
-        // First ensure database structure exists
         FirebaseDataService.shared.ensureDatabaseSetup { success in
             if success {
-                // Now generate or update the daily prompt
                 manager.generateOrUpdateDailyPrompt()
-
-                // Set up notification
-                NotificationManager.shared.updateScheduledNotification(basedOn: manager)
             } else {
                 errorMessage = "Error setting up database. Please try again."
             }
-
             isInitializing = false
         }
     }
 }
 
-// Unauthorized user view (unchanged)
+// Unauthorized user view
 struct UnauthorizedView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     
@@ -209,7 +189,7 @@ struct UnauthorizedView: View {
     }
 }
 
-// Loading overlay component (unchanged)
+// Loading overlay component
 struct LoadingOverlayView: View {
     var body: some View {
         Color.black.opacity(0.4)
@@ -239,7 +219,7 @@ struct LoadingOverlayView: View {
     }
 }
 
-// Error toast component (unchanged)
+// Error toast component
 struct ErrorToastView: View {
     @Binding var message: String
 

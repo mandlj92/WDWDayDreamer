@@ -192,6 +192,7 @@ struct LoginView: View {
                 }
                 .padding()
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom) // <-- ADD THIS MODIFIER
         }
         .onTapGesture {
             // Dismiss keyboard when tapping outside

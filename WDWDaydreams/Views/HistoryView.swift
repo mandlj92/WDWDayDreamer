@@ -40,15 +40,17 @@ struct HistoryView: View {
             }
         }
         .onAppear {
-            // Refresh the history when the view appears
+            // --- FIX: This now just simulates a refresh for UI feedback ---
             refreshHistory()
         }
     }
 
     private func refreshHistory() {
         isRefreshing = true
-        manager.fetchStoryHistory()
+        // --- FIX: REMOVED OLD FETCH CALL ---
+        // The listener in ScenarioManager now handles this automatically.
 
+        // We keep this delay to give the user visual feedback that a refresh was triggered.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isRefreshing = false
         }

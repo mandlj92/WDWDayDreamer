@@ -11,12 +11,14 @@ struct FavoritesView: View {
             } else {
                 ForEach(manager.favorites) { story in
                     StoryCardView(story: story, showFavoriteLabel: true, previewMode: true)
+                        .transition(.opacity.combined(with: .scale))
                 }
                 .onDelete { offsets in
                     manager.removeFavorite(at: offsets)
                 }
             }
         }
+        .animation(.easeInOut, value: manager.favorites)
         .listStyle(InsetGroupedListStyle())
         .background(DisneyColors.backgroundCream)
         .scrollContentBackground(.hidden)

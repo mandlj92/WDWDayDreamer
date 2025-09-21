@@ -88,7 +88,8 @@ class HistoryViewModel: ObservableObject {
     
     func refreshHistory() {
         isRefreshing = true
-        manager.fetchStoryHistory()
+        // --- FIX: REMOVED OLD FETCH CALL ---
+        // The listener in ScenarioManager now handles this automatically.
         
         // Simulate refreshing state for feedback
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {

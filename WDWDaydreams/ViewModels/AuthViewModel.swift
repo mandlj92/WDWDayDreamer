@@ -56,6 +56,7 @@ final class AuthViewModel: NSObject, ObservableObject {
                 if let user = user {
                     print("🔐 User authenticated: \(user.email ?? "no email") - UID: \(user.uid)")
                     self?.checkUserAuthorization()
+                    self?.clearErrors()
                 } else {
                     self?.isAuthorized = false
                     self?.userRole = ""
@@ -98,29 +99,44 @@ final class AuthViewModel: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Email/Password Login
+    // MARK: - Email/Password Login (Enhanced)
     func login(email: String, password: String) {
         print("🔐 Attempting login with email: \(email)")
+        
+        // Clear previous errors
+        clearErrors()
         isLoading = true
-        errorMessage = ""
 
-        firebaseService.loginUser(email: email, password: password) { [weak self] success, error in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-                
-                print("🔐 Login result - Success: \(success), Error: \(error ?? "none")")
-
-                if let error = error {
-                    self.errorMessage = error
-                    print("🔐 Login failed: \(error)")
-                } else if !success {
-                    self.errorMessage = "Login failed. Please try again."
-                    print("🔐 Login failed: Unknown reason")
-                } else {
-                    print("🔐 Login successful!")
-                    if let user = Auth.auth().currentUser {
-                        print("🔐 Authenticated user: \(user.email ?? "no email") - UID: \(user.uid)")
+        // First, sign out any existing user
+        try? Auth.auth().signOut()
+        
+        // Add a small delay to ensure clean state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.isLoading = false
+                    
+                    if let error = error {
+                        let nsError = error as NSError
+                        print("🔐 Login failed with error: \(error.localizedDescription)")
+                        print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
+                        
+                        // Handle specific error cases
+                        switch nsError.code {
+                        case 17008: // FIRAuthErrorCodeInvalidCredential
+                            self.errorMessage = "Invalid email or password. Please check your credentials."
+                        case 17011: // FIRAuthErrorCodeUserNotFound
+                            self.errorMessage = "No account found with this email address."
+                        case 17009: // FIRAuthErrorCodeWrongPassword
+                            self.errorMessage = "Incorrect password. Please try again."
+                        case 17020: // FIRAuthErrorCodeNetworkError
+                            self.errorMessage = "Network error. Please check your connection and try again."
+                        default:
+                            self.errorMessage = "Login failed: \(error.localizedDescription)"
+                        }
+                    } else if let user = result?.user {
+                        print("🔐 Login successful for user: \(user.email ?? "no email")")
                         self.checkUserAuthorization()
                     }
                 }
@@ -128,9 +144,12 @@ final class AuthViewModel: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Google Sign-In
+    // MARK: - Google Sign-In (Enhanced)
     func signInWithGoogle() {
         print("🔐 Attempting Google Sign-In")
+        
+        // Clear previous errors
+        clearErrors()
         
         guard let presentingViewController = getRootViewController() else {
             errorMessage = "Unable to find root view controller"
@@ -138,7 +157,19 @@ final class AuthViewModel: NSObject, ObservableObject {
         }
         
         isLoading = true
-        errorMessage = ""
+        
+        // First, sign out any existing user
+        try? Auth.auth().signOut()
+        GIDSignIn.sharedInstance.signOut()
+        
+        // Configure Google Sign-In if needed
+        guard let clientID = FirebaseApp.app()?.options.clientID else {
+            isLoading = false
+            errorMessage = "Google Sign-In configuration error"
+            return
+        }
+        
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
         
         GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController) { [weak self] result, error in
             DispatchQueue.main.async {
@@ -146,8 +177,13 @@ final class AuthViewModel: NSObject, ObservableObject {
                 
                 if let error = error {
                     self.isLoading = false
-                    self.errorMessage = "Google Sign-In failed: \(error.localizedDescription)"
-                    print("🔐 Google Sign-In error: \(error)")
+                    let nsError = error as NSError
+                    
+                    // Don't show error for user cancellation
+                    if nsError.code != -5 { // GIDSignInErrorCodeCanceled
+                        self.errorMessage = "Google Sign-In failed: \(error.localizedDescription)"
+                        print("🔐 Google Sign-In error: \(error)")
+                    }
                     return
                 }
                 
@@ -158,8 +194,10 @@ final class AuthViewModel: NSObject, ObservableObject {
                     return
                 }
                 
-                let credential = GoogleAuthProvider.credential(withIDToken: idToken,
-                                                             accessToken: user.accessToken.tokenString)
+                let credential = GoogleAuthProvider.credential(
+                    withIDToken: idToken,
+                    accessToken: user.accessToken.tokenString
+                )
                 
                 // Sign in to Firebase with Google credential
                 Auth.auth().signIn(with: credential) { authResult, error in
@@ -181,24 +219,50 @@ final class AuthViewModel: NSObject, ObservableObject {
 
     func signOut() {
         print("🔐 Attempting sign out")
-        if !firebaseService.signOutUser() {
-            errorMessage = "Unable to sign out. Please try again."
+        
+        do {
+            try Auth.auth().signOut()
+            GIDSignIn.sharedInstance.signOut()
+            
+            // Reset authorization state
+            isAuthorized = false
+            userRole = ""
+            clearErrors()
+            
+            print("🔐 Sign out successful")
+        } catch {
+            errorMessage = "Unable to sign out: \(error.localizedDescription)"
+            print("🔐 Sign out error: \(error)")
         }
-        
-        // Also sign out of Google
-        GIDSignIn.sharedInstance.signOut()
-        
-        // Reset authorization state
-        isAuthorized = false
-        userRole = ""
     }
     
     // MARK: - Helper Methods
+    private func clearErrors() {
+        errorMessage = ""
+    }
+    
     private func getRootViewController() -> UIViewController? {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else {
             return nil
         }
         return window.rootViewController
+    }
+    
+    // MARK: - Token Refresh
+    private func refreshUserToken() {
+        guard let user = Auth.auth().currentUser else { return }
+        
+        user.getIDTokenForcingRefresh(true) { [weak self] token, error in
+            if let error = error {
+                print("🔐 Token refresh failed: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self?.errorMessage = "Session expired. Please sign in again."
+                    self?.signOut()
+                }
+            } else {
+                print("🔐 Token refreshed successfully")
+            }
+        }
     }
 }

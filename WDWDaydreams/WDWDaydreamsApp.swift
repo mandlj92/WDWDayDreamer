@@ -2,6 +2,19 @@ import SwiftUI
 import FirebaseCore
 import FirebaseRemoteConfig
 import GoogleSignIn
+import FirebaseAuth
+import FirebaseAppCheck // <-- 1. Add this import
+
+// Custom class to provide a debug App Check provider
+class YourAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
+  func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+    #if DEBUG
+      return AppCheckDebugProvider(app: app)
+    #else
+      return AppAttestProvider(app: app)
+    #endif
+  }
+}
 
 @main
 struct WDWDaydreamsApp: App {
@@ -11,6 +24,9 @@ struct WDWDaydreamsApp: App {
     @Environment(\.scenePhase) var scenePhase
 
     init() {
+        // <-- 2. Set the App Check provider factory BEFORE configuring Firebase
+        AppCheck.setAppCheckProviderFactory(YourAppCheckProviderFactory())
+
         print("=== Loaded fonts ===")
         for family in UIFont.familyNames.sorted() {
             for name in UIFont.fontNames(forFamilyName: family) {

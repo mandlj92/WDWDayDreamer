@@ -18,7 +18,7 @@ enum StoryAuthor: String, Codable, CaseIterable {
 }
 
 // Represents a single day's prompt and response
-struct DaydreamStory: Identifiable, Codable {
+struct DaydreamStory: Identifiable, Codable, Equatable { // <-- ADDED EQUATABLE HERE
     let id: UUID
     var dateAssigned: Date
     var items: [Category: String] // The generated scenario items

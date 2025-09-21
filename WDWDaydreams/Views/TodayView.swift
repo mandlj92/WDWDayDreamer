@@ -37,7 +37,7 @@ struct TodayView: View {
                                 .padding()
                             
                             Button("Generate Today's Prompt") {
-                                print("🎲 User tapped Generate Prompt")
+                                print("軸 User tapped Generate Prompt")
                                 viewModel.generateNewPrompt()
                             }
                             .buttonStyle(DisneyButtonStyle())
@@ -56,7 +56,7 @@ struct TodayView: View {
                     // Show the Generate New Prompt button if it's the user's turn and there's already a prompt
                     if viewModel.currentPrompt != nil && viewModel.isCurrentUsersTurn {
                         Button("Generate New Prompt") {
-                            print("🎲 User tapped Generate New Prompt")
+                            print("軸 User tapped Generate New Prompt")
                             viewModel.generateNewPrompt()
                         }
                         .buttonStyle(DisneyButtonStyle())
@@ -70,24 +70,25 @@ struct TodayView: View {
             }
         }
         .onAppear {
-            print("📱 TodayView appeared")
+            print("導 TodayView appeared")
             // Create a new viewModel with the real manager from environment
             self.viewModel = TodayViewModel(manager: manager)
             
-            // Refresh the history data
-            manager.fetchStoryHistory()
+            // --- FIX: REMOVED OLD FETCH CALL ---
+            // The listener in ScenarioManager now handles this automatically.
             
             // Try to generate today's prompt if none exists
             if manager.currentStoryPrompt == nil {
-                print("🔄 No current prompt, trying to generate...")
+                print("売 No current prompt, trying to generate...")
                 manager.generateOrUpdateDailyPrompt()
             }
         }
         .refreshable {
             // Pull to refresh functionality
-            print("🔄 User pulled to refresh")
+            print("売 User pulled to refresh")
             manager.generateOrUpdateDailyPrompt()
-            manager.fetchStoryHistory()
+            // --- FIX: REMOVED OLD FETCH CALL ---
+            // The listener in ScenarioManager now handles this automatically.
         }
     }
 }
