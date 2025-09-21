@@ -9,10 +9,11 @@ class WDWWeatherManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String = ""
     @Published var lastUpdated: Date?
-    
+
     private var cancellable: AnyCancellable?
     private var remoteConfig: RemoteConfig
     private var apiKey: String = ""
+    private var pendingWeatherFetch: Bool = false
     
     init() {
         // Initialize Firebase Remote Config
@@ -63,21 +64,27 @@ class WDWWeatherManager: ObservableObject {
                 
                 // Get the API key from Remote Config
                 let configValue = self.remoteConfig["weather_api_key"].stringValue
-                
+
                 if configValue.isEmpty {
                     print("⚠️ Weather API key not found in Remote Config")
-                    self.apiKey = ""
                     DispatchQueue.main.async {
+                        self.apiKey = ""
                         self.errorMessage = "Weather service not configured"
                     }
                 } else {
                     print("✅ Weather API key loaded from Remote Config: \(configValue.prefix(8))...")
-                    self.apiKey = configValue
-                    // Clear any previous configuration errors
                     DispatchQueue.main.async {
+                        self.apiKey = configValue
+                        // Clear any previous configuration errors
                         if self.errorMessage == "Configuration error. Please check your connection." ||
                            self.errorMessage == "Weather service not configured" {
                             self.errorMessage = ""
+                        }
+
+                        if self.pendingWeatherFetch {
+                            self.pendingWeatherFetch = false
+                            // Retry the pending fetch now that we have a key
+                            self.fetchWeather()
                         }
                     }
                 }
@@ -90,9 +97,11 @@ class WDWWeatherManager: ObservableObject {
         // Ensure we have an API key before making the request
         guard !apiKey.isEmpty else {
             print("⚠️ Cannot fetch weather: API key not available")
+            pendingWeatherFetch = true
             DispatchQueue.main.async {
                 self.errorMessage = "Weather service not configured"
             }
+            fetchRemoteConfig()
             return
         }
         
