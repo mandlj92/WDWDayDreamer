@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import FirebaseRemoteConfig
 
 class WDWWeatherManager: ObservableObject {
     @Published var weatherIcon: String = "cloud.sun"
@@ -10,13 +11,92 @@ class WDWWeatherManager: ObservableObject {
     @Published var lastUpdated: Date?
     
     private var cancellable: AnyCancellable?
+    private var remoteConfig: RemoteConfig
+    private var apiKey: String = ""
+    
+    init() {
+        // Initialize Firebase Remote Config
+        remoteConfig = RemoteConfig.remoteConfig()
+        
+        // Set default values for Remote Config
+        let defaults: [String: NSObject] = [
+            "weather_api_key": "" as NSString // Empty default - must be set in Firebase console
+        ]
+        remoteConfig.setDefaults(defaults)
+        
+        // Configure Remote Config settings for development
+        let settings = RemoteConfigSettings()
+        #if DEBUG
+        settings.minimumFetchInterval = 0 // Allow immediate fetching in debug builds
+        #else
+        settings.minimumFetchInterval = 3600 // 1 hour minimum in production
+        #endif
+        remoteConfig.configSettings = settings
+        
+        // Fetch the API key on initialization
+        fetchRemoteConfig()
+    }
+    
+    private func fetchRemoteConfig() {
+        print("🔧 Fetching Remote Config...")
+        
+        remoteConfig.fetch { [weak self] status, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ Remote Config fetch error: \(error.localizedDescription)")
+                // You might want to fall back to a cached value or show an error
+                DispatchQueue.main.async {
+                    self.errorMessage = "Configuration error. Please check your connection."
+                }
+                return
+            }
+            
+            // Activate the fetched config
+            self.remoteConfig.activate { [weak self] changed, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ Remote Config activation error: \(error.localizedDescription)")
+                    return
+                }
+                
+                // Get the API key from Remote Config
+                self.apiKey = self.remoteConfig["weather_api_key"].stringValue ?? ""
+                
+                if self.apiKey.isEmpty {
+                    print("⚠️ Weather API key not found in Remote Config")
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Weather service not configured"
+                    }
+                } else {
+                    print("✅ Weather API key loaded from Remote Config")
+                    // Clear any previous configuration errors
+                    DispatchQueue.main.async {
+                        if self.errorMessage == "Configuration error. Please check your connection." ||
+                           self.errorMessage == "Weather service not configured" {
+                            self.errorMessage = ""
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     // Get weather for Walt Disney World (Orlando area)
     func fetchWeather() {
+        // Ensure we have an API key before making the request
+        guard !apiKey.isEmpty else {
+            print("⚠️ Cannot fetch weather: API key not available")
+            DispatchQueue.main.async {
+                self.errorMessage = "Weather service not configured"
+            }
+            return
+        }
+        
         isLoading = true
         errorMessage = ""
         
-        let apiKey = "ee8e9e609121b1c94d07c64379c612d4" // Replace with your own API key from OpenWeatherMap
         let lat = 28.3852 // Disney World coordinates
         let lon = -81.5639
         let urlString = "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&units=imperial&appid=\(apiKey)"
@@ -38,7 +118,19 @@ class WDWWeatherManager: ObservableObject {
                 case .finished:
                     break
                 case .failure(let error):
-                    self?.errorMessage = "Weather error: \(error.localizedDescription)"
+                    // Check for specific API errors
+                    if let urlError = error as? URLError {
+                        switch urlError.code {
+                        case .notConnectedToInternet:
+                            self?.errorMessage = "No internet connection"
+                        case .timedOut:
+                            self?.errorMessage = "Request timed out"
+                        default:
+                            self?.errorMessage = "Network error"
+                        }
+                    } else {
+                        self?.errorMessage = "Weather data unavailable"
+                    }
                     print("Weather fetch error: \(error)")
                 }
             }, receiveValue: { [weak self] response in
@@ -46,7 +138,13 @@ class WDWWeatherManager: ObservableObject {
                 self?.temperature = "\(Int(response.main.temp))°F"
                 self?.lastUpdated = Date()
                 self?.isLoading = false
+                self?.errorMessage = "" // Clear any previous errors
             })
+    }
+    
+    // Public method to refresh Remote Config (useful for settings or manual refresh)
+    func refreshConfiguration() {
+        fetchRemoteConfig()
     }
 
     // Add a method to get a themed weather color based on the current conditions

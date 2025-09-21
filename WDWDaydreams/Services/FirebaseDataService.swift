@@ -76,7 +76,8 @@ class FirebaseDataService {
             }
 
             let settings: [String: Any] = [
-                "enabledCategories": ["park", "ride", "food"]
+                "enabledCategories": ["park", "ride", "food"],
+                "tripDate": NSNull() // Explicitly set no trip date initially
             ]
 
             userSettingsRef.setData(settings, merge: true) { error in
@@ -97,9 +98,9 @@ class FirebaseDataService {
     
     // MARK: - User Settings
     
-    func fetchUserSettings(completion: @escaping ([Category]) -> Void) {
+    func fetchUserSettings(completion: @escaping ([Category], Date?) -> Void) {
         guard ensureAuthenticated() else {
-            completion([.park, .ride, .food]) // Default categories
+            completion([.park, .ride, .food], nil) // Default categories, no trip date
             return
         }
         
@@ -107,25 +108,37 @@ class FirebaseDataService {
         ref.getDocument { snap, error in
             if let error = error {
                 print("Error fetching user settings: \(error.localizedDescription)")
-                completion([.park, .ride, .food]) // Default categories
+                completion([.park, .ride, .food], nil) // Default categories, no trip date
                 return
             }
             
+            var categories: [Category] = [.park, .ride, .food] // Default
+            var tripDate: Date? = nil
+            
             if let data = snap?.data() {
-                // Manual parsing of user settings
+                // Parse categories
                 if let categoryStrings = data["enabledCategories"] as? [String] {
-                    let categories = categoryStrings.compactMap { Category(rawValue: $0) }
-                    completion(categories.isEmpty ? [.park, .ride, .food] : categories)
-                    return
+                    let parsedCategories = categoryStrings.compactMap { Category(rawValue: $0) }
+                    if !parsedCategories.isEmpty {
+                        categories = parsedCategories
+                    }
+                }
+                
+                // Parse trip date
+                if let tripTimestamp = data["tripDate"] as? Timestamp {
+                    tripDate = tripTimestamp.dateValue()
+                    print("✅ Loaded trip date: \(tripDate!)")
+                } else {
+                    print("ℹ️ No trip date found in settings")
                 }
             }
             
-            // Default if no settings found
-            completion([.park, .ride, .food])
+            print("✅ Loaded user settings: categories=\(categories.map{$0.rawValue}), tripDate=\(tripDate?.description ?? "nil")")
+            completion(categories, tripDate)
         }
     }
     
-    func saveUserSettings(enabledCategories: [Category], completion: @escaping (Bool) -> Void) {
+    func saveUserSettings(enabledCategories: [Category], tripDate: Date? = nil, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated() else {
             completion(false)
             return
@@ -138,18 +151,26 @@ class FirebaseDataService {
         let categoryStrings = categoriesToSave.map { $0.rawValue }
         
         // Create data dictionary
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "enabledCategories": categoryStrings
         ]
         
-        // Save to Firestore
+        // Add trip date if provided (use NSNull() for nil to explicitly remove it)
+        if let tripDate = tripDate {
+            data["tripDate"] = Timestamp(date: tripDate)
+        } else {
+            data["tripDate"] = NSNull()
+        }
+        
+        // Save to Firestore with merge to preserve other settings
         db.collection("userSettings")
            .document(userId)
-           .setData(data) { error in
+           .setData(data, merge: true) { error in
                if let error = error {
                    print("Error saving user settings: \(error.localizedDescription)")
                    completion(false)
                } else {
+                   print("✅ User settings saved: categories=\(categoryStrings), tripDate=\(tripDate?.description ?? "nil")")
                    completion(true)
                }
            }

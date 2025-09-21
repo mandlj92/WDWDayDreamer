@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import FirebaseRemoteConfig
 import GoogleSignIn
 
 @main
@@ -20,6 +21,9 @@ struct WDWDaydreamsApp: App {
         // Configure Firebase first
         FirebaseApp.configure()
         
+        // Initialize Remote Config with default settings
+        Self.configureRemoteConfig()
+        
         // Configure Google Sign-In with better error handling
         Self.configureGoogleSignIn()
         
@@ -28,6 +32,28 @@ struct WDWDaydreamsApp: App {
 
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
+    }
+    
+    // Add Remote Config initialization
+    private static func configureRemoteConfig() {
+        let remoteConfig = RemoteConfig.remoteConfig()
+        let settings = RemoteConfigSettings()
+        
+        #if DEBUG
+        settings.minimumFetchInterval = 0 // Allow immediate fetching in debug
+        #else
+        settings.minimumFetchInterval = 3600 // 1 hour in production
+        #endif
+        
+        remoteConfig.configSettings = settings
+        
+        // Set defaults
+        let defaults: [String: NSObject] = [
+            "weather_api_key": "" as NSString
+        ]
+        remoteConfig.setDefaults(defaults)
+        
+        print("✅ Remote Config initialized")
     }
     
     // Made static so it can be called before instance initialization

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A22272932E804AEE00F73D97 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = A22272922E804AEE00F73D97 /* GoogleSignIn */; };
 		A22272952E804AEE00F73D97 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A22272942E804AEE00F73D97 /* GoogleSignInSwift */; };
+		A22272992E805BE600F73D97 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = A22272982E805BE600F73D97 /* FirebaseRemoteConfig */; };
 		A25BB1B32DB5C01700201F87 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B22DB5C01700201F87 /* FirebaseAnalytics */; };
 		A25BB1B82DB5C11D00201F87 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B72DB5C11D00201F87 /* FirebaseAppCheck */; };
 		A25BB1BA2DB5C11D00201F87 /* FirebaseAppDistribution-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = A25BB1B92DB5C11D00201F87 /* FirebaseAppDistribution-Beta */; };
@@ -86,6 +87,7 @@
 				A25BB1BE2DB5C11D00201F87 /* FirebaseAuthCombine-Community in Frameworks */,
 				A25BB1C02DB5C34C00201F87 /* FirebaseFirestore in Frameworks */,
 				A25BB1C22DB5C42200201F87 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				A22272992E805BE600F73D97 /* FirebaseRemoteConfig in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -155,6 +157,7 @@
 				A25BB1C12DB5C42200201F87 /* FirebaseFirestoreCombine-Community */,
 				A22272922E804AEE00F73D97 /* GoogleSignIn */,
 				A22272942E804AEE00F73D97 /* GoogleSignInSwift */,
+				A22272982E805BE600F73D97 /* FirebaseRemoteConfig */,
 			);
 			productName = WDWDaydreams;
 			productReference = A25BB15D2DB5ACD000201F87 /* WDWDaydreams.app */;
@@ -637,6 +640,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A22272912E804AEE00F73D97 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		A22272982E805BE600F73D97 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A25BB1B12DB5C01700201F87 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
 		};
 		A25BB1B22DB5C01700201F87 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;

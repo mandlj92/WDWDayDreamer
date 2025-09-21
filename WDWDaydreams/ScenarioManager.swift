@@ -25,7 +25,15 @@ class ScenarioManager: ObservableObject {
             }
         }
     }
-    @Published var tripDate: Date?
+    @Published var tripDate: Date? {
+        didSet {
+            // Save trip date whenever it changes
+            if tripDate != oldValue {
+                print("📅 Trip date changed from \(oldValue?.description ?? "nil") to \(tripDate?.description ?? "nil")")
+                saveUserSettings()
+            }
+        }
+    }
     @Published var isLoading: Bool = false
     
     // MARK: - Private Properties
@@ -187,19 +195,24 @@ class ScenarioManager: ObservableObject {
     
     private func fetchUserSettings() {
         print("⚙️ Fetching user settings...")
-        firebaseService.fetchUserSettings { [weak self] categories in
+        firebaseService.fetchUserSettings { [weak self] categories, tripDate in
             DispatchQueue.main.async {
                 // Prevent triggering didSet during initialization
                 if self?.enabledCategories != categories {
                     self?.enabledCategories = categories
-                    print("✅ User settings loaded: \(categories.map { $0.rawValue })")
+                    print("✅ Categories loaded: \(categories.map { $0.rawValue })")
+                }
+                
+                if self?.tripDate != tripDate {
+                    self?.tripDate = tripDate
+                    print("✅ Trip date loaded: \(tripDate?.description ?? "nil")")
                 }
             }
         }
     }
     
     private func saveUserSettings() {
-        firebaseService.saveUserSettings(enabledCategories: enabledCategories) { success in
+        firebaseService.saveUserSettings(enabledCategories: enabledCategories, tripDate: tripDate) { success in
             if !success {
                 print("❌ Failed to save user settings")
             } else {
