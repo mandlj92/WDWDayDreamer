@@ -1,7 +1,6 @@
 import SwiftUI
 import FirebaseCore
 import GoogleSignIn
-import AuthenticationServices
 
 @main
 struct WDWDaydreamsApp: App {
