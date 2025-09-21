@@ -270,7 +270,8 @@ class FirebaseDataService {
             
             for doc in documents {
                 let data = doc.data()
-                
+                let storyID = UUID(uuidString: doc.documentID) ?? UUID()
+
                 // Extract basic data
                 guard let dateTimestamp = data["date"] as? Timestamp,
                       let itemsDict = data["items"] as? [String: String] else {
@@ -291,7 +292,7 @@ class FirebaseDataService {
                 
                 // Create DaydreamStory
                 let story = DaydreamStory(
-                    id: UUID(), // Generate new UUID
+                    id: storyID,
                     dateAssigned: dateTimestamp.dateValue(),
                     items: items,
                     assignedAuthor: author,
