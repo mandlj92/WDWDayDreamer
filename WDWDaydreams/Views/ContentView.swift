@@ -5,45 +5,57 @@ struct ContentView: View {
     @EnvironmentObject var manager: ScenarioManager
     @EnvironmentObject var weatherManager: WDWWeatherManager
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    
     @State private var showSettings = false
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
     @State private var errorMessage = ""
 
+    // Determine the current theme based on manager and system setting
+    var theme: Theme {
+        switch themeManager.selectedTheme {
+        case .light:
+            return LightTheme()
+        case .dark:
+            return DarkTheme()
+        case .system:
+            // Use the system's color scheme to decide
+            return UITraitCollection.current.userInterfaceStyle == .dark ? DarkTheme() : LightTheme()
+        }
+    }
+
     var body: some View {
         ZStack {
             // Background color
-            DisneyColors.backgroundCream
+            theme.backgroundCream
                 .edgesIgnoringSafeArea(.all)
 
-            // --- FIX: Background sparkle decoration moved here ---
-            // This now sits behind the main content instead of pushing it down.
+            // Background sparkle decoration
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     Image(systemName: "sparkles")
                         .font(.system(size: 80))
-                        .foregroundColor(DisneyColors.mainStreetGold.opacity(0.1))
+                        .foregroundColor(theme.mainStreetGold.opacity(0.1))
                     Spacer()
                     Image(systemName: "wand.and.stars")
                         .font(.system(size: 60))
-                        .foregroundColor(DisneyColors.magicBlue.opacity(0.1))
+                        .foregroundColor(theme.magicBlue.opacity(0.1))
                     Spacer()
                 }
                 .offset(y: 20)
             }
             .edgesIgnoringSafeArea(.bottom)
 
-            // Check if user is authorized
+            // Main Content
             if !authViewModel.isAuthorized {
-                UnauthorizedView()
+                UnauthorizedView().environment(\.theme, theme)
             } else {
-                // Main authorized content
                 NavigationView {
                     VStack {
-                        // Tab selector
                         Picker("View", selection: $currentView) {
                             Text("Today").tag("Today")
                             Text("History").tag("History")
@@ -51,15 +63,15 @@ struct ContentView: View {
                         }
                         .pickerStyle(SegmentedPickerStyle())
                         .padding()
-                        .background(DisneyColors.backgroundCream)
+                        .background(theme.backgroundCream)
 
                         // Content based on selected tab
                         if currentView == "Today" {
-                            TodayView()
+                            TodayView().environment(\.theme, theme)
                         } else if currentView == "History" {
-                            HistoryView()
+                            HistoryView().environment(\.theme, theme)
                         } else if currentView == "Favorites" {
-                            FavoritesView()
+                            FavoritesView().environment(\.theme, theme)
                         }
                     }
                     .navigationTitle("Disney Daydreams")
@@ -67,64 +79,50 @@ struct ContentView: View {
                         ToolbarItem(placement: .principal) {
                             Text("Disney Daydreams")
                                 .font(.disneyTitle(24))
-                                .foregroundColor(DisneyColors.magicBlue)
+                                .foregroundColor(theme.magicBlue)
                         }
-
                         ToolbarItem(placement: .navigationBarLeading) {
-                            WeatherWidget(weatherManager: weatherManager, showRefreshButton: false)
-                                .onTapGesture {
-                                    weatherManager.fetchWeather()
-                                }
+                            WeatherWidget(weatherManager: weatherManager).environment(\.theme, theme)
                         }
-
                         ToolbarItem(placement: .navigationBarTrailing) {
                             HStack {
-                                Button(action: { showSettings = true }) {
-                                    Image(systemName: "gear")
-                                        .foregroundColor(DisneyColors.magicBlue)
-                                }
-                                
-                                Button(action: { showLogoutAlert = true }) {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                        .foregroundColor(DisneyColors.magicBlue)
-                                }
+                                Button(action: { showSettings = true }) { Image(systemName: "gear") }
+                                Button(action: { showLogoutAlert = true }) { Image(systemName: "rectangle.portrait.and.arrow.right") }
                             }
+                            .foregroundColor(theme.magicBlue)
                         }
                     }
                     .sheet(isPresented: $showSettings) {
-                        SettingsView()
+                        SettingsView().environment(\.theme, theme)
                     }
                     .alert(isPresented: $showLogoutAlert) {
                         Alert(
                             title: Text("Sign Out"),
-                            message: Text("Are you sure you want to sign out?"),
-                            primaryButton: .destructive(Text("Sign Out")) {
-                                authViewModel.signOut()
-                            },
+                            message: Text("Are you sure?"),
+                            primaryButton: .destructive(Text("Sign Out"), action: authViewModel.signOut),
                             secondaryButton: .cancel()
                         )
                     }
                 }
+                .navigationViewStyle(StackNavigationViewStyle())
             }
 
-            // Loading overlay
-            if isInitializing {
-                LoadingOverlayView()
-            }
-
-            // Error toast
-            if !errorMessage.isEmpty {
-                ErrorToastView(message: $errorMessage)
-            }
+            if isInitializing { LoadingOverlayView(theme: theme) }
+            if !errorMessage.isEmpty { ErrorToastView(message: $errorMessage, theme: theme) }
         }
+        .preferredColorScheme(
+            themeManager.selectedTheme == .light ? .light :
+            (themeManager.selectedTheme == .dark ? .dark : nil)
+        )
         .onAppear {
             setupApp()
             weatherManager.fetchWeather()
         }
-        .onReceive(authViewModel.$errorMessage) { message in
-            guard !message.isEmpty else { return }
-            errorMessage = message
-            authViewModel.errorMessage = ""
+        .onReceive(authViewModel.$errorMessage) { msg in
+            if !msg.isEmpty {
+                errorMessage = msg
+                authViewModel.errorMessage = ""
+            }
         }
     }
 
@@ -134,115 +132,74 @@ struct ContentView: View {
             if success {
                 manager.generateOrUpdateDailyPrompt()
             } else {
-                errorMessage = "Error setting up database. Please try again."
+                errorMessage = "Error setting up database."
             }
             isInitializing = false
         }
     }
 }
 
-// Unauthorized user view
+// Environment Key for passing theme
+private struct ThemeKey: EnvironmentKey {
+    static let defaultValue: Theme = LightTheme()
+}
+
+extension EnvironmentValues {
+    var theme: Theme {
+        get { self[ThemeKey.self] }
+        set { self[ThemeKey.self] = newValue }
+    }
+}
+
+
+// MARK: - Subviews
 struct UnauthorizedView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.theme) var theme: Theme
     
     var body: some View {
         VStack(spacing: 30) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 80))
-                .foregroundColor(DisneyColors.mickeyRed)
-            
-            Text("Access Restricted")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(DisneyColors.mickeyRed)
-            
-            Text("This app is private and only available to authorized users.")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-            
-            VStack(spacing: 12) {
-                Text("If you believe you should have access:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Text("• Contact the app administrator")
-                Text("• Verify you're using the correct account")
-                Text("• Check your email for authorization")
-            }
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(10)
-            
-            Button("Try Different Account") {
-                authViewModel.signOut()
-            }
-            .buttonStyle(DisneyButtonStyle(color: DisneyColors.mickeyRed))
-            
+            Image(systemName: "lock.shield").font(.system(size: 80))
+            Text("Access Restricted").font(.largeTitle).fontWeight(.bold)
+            Text("This app is private and only for authorized users.").multilineTextAlignment(.center)
+            Button("Try Different Account") { authViewModel.signOut() }
+                .buttonStyle(DisneyButtonStyle(color: theme.mickeyRed))
             Spacer()
         }
+        .foregroundColor(theme.mickeyRed)
         .padding()
-        .background(DisneyColors.backgroundCream)
+        .background(theme.backgroundCream)
     }
 }
 
-// Loading overlay component
 struct LoadingOverlayView: View {
+    let theme: Theme
     var body: some View {
-        Color.black.opacity(0.4)
-            .edgesIgnoringSafeArea(.all)
-
+        Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
         VStack {
-            Image(systemName: "sparkles")
-                .font(.system(size: 40))
-                .foregroundColor(DisneyColors.mainStreetGold)
-
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                .scaleEffect(1.2)
-                .padding()
-
-            Text("Setting up your Disney Daydreams...")
-                .font(.system(.headline, design: .rounded))
-                .foregroundColor(.white)
-                .padding()
+            Image(systemName: "sparkles").font(.system(size: 40)).foregroundColor(theme.mainStreetGold)
+            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white)).scaleEffect(1.2).padding()
+            Text("Setting up your Daydreams...").font(.headline).foregroundColor(.white)
         }
-        .padding(30)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(DisneyColors.magicBlue)
-                .shadow(radius: 10)
-        )
+        .padding(30).background(RoundedRectangle(cornerRadius: 20).fill(theme.magicBlue).shadow(radius: 10))
     }
 }
 
-// Error toast component
 struct ErrorToastView: View {
     @Binding var message: String
-
+    let theme: Theme
     var body: some View {
         VStack {
             Spacer()
-
             Text(message)
-                .padding()
-                .background(DisneyColors.mickeyRed.opacity(0.9))
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
+                .padding().background(theme.mickeyRed.opacity(0.9)).foregroundColor(.white)
+                .cornerRadius(10).padding()
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation {
-                            message = ""
-                        }
+                        withAnimation { message = "" }
                     }
                 }
         }
-        .transition(.move(edge: .bottom))
-        .animation(.easeInOut, value: message)
+        .transition(.move(edge: .bottom)).animation(.easeInOut, value: message)
     }
 }

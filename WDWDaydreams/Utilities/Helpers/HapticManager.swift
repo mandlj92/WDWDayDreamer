@@ -1,10 +1,3 @@
-//
-//  HapticManager.swift
-//  WDWDaydreams
-//
-//  Created by Jonathan Mandl on 9/21/25.
-//
-
 // Helpers/HapticManager.swift
 import SwiftUI
 

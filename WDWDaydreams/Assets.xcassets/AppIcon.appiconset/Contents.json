@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "Disney DayDreamer.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Disney DayDreamer 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

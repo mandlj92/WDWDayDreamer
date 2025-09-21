@@ -3,6 +3,9 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var manager: ScenarioManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.theme) var theme: Theme
+    
     @State private var viewModel: SettingsViewModel?
     @Environment(\.dismiss) private var dismiss
     @State private var showClearConfirmation = false
@@ -10,54 +13,65 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Apply a subtle background
-                DisneyColors.backgroundCream
+                // Use the dynamic theme background color
+                theme.backgroundCream
                     .edgesIgnoringSafeArea(.all)
                 
                 if let viewModel = viewModel {
                     Form {
+                        // Title Section
                         Section {
                             VStack(alignment: .center, spacing: 12) {
                                 Image(systemName: "wand.and.stars")
                                     .font(.system(size: 40))
-                                    .foregroundColor(DisneyColors.magicBlue)
+                                    .foregroundColor(theme.magicBlue)
                                 
                                 Text("Disney Daydreams Settings")
                                     .font(.disneyTitle(18))
-                                    .foregroundColor(DisneyColors.magicBlue)
+                                    .foregroundColor(theme.magicBlue)
                                     .multilineTextAlignment(.center)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .listRowBackground(DisneyColors.backgroundCream)
+                            .listRowBackground(theme.backgroundCream)
                         }
                         
-                        // Category section
-                        Section(header: SectionHeader(title: "Enable Categories For Prompts")) {
+                        // App Appearance Section
+                        Section(header: SectionHeader(title: "Appearance", theme: theme)) {
+                            Picker("Theme", selection: $themeManager.selectedTheme) {
+                                ForEach(ThemeOption.allCases) { option in
+                                    Text(option.displayName).tag(option)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                        }
+                        .listRowBackground(theme.cardBackground)
+
+                        // Category Section
+                        Section(header: SectionHeader(title: "Enable Categories For Prompts", theme: theme)) {
                             ForEach(Category.allCases) { category in
                                 CategoryToggleRow(
                                     category: category,
-                                    viewModel: viewModel
+                                    viewModel: viewModel,
+                                    theme: theme
                                 )
                             }
                             
-                            // Show warning if only one category is enabled
                             let enabledCount = Category.allCases.filter { viewModel.isCategoryEnabled($0) }.count
                             if enabledCount == 1 {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.orange)
                                     Text("At least one category must be enabled")
                                         .font(.caption)
-                                        .foregroundColor(.orange)
                                 }
+                                .foregroundColor(.orange)
                                 .padding(.top, 4)
                             }
                         }
-                        .listRowBackground(Color.white)
+                        .listRowBackground(theme.cardBackground)
 
-                        // Trip countdown section
-                        Section(header: SectionHeader(title: "Trip Countdown")) {
+                        // Trip Countdown Section
+                        Section(header: SectionHeader(title: "Trip Countdown", theme: theme)) {
                             DatePicker(
                                 "Trip Date",
                                 selection: Binding(
@@ -68,46 +82,37 @@ struct SettingsView: View {
                                 displayedComponents: .date
                             )
                             .datePickerStyle(.compact)
-                            .foregroundColor(DisneyColors.magicBlue)
+                            .colorScheme(themeManager.selectedTheme == .dark ? .dark : .light)
+                            .foregroundColor(theme.primaryText)
 
-                            // Display the countdown
                             if viewModel.showTripCountdown {
-                                TripCountdownRow(days: viewModel.daysUntilTrip)
-                            } else if viewModel.tripDate.wrappedValue != nil {
-                                Text("Trip date has passed.")
-                                    .foregroundColor(.secondary)
+                                TripCountdownRow(days: viewModel.daysUntilTrip, theme: theme)
                             }
                         }
-                        .listRowBackground(Color.white)
+                        .listRowBackground(theme.cardBackground)
 
-                        // Danger zone section
-                        Section(header: Text("Danger Zone")
-                                    .foregroundColor(DisneyColors.mickeyRed)
-                                    .font(.headline)) {
+                        // Danger Zone Section
+                        Section(header: Text("Danger Zone").foregroundColor(theme.mickeyRed).font(.headline)) {
                             Button(action: {
                                 showClearConfirmation = true
                             }) {
                                 HStack {
                                     Image(systemName: "trash.fill")
-                                        .foregroundColor(.white)
                                     Text("Clear All Story History")
-                                        .foregroundColor(.white)
                                         .fontWeight(.semibold)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(DisneyColors.mickeyRed)
-                                .cornerRadius(10)
                             }
-                            .buttonStyle(BorderlessButtonStyle())
-                            .listRowBackground(DisneyColors.backgroundCream)
+                            .buttonStyle(DisneyButtonStyle(color: theme.mickeyRed))
+                            .listRowBackground(theme.backgroundCream)
                         }
                     }
                     .scrollContentBackground(.hidden)
                     .alert(isPresented: $showClearConfirmation) {
                         Alert(
                             title: Text("Clear History"),
-                            message: Text("Are you sure you want to clear all story history? This cannot be undone."),
+                            message: Text("Are you sure? This cannot be undone."),
                             primaryButton: .destructive(Text("Clear All")) {
                                 viewModel.clearHistory()
                             },
@@ -115,8 +120,7 @@ struct SettingsView: View {
                         )
                     }
                 } else {
-                    ProgressView("Loading...")
-                        .progressViewStyle(CircularProgressViewStyle(tint: DisneyColors.magicBlue))
+                    ProgressView("Loading...").progressViewStyle(CircularProgressViewStyle(tint: theme.magicBlue))
                 }
             }
             .navigationTitle("Settings")
@@ -126,7 +130,7 @@ struct SettingsView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(DisneyColors.magicBlue)
+                    .foregroundColor(theme.magicBlue)
                     .fontWeight(.semibold)
                 }
             }
@@ -134,16 +138,18 @@ struct SettingsView: View {
                 self.viewModel = SettingsViewModel(manager: manager)
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 
-// Settings components
+// MARK: - Subviews
 struct SectionHeader: View {
     let title: String
+    let theme: Theme
     
     var body: some View {
         Text(title)
-            .foregroundColor(DisneyColors.magicBlue)
+            .foregroundColor(theme.magicBlue)
             .font(.headline)
     }
 }
@@ -151,20 +157,14 @@ struct SectionHeader: View {
 struct CategoryToggleRow: View {
     let category: Category
     let viewModel: SettingsViewModel
+    let theme: Theme
     
     private var isEnabled: Binding<Bool> {
         Binding(
             get: { viewModel.isCategoryEnabled(category) },
             set: { newValue in
-                // Prevent disabling all categories
                 let currentlyEnabled = Category.allCases.filter { viewModel.isCategoryEnabled($0) }
-                
-                if !newValue && currentlyEnabled.count <= 1 {
-                    // Don't allow disabling the last category
-                    print("⚠️ Cannot disable last category")
-                    return
-                }
-                
+                if !newValue && currentlyEnabled.count <= 1 { return }
                 viewModel.toggleCategory(category, isEnabled: newValue)
             }
         )
@@ -182,32 +182,30 @@ struct CategoryToggleRow: View {
                     .foregroundColor(CategoryHelper.color(for: category))
                 
                 Text(category.rawValue.capitalized)
+                    .foregroundColor(theme.primaryText)
                 
                 if isLastEnabled {
                     Spacer()
-                    Image(systemName: "lock.fill")
-                        .foregroundColor(.orange)
-                        .font(.caption)
+                    Image(systemName: "lock.fill").foregroundColor(.orange).font(.caption)
                 }
             }
         }
         .toggleStyle(SwitchToggleStyle(tint: CategoryHelper.color(for: category)))
-        .disabled(isLastEnabled) // Disable toggle if it's the last enabled category
+        .disabled(isLastEnabled)
     }
 }
 
 struct TripCountdownRow: View {
     let days: Int
+    let theme: Theme
     
     var body: some View {
         HStack {
             Image(systemName: "calendar.badge.clock")
-                .foregroundColor(DisneyColors.mickeyRed)
-            
             Text("\(days) day\(days == 1 ? "" : "s") until your trip!")
-                .foregroundColor(DisneyColors.mickeyRed)
                 .font(.headline)
         }
+        .foregroundColor(theme.mickeyRed)
         .padding(.vertical, 4)
     }
 }
