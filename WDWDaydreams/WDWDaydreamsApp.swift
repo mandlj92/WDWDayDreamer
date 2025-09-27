@@ -25,7 +25,6 @@ struct WDWDaydreamsApp: App {
     @StateObject var themeManager = ThemeManager()
     @StateObject var fcmService = FCMService.shared
     let notificationManager = NotificationManager.shared
-    @Environment(\.scenePhase) var scenePhase
     
     // Create a UIApplicationDelegateAdaptor for handling push notifications
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -70,30 +69,42 @@ struct WDWDaydreamsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authViewModel.isAuthenticated {
-                    AuthenticatedView()
-                } else {
-                    LoginView()
+            MainAppView()
+                .environmentObject(authViewModel)
+                .environmentObject(weatherManager)
+                .environmentObject(themeManager)
+                .environmentObject(fcmService)
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
                 }
+        }
+    }
+}
+
+// MARK: - Main App View (handles scene phase)
+struct MainAppView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var weatherManager: WDWWeatherManager
+    @EnvironmentObject var fcmService: FCMService
+    @Environment(\.scenePhase) var scenePhase
+    
+    var body: some View {
+        Group {
+            if authViewModel.isAuthenticated {
+                AuthenticatedView()
+            } else {
+                LoginView()
             }
-            .environmentObject(authViewModel)
-            .environmentObject(weatherManager)
-            .environmentObject(themeManager)
-            .environmentObject(fcmService)
-            .onOpenURL { url in
-                GIDSignIn.sharedInstance.handle(url)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StoryCompletedRemotely"))) { notification in
-                // Handle story completion notification
-                print("🔔 App: Received story completion notification")
-                // You can trigger UI updates or data refresh here
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewPromptAvailable"))) { notification in
-                // Handle new prompt notification
-                print("🔔 App: Received new prompt notification")
-                // You can trigger UI updates or data refresh here
-            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StoryCompletedRemotely"))) { notification in
+            // Handle story completion notification
+            print("🔔 App: Received story completion notification")
+            // You can trigger UI updates or data refresh here
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewPromptAvailable"))) { notification in
+            // Handle new prompt notification
+            print("🔔 App: Received new prompt notification")
+            // You can trigger UI updates or data refresh here
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
