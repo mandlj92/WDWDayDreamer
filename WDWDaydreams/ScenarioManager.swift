@@ -41,11 +41,24 @@ class ScenarioManager: ObservableObject {
 
     // Consolidated listener for better performance
     private var dataListener: ListenerRegistration?
+
+    private let completionNotificationDefaultsKey = "ScenarioManagerCompletionNotificationCache"
+    private var completionNotificationCache: Set<String> = [] {
+        didSet {
+            UserDefaults.standard.set(Array(completionNotificationCache), forKey: completionNotificationDefaultsKey)
+        }
+    }
+    private lazy var completionNotificationDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withYear, .withMonth, .withDay]
+        return formatter
+    }()
     
     // MARK: - Initialization & Setup
     
     init() {
         print("🚀 ScenarioManager initializing...")
+        loadCompletionNotificationCache()
         fetchUserSettings()
         rebuildDeck()
         fetchFavorites()
@@ -130,17 +143,21 @@ class ScenarioManager: ObservableObject {
     
     private func checkForNewCompletions(in stories: [DaydreamStory]) {
         let currentAuthor = firebaseService.isCurrentUserJon ? StoryAuthor.user : StoryAuthor.wife
-        
+
         // Find recently completed stories by partner
         let recentCompletions = stories.filter { story in
             story.isWritten &&
             story.assignedAuthor != currentAuthor &&
             Calendar.current.isDateInToday(story.dateAssigned)
         }
-        
-        // Send notification for new completions (you could add more sophisticated tracking here)
-        if let latestCompletion = recentCompletions.first {
+
+        if let latestCompletion = recentCompletions.first(where: { completion in
+            let key = completionNotificationKey(for: completion)
+            return !completionNotificationCache.contains(key)
+        }) {
+            let key = completionNotificationKey(for: latestCompletion)
             NotificationManager.shared.sendLocalCompletionNotification(from: latestCompletion.assignedAuthor.displayName)
+            completionNotificationCache.insert(key)
         }
     }
     
@@ -374,6 +391,7 @@ class ScenarioManager: ObservableObject {
         }
         
         print("🆕 No prompt for today, creating new one...")
+        resetCompletionNotificationCache()
         next()
     }
     
@@ -422,5 +440,23 @@ class ScenarioManager: ObservableObject {
         
         return (isJon && prompt.assignedAuthor == .user) ||
                (!isJon && prompt.assignedAuthor == .wife)
+    }
+}
+
+// MARK: - Notification Cache Helpers
+extension ScenarioManager {
+    private func loadCompletionNotificationCache() {
+        if let storedKeys = UserDefaults.standard.array(forKey: completionNotificationDefaultsKey) as? [String] {
+            completionNotificationCache = Set(storedKeys)
+        }
+    }
+
+    private func resetCompletionNotificationCache() {
+        completionNotificationCache.removeAll()
+    }
+
+    private func completionNotificationKey(for story: DaydreamStory) -> String {
+        let startOfDay = Calendar.current.startOfDay(for: story.dateAssigned)
+        return completionNotificationDateFormatter.string(from: startOfDay)
     }
 }
