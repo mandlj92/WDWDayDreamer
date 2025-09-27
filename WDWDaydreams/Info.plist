@@ -2,10 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Custom Fonts -->
     <key>UIAppFonts</key>
     <array>
         <string>waltographUI.ttf</string>
     </array>
+    
+    <!-- Firebase URL Schemes -->
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -17,5 +20,28 @@
             </array>
         </dict>
     </array>
+    
+    <!-- Push Notifications Background Modes -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+        <string>background-processing</string>
+    </array>
+    
+    <!-- Push Notification Capabilities -->
+    <key>aps-environment</key>
+    <string>development</string>
+    
+    <!-- Required for iOS 15+ notification permissions -->
+    <key>NSUserNotificationRequestAuthorizationBeforeDisplay</key>
+    <true/>
+    
+    <!-- Firebase Cloud Messaging -->
+    <key>FirebaseMessagingAutoInitEnabled</key>
+    <true/>
+    
+    <!-- Privacy descriptions -->
+    <key>NSUserNotificationsUsageDescription</key>
+    <string>WDW Daydreams sends notifications when your partner writes a story or when it's your turn to write.</string>
 </dict>
 </plist>

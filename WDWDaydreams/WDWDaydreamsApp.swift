@@ -1,9 +1,11 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseRemoteConfig
+import FirebaseMessaging
 import GoogleSignIn
 import FirebaseAuth
 import FirebaseAppCheck
+import UserNotifications
 
 // Custom class to provide a debug App Check provider
 class YourAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
@@ -21,8 +23,12 @@ struct WDWDaydreamsApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject var weatherManager = WDWWeatherManager()
     @StateObject var themeManager = ThemeManager()
+    @StateObject var fcmService = FCMService.shared
     let notificationManager = NotificationManager.shared
     @Environment(\.scenePhase) var scenePhase
+    
+    // Create a UIApplicationDelegateAdaptor for handling push notifications
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     init() {
         AppCheck.setAppCheckProviderFactory(YourAppCheckProviderFactory())
@@ -74,16 +80,75 @@ struct WDWDaydreamsApp: App {
             .environmentObject(authViewModel)
             .environmentObject(weatherManager)
             .environmentObject(themeManager)
+            .environmentObject(fcmService)
             .onOpenURL { url in
                 GIDSignIn.sharedInstance.handle(url)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StoryCompletedRemotely"))) { notification in
+                // Handle story completion notification
+                print("🔔 App: Received story completion notification")
+                // You can trigger UI updates or data refresh here
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewPromptAvailable"))) { notification in
+                // Handle new prompt notification
+                print("🔔 App: Received new prompt notification")
+                // You can trigger UI updates or data refresh here
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 print("App became active.")
                 weatherManager.fetchWeather()
+                // Refresh FCM token when app becomes active
+                fcmService.retrieveFCMToken()
             }
         }
+    }
+}
+
+// MARK: - App Delegate for Push Notifications
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        print("✅ AppDelegate: Application did finish launching")
+        
+        // Set messaging delegate
+        Messaging.messaging().delegate = FCMService.shared
+        
+        // Register for remote notifications
+        application.registerForRemoteNotifications()
+        
+        return true
+    }
+    
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        print("✅ AppDelegate: Successfully registered for remote notifications")
+        Messaging.messaging().apnsToken = deviceToken
+    }
+    
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        print("❌ AppDelegate: Failed to register for remote notifications: \(error.localizedDescription)")
+    }
+    
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        print("🔔 AppDelegate: Received remote notification: \(userInfo)")
+        
+        // Handle the notification payload
+        FCMService.shared.handleNotificationPayload(userInfo)
+        
+        completionHandler(.newData)
     }
 }
 

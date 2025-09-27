@@ -36,6 +36,7 @@ class ScenarioManager: ObservableObject {
     private var deck: [DaydreamStory] = []
     private var deckIndex = 0
     private var firebaseService = FirebaseDataService.shared
+    private var fcmService = FCMService.shared
     private var isGeneratingPrompt = false
 
     // --- FIX: Add properties to hold the listeners ---
@@ -181,6 +182,13 @@ class ScenarioManager: ObservableObject {
                     print("❌ Failed to save daily prompt")
                 } else {
                     print("✅ Daily prompt saved to Firebase")
+                    
+                    // Send FCM notification to partner about new prompt
+                    let promptPreview = story.promptText
+                    self.fcmService.notifyPartnerOfNewPrompt(
+                        assignedAuthor: nextAuthor.displayName,
+                        promptPreview: promptPreview
+                    )
                 }
             }
             
@@ -333,9 +341,15 @@ class ScenarioManager: ObservableObject {
             storyToUpdate.storyText = text
             
             // This now triggers the notification in FirebaseDataService
-            firebaseService.markStoryAsCompleted(storyToUpdate) { success in
+            firebaseService.markStoryAsCompleted(storyToUpdate) { [weak self] success in
                 if success {
                     print("✅ Story marked as completed and updated in shared stories")
+                    
+                    // Send FCM notification to partner about story completion
+                    self?.fcmService.notifyPartnerOfStoryCompletion(
+                        authorName: storyToUpdate.assignedAuthor.displayName,
+                        storyPrompt: storyToUpdate.promptText
+                    )
                 } else {
                     print("❌ Failed to mark story as completed")
                 }
