@@ -3,6 +3,7 @@ import SwiftUI
 // Create a reusable weather widget component
 struct WeatherWidget: View {
     @ObservedObject var weatherManager: WDWWeatherManager
+    @Environment(\.theme) var theme: Theme
     var showRefreshButton: Bool = true
     
     var body: some View {
@@ -17,7 +18,7 @@ struct WeatherWidget: View {
             Text(weatherManager.temperature)
                 .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.medium)
-                .foregroundColor(DisneyColors.magicBlue)
+                .foregroundColor(theme.magicBlue)
             
             // Optional refresh button
             if showRefreshButton {
@@ -26,7 +27,7 @@ struct WeatherWidget: View {
                 }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.caption)
-                        .foregroundColor(DisneyColors.magicBlue)
+                        .foregroundColor(theme.magicBlue)
                         .opacity(weatherManager.isLoading ? 0.5 : 1.0)
                         .rotationEffect(weatherManager.isLoading ? .degrees(360) : .degrees(0))
                         .animation(weatherManager.isLoading ? Animation.linear(duration: 1.0).repeatForever(autoreverses: false) : .default, value: weatherManager.isLoading)
@@ -42,7 +43,7 @@ struct WeatherWidget: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
         )
     }
 }
@@ -53,5 +54,6 @@ struct WeatherWidget_Previews: PreviewProvider {
         WeatherWidget(weatherManager: WDWWeatherManager())
             .padding()
             .background(DisneyColors.backgroundCream)
+            .environment(\.theme, LightTheme())
     }
 }

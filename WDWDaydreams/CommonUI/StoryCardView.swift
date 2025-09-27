@@ -6,59 +6,60 @@ struct StoryCardView: View {
     let story: DaydreamStory
     var showFavoriteLabel: Bool = true
     var previewMode: Bool = false
+    @Environment(\.theme) var theme: Theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Date and author header
             HStack {
                 Image(systemName: "calendar")
-                    .foregroundColor(DisneyColors.magicBlue)
+                    .foregroundColor(theme.magicBlue)
                 Text("\(story.dateAssigned, style: .date)")
                     .font(.caption)
-                    .foregroundColor(DisneyColors.magicBlue)
+                    .foregroundColor(theme.magicBlue)
                 
                 Spacer()
                 
                 Image(systemName: "person.fill")
-                    .foregroundColor(DisneyColors.fantasyPurple)
+                    .foregroundColor(theme.fantasyPurple)
                 Text("\(story.assignedAuthor.displayName)'s Turn")
                     .font(.caption)
-                    .foregroundColor(DisneyColors.fantasyPurple)
+                    .foregroundColor(theme.fantasyPurple)
             }
             .padding(.bottom, 4)
 
             // Prompt with themed styling
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(DisneyColors.mainStreetGold)
+                    .foregroundColor(theme.mainStreetGold)
                 
                 Text("Prompt: \(story.promptText)")
                     .font(.footnote)
                     .italic()
                     .lineLimit(2)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.primaryText)
             }
 
             // Story text with themed styling
             if story.isWritten {
                 VStack(alignment: .leading, spacing: 4) {
                     Divider()
-                        .background(DisneyColors.mainStreetGold.opacity(0.5))
+                        .background(theme.mainStreetGold.opacity(0.5))
                         .padding(.vertical, 4)
                     
                     Text(story.storyText!)
                         .font(.body)
                         .lineLimit(previewMode ? 3 : nil)
-                        .foregroundColor(.primary)
+                        .foregroundColor(theme.primaryText)
                 }
             } else {
                 HStack {
                     Image(systemName: "pencil")
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.secondaryText)
                     
                     Text("(Story not written yet)")
                         .font(.body)
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.secondaryText)
                 }
                 .padding(.top, 4)
             }
@@ -68,11 +69,11 @@ struct StoryCardView: View {
                 HStack {
                     Spacer()
                     Image(systemName: "heart.fill")
-                        .foregroundColor(DisneyColors.mickeyRed)
+                        .foregroundColor(theme.mickeyRed)
                     if previewMode {
                         Text("Favorite")
                             .font(.caption)
-                            .foregroundColor(DisneyColors.mickeyRed)
+                            .foregroundColor(theme.mickeyRed)
                     }
                 }
                 .padding(.top, 4)
@@ -80,7 +81,7 @@ struct StoryCardView: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
-        .background(DisneyColors.backgroundCream)
+        .background(theme.cardBackground)
         .cornerRadius(10)
     }
 }
@@ -92,6 +93,7 @@ import SwiftUI
 struct CategoryBadgeView: View {
     let category: Category
     let value: String
+    @Environment(\.theme) var theme: Theme
     
     var body: some View {
         HStack {
@@ -104,7 +106,7 @@ struct CategoryBadgeView: View {
                 .foregroundColor(CategoryHelper.color(for: category))
             
             Text(value)
-                .foregroundColor(.primary)
+                .foregroundColor(theme.primaryText)
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 8)
@@ -122,6 +124,7 @@ struct DisneyPromptView: View {
     let isUsersTurn: Bool
     let onToggleFavorite: () -> Void
     let onSaveStory: (String) -> Void
+    @Environment(\.theme) var theme: Theme
     
     @State private var storyText: String = ""
     @State private var isEditing: Bool = false
@@ -133,14 +136,14 @@ struct DisneyPromptView: View {
                 Text("Today's Disney Daydream")
                     .font(.system(.title2, design: .rounded))
                     .bold()
-                    .foregroundColor(DisneyColors.magicBlue)
+                    .foregroundColor(theme.magicBlue)
                 
                 Spacer()
                 
                 // Favorite button
                 Button(action: onToggleFavorite) {
                     Image(systemName: prompt.isFavorite ? "heart.fill" : "heart")
-                        .foregroundColor(prompt.isFavorite ? DisneyColors.mickeyRed : .gray)
+                        .foregroundColor(prompt.isFavorite ? theme.mickeyRed : theme.secondaryText)
                         .scaleEffect(prompt.isFavorite ? 1.1 : 1.0)
                         .animation(.spring(), value: prompt.isFavorite)
                 }
@@ -148,7 +151,7 @@ struct DisneyPromptView: View {
             
             Text("It's \(prompt.assignedAuthor.displayName)'s turn today!")
                 .font(.subheadline)
-                .foregroundColor(DisneyColors.fantasyPurple)
+                .foregroundColor(theme.fantasyPurple)
             
             // Prompt items
             ForEach(prompt.items.sorted(by: { $0.key.rawValue < $1.key.rawValue }), id: \.key) { item in
@@ -156,14 +159,14 @@ struct DisneyPromptView: View {
             }
             
             Divider()
-                .background(DisneyColors.mainStreetGold.opacity(0.5))
+                .background(theme.mainStreetGold.opacity(0.5))
             
             // Story writing/viewing area
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Your Story")
                         .font(.headline)
-                        .foregroundColor(DisneyColors.magicBlue)
+                        .foregroundColor(theme.magicBlue)
                     
                     Spacer()
                     
@@ -179,7 +182,7 @@ struct DisneyPromptView: View {
                             }
                             isEditing.toggle()
                         }
-                        .foregroundColor(DisneyColors.magicBlue)
+                        .foregroundColor(theme.magicBlue)
                     }
                 }
                 
@@ -197,7 +200,7 @@ struct DisneyPromptView: View {
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
+                                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
                         )
                     
                     if !isEditing {
@@ -205,7 +208,7 @@ struct DisneyPromptView: View {
                             onSaveStory(storyText)
                             isEditing = false
                         }
-                        .buttonStyle(DisneyButtonStyle())
+                        .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .disabled(storyText.isEmpty)
                     }
@@ -213,18 +216,18 @@ struct DisneyPromptView: View {
                     // Show a message when it's not the user's turn and no story yet
                     Text("Waiting for \(prompt.assignedAuthor.displayName) to write their story...")
                         .italic()
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.secondaryText)
                         .padding()
                 }
             }
         }
         .padding()
-        .background(DisneyColors.backgroundCream)
+        .background(theme.cardBackground)
         .cornerRadius(20)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
         )
         .padding(.horizontal)
         .onAppear {

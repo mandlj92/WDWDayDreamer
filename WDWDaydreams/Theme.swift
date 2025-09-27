@@ -46,6 +46,19 @@ struct DarkTheme: Theme {
     let cardBackground = Color(red: 44/255, green: 44/255, blue: 46/255)
 }
 
+// MARK: - Compatibility Bridge for DisneyColors
+// This provides static access to theme colors for gradual migration
+struct DisneyColors {
+    // Use light theme colors as static defaults
+    static let magicBlue = Color(red: 25/255, green: 113/255, blue: 184/255)
+    static let castlePink = Color(red: 247/255, green: 168/255, blue: 184/255)
+    static let mickeyRed = Color(red: 204/255, green: 0/255, blue: 0/255)
+    static let adventureGreen = Color(red: 39/255, green: 111/255, blue: 78/255)
+    static let fantasyPurple = Color(red: 143/255, green: 88/255, blue: 178/255)
+    static let tomorrowlandSilver = Color(red: 164/255, green: 174/255, blue: 184/255)
+    static let mainStreetGold = Color(red: 227/255, green: 197/255, blue: 102/255)
+    static let backgroundCream = Color(red: 252/255, green: 250/255, blue: 245/255)
+}
 
 // MARK: –– Disney‑Style Fonts
 extension Font {
@@ -61,6 +74,11 @@ extension Font {
 struct DisneyButtonStyle: ButtonStyle {
     var color: Color
     var textColor: Color = .white
+    
+    init(color: Color = DisneyColors.magicBlue, textColor: Color = .white) {
+        self.color = color
+        self.textColor = textColor
+    }
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

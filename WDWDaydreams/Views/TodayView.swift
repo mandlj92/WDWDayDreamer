@@ -4,109 +4,140 @@ import FirebaseAuth
 
 struct TodayView: View {
     @EnvironmentObject var manager: ScenarioManager
-    @State private var viewModel: TodayViewModel?
+    @Environment(\.theme) var theme: Theme
+    
+    @State private var storyText: String = ""
+    @State private var isEditing: Bool = false
+    
+    // Computed properties to replace ViewModel
+    private var currentPrompt: DaydreamStory? {
+        manager.currentStoryPrompt
+    }
+    
+    private var isCurrentUsersTurn: Bool {
+        manager.isCurrentUsersTurn()
+    }
+    
+    private var showTripCountdown: Bool {
+        guard let tripDate = manager.tripDate else { return false }
+        let days = daysUntilTrip
+        return tripDate > Date() && days >= 0
+    }
+    
+    private var daysUntilTrip: Int {
+        guard let tripDate = manager.tripDate else { return 0 }
+        return Calendar.current.dateComponents([.day],
+                from: Calendar.current.startOfDay(for: Date()),
+                to: Calendar.current.startOfDay(for: tripDate)).day ?? 0
+    }
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                if let viewModel = viewModel {
-                    // Trip countdown if available
-                    if viewModel.showTripCountdown {
-                        TripCountdownView(days: viewModel.daysUntilTrip)
-                    }
-                    
-                    // Today's prompt
-                    if let prompt = viewModel.currentPrompt {
-                        DisneyPromptView(
-                            prompt: prompt,
-                            isUsersTurn: viewModel.isCurrentUsersTurn,
-                            onToggleFavorite: {
-                                viewModel.toggleFavorite()
-                            },
-                            onSaveStory: { text in
-                                viewModel.storyText = text
-                                viewModel.saveStory()
-                            }
-                        )
-                    } else {
-                        // No prompt available - show generation option
-                        VStack(spacing: 20) {
-                            Text("No prompt available for today")
-                                .font(.headline)
-                                .foregroundColor(DisneyColors.mickeyRed)
-                                .padding()
-                            
-                            Button("Generate Today's Prompt") {
-                                print("軸 User tapped Generate Prompt")
-                                viewModel.generateNewPrompt()
-                            }
-                            .buttonStyle(DisneyButtonStyle())
-                            .padding()
+                // Trip countdown if available
+                if showTripCountdown {
+                    TripCountdownView(days: daysUntilTrip, theme: theme)
+                }
+                
+                // Today's prompt
+                if let prompt = currentPrompt {
+                    DisneyPromptView(
+                        prompt: prompt,
+                        isUsersTurn: isCurrentUsersTurn,
+                        onToggleFavorite: {
+                            manager.toggleFavorite()
+                        },
+                        onSaveStory: { text in
+                            saveStory(text: text)
                         }
-                        .padding()
-                        .background(DisneyColors.backgroundCream)
-                        .cornerRadius(15)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
-                        )
-                        .padding(.horizontal)
-                    }
-                    
-                    // Show the Generate New Prompt button if it's the user's turn and there's already a prompt
-                    if viewModel.currentPrompt != nil && viewModel.isCurrentUsersTurn {
-                        Button("Generate New Prompt") {
-                            print("軸 User tapped Generate New Prompt")
-                            viewModel.generateNewPrompt()
-                        }
-                        .buttonStyle(DisneyButtonStyle())
-                        .padding()
-                    }
+                    )
                 } else {
-                    ProgressView("Loading...")
-                        .progressViewStyle(CircularProgressViewStyle(tint: DisneyColors.magicBlue))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // No prompt available - show generation option
+                    VStack(spacing: 20) {
+                        Text("No prompt available for today")
+                            .font(.headline)
+                            .foregroundColor(theme.mickeyRed)
+                            .padding()
+                        
+                        Button("Generate Today's Prompt") {
+                            print("🎯 User tapped Generate Prompt")
+                            manager.next()
+                        }
+                        .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                        .padding()
+                    }
+                    .padding()
+                    .background(theme.backgroundCream)
+                    .cornerRadius(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                }
+                
+                // Show the Generate New Prompt button if it's the user's turn and there's already a prompt
+                if currentPrompt != nil && isCurrentUsersTurn {
+                    Button("Generate New Prompt") {
+                        print("🎯 User tapped Generate New Prompt")
+                        manager.next()
+                    }
+                    .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                    .padding()
                 }
             }
         }
         .onAppear {
-            print("導 TodayView appeared")
-            // Create a new viewModel with the real manager from environment
-            self.viewModel = TodayViewModel(manager: manager)
+            print("📱 TodayView appeared")
             
-            // --- FIX: REMOVED OLD FETCH CALL ---
-            // The listener in ScenarioManager now handles this automatically.
+            // Initialize text with existing story if available
+            if let prompt = currentPrompt, prompt.isWritten {
+                storyText = prompt.storyText ?? ""
+            }
             
             // Try to generate today's prompt if none exists
             if manager.currentStoryPrompt == nil {
-                print("売 No current prompt, trying to generate...")
+                print("🔍 No current prompt, trying to generate...")
                 manager.generateOrUpdateDailyPrompt()
             }
         }
         .refreshable {
             // Pull to refresh functionality
-            print("売 User pulled to refresh")
+            print("🔄 User pulled to refresh")
             manager.generateOrUpdateDailyPrompt()
-            // --- FIX: REMOVED OLD FETCH CALL ---
-            // The listener in ScenarioManager now handles this automatically.
         }
+        .onChange(of: currentPrompt?.storyText) { _, newValue in
+            // Update local text when story changes
+            if let newText = newValue, !isEditing {
+                storyText = newText
+            }
+        }
+    }
+    
+    // Local functions to replace ViewModel methods
+    private func saveStory(text: String) {
+        guard let prompt = currentPrompt else { return }
+        storyText = text
+        manager.saveStoryText(text, for: prompt.id)
+        isEditing = false
     }
 }
 
-// Create the TripCountdownView that was missing
+// Updated TripCountdownView to use theme
 struct TripCountdownView: View {
     let days: Int
+    let theme: Theme
     
     var body: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "calendar.badge.clock")
                     .font(.title2)
-                    .foregroundColor(DisneyColors.mickeyRed)
+                    .foregroundColor(theme.mickeyRed)
                 
                 Text("Trip Countdown")
                     .font(.headline)
-                    .foregroundColor(DisneyColors.mickeyRed)
+                    .foregroundColor(theme.mickeyRed)
                 
                 Spacer()
             }
@@ -114,33 +145,33 @@ struct TripCountdownView: View {
             HStack {
                 Text("\(days)")
                     .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundColor(DisneyColors.magicBlue)
+                    .foregroundColor(theme.magicBlue)
                 
                 VStack(alignment: .leading) {
                     Text(days == 1 ? "day" : "days")
                         .font(.headline)
-                        .foregroundColor(DisneyColors.magicBlue)
+                        .foregroundColor(theme.magicBlue)
                     Text("until Disney!")
                         .font(.subheadline)
-                        .foregroundColor(DisneyColors.magicBlue.opacity(0.8))
+                        .foregroundColor(theme.magicBlue.opacity(0.8))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "sparkles")
                     .font(.title)
-                    .foregroundColor(DisneyColors.mainStreetGold)
+                    .foregroundColor(theme.mainStreetGold)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(DisneyColors.backgroundCream)
+                .fill(theme.backgroundCream)
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 15)
-                .stroke(DisneyColors.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
         )
         .padding(.horizontal)
     }

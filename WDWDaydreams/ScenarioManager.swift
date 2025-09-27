@@ -39,10 +39,8 @@ class ScenarioManager: ObservableObject {
     private var fcmService = FCMService.shared
     private var isGeneratingPrompt = false
 
-    // --- FIX: Add properties to hold the listeners ---
-    private var historyListener: ListenerRegistration?
-    private var promptListener: ListenerRegistration?
-    private var completionListener: ListenerRegistration?
+    // Consolidated listener for better performance
+    private var dataListener: ListenerRegistration?
     
     // MARK: - Initialization & Setup
     
@@ -51,44 +49,98 @@ class ScenarioManager: ObservableObject {
         fetchUserSettings()
         rebuildDeck()
         fetchFavorites()
-        setupListeners() // Moved setupListeners here to attach them right away
+        setupOptimizedListeners()
     }
     
     deinit {
-        // --- FIX: Ensure all listeners are removed ---
-        historyListener?.remove()
-        promptListener?.remove()
-        completionListener?.remove()
+        // Clean up listeners
+        dataListener?.remove()
     }
     
-    private func setupListeners() {
-        // --- FIX: Call the new 'listen' methods instead of 'fetch' ---
-        historyListener = firebaseService.listenForStoryHistory { [weak self] stories in
-            DispatchQueue.main.async {
-                self?.storyHistory = stories
+    private func setupOptimizedListeners() {
+        // Single listener for shared stories with debouncing
+        var lastProcessedTime = Date()
+        let debounceInterval: TimeInterval = 0.5
+        
+        dataListener = firebaseService.getFirestoreReference().collection("sharedStories")
+            .order(by: "date", descending: true)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
                 
-                // Also update the current prompt if it's part of the new history
-                if let todayStory = stories.first(where: { $0.isToday }) {
-                    self?.currentStoryPrompt = todayStory
+                if let error = error {
+                    print("❌ Error listening for shared stories: \(error.localizedDescription)")
+                    return
                 }
-            }
-        }
-
-        promptListener = firebaseService.listenForDailyPrompt { [weak self] prompt in
-            DispatchQueue.main.async {
-                if let prompt = prompt {
-                    self?.currentStoryPrompt = prompt
-                } else {
-                    // If no prompt exists for today, generate one
-                    if self?.currentStoryPrompt == nil || !(self?.currentStoryPrompt?.isToday ?? false) {
-                        self?.generateOrUpdateDailyPrompt()
+                
+                guard let documents = snapshot?.documents else {
+                    print("❌ No documents found in sharedStories collection")
+                    return
+                }
+                
+                let now = Date()
+                if now.timeIntervalSince(lastProcessedTime) < debounceInterval {
+                    print("🔄 Debouncing rapid changes...")
+                    return
+                }
+                lastProcessedTime = now
+                
+                print("📄 [Optimized] Received \(documents.count) shared story documents")
+                
+                let stories = documents.compactMap { doc -> DaydreamStory? in
+                    let data = doc.data()
+                    guard let dateTimestamp = data["date"] as? Timestamp,
+                          let itemsDict = data["items"] as? [String: String],
+                          let authorString = data["author"] as? String,
+                          let author = StoryAuthor(rawValue: authorString)
+                    else {
+                        print("⚠️ Missing required fields in document: \(doc.documentID)")
+                        return nil
                     }
+                    
+                    var items: [Category: String] = [:]
+                    for (key, value) in itemsDict {
+                        if let category = Category(rawValue: key) {
+                            items[category] = value
+                        }
+                    }
+                    
+                    return DaydreamStory(
+                        id: UUID(),
+                        dateAssigned: dateTimestamp.dateValue(),
+                        items: items,
+                        assignedAuthor: author,
+                        storyText: data["text"] as? String,
+                        isFavorite: false
+                    )
+                }
+                
+                DispatchQueue.main.async {
+                    self.storyHistory = stories
+                    
+                    // Update current prompt if it's part of today's stories
+                    if let todayStory = stories.first(where: { $0.isToday }) {
+                        self.currentStoryPrompt = todayStory
+                    }
+                    
+                    // Check for story completions (for notifications)
+                    self.checkForNewCompletions(in: stories)
                 }
             }
+    }
+    
+    private func checkForNewCompletions(in stories: [DaydreamStory]) {
+        let currentAuthor = firebaseService.isCurrentUserJon ? StoryAuthor.user : StoryAuthor.wife
+        
+        // Find recently completed stories by partner
+        let recentCompletions = stories.filter { story in
+            story.isWritten &&
+            story.assignedAuthor != currentAuthor &&
+            Calendar.current.isDateInToday(story.dateAssigned)
         }
-
-        completionListener = firebaseService.listenForStoryCompletion { authorName in
-            NotificationManager.shared.sendLocalCompletionNotification(from: authorName)
+        
+        // Send notification for new completions (you could add more sophisticated tracking here)
+        if let latestCompletion = recentCompletions.first {
+            NotificationManager.shared.sendLocalCompletionNotification(from: latestCompletion.assignedAuthor.displayName)
         }
     }
     
@@ -140,18 +192,22 @@ class ScenarioManager: ObservableObject {
         isLoading = true
         
         print("🎲 Generating new prompt...")
-        guard !deck.isEmpty else {
+        
+        // Ensure we have a deck
+        if deck.isEmpty {
             print("❌ Deck is empty, rebuilding...")
             rebuildDeck()
-            guard !deck.isEmpty else {
+            
+            // Check if rebuild was successful
+            if deck.isEmpty {
                 print("❌ Still no deck after rebuild")
                 isGeneratingPrompt = false
                 isLoading = false
                 return
             }
-            return
         }
         
+        // Reset deck if we've used all cards
         if deckIndex >= deck.count {
             print("🔄 Reached end of deck, shuffling...")
             deck.shuffle()
@@ -189,14 +245,6 @@ class ScenarioManager: ObservableObject {
                         assignedAuthor: nextAuthor.displayName,
                         promptPreview: promptPreview
                     )
-                }
-            }
-            
-            self.firebaseService.saveStory(story, toCollection: "history") { success in
-                if !success {
-                    print("❌ Failed to save story to history")
-                } else {
-                    print("✅ Story saved to history collection")
                 }
             }
         }
@@ -340,7 +388,15 @@ class ScenarioManager: ObservableObject {
             var storyToUpdate = storyHistory[index]
             storyToUpdate.storyText = text
             
-            // This now triggers the notification in FirebaseDataService
+            // Update local state immediately for better UX
+            DispatchQueue.main.async {
+                self.storyHistory[index] = storyToUpdate
+                if self.currentStoryPrompt?.id == storyId {
+                    self.currentStoryPrompt = storyToUpdate
+                }
+            }
+            
+            // This triggers the notification in FirebaseDataService
             firebaseService.markStoryAsCompleted(storyToUpdate) { [weak self] success in
                 if success {
                     print("✅ Story marked as completed and updated in shared stories")
