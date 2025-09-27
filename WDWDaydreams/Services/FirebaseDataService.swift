@@ -684,6 +684,47 @@ class FirebaseDataService {
             return false
         }
     }
+    // MARK: - System Testing
+        
+        // Test Firebase connection and permissions
+        func testFirebaseConnection(completion: @escaping (Bool, String) -> Void) {
+            guard ensureAuthenticated() else {
+                completion(false, "User not authenticated")
+                return
+            }
+            
+            print("🧪 Testing Firebase connection...")
+            
+            // Test 1: Try to read user settings
+            let userSettingsRef = db.collection("userSettings").document(userId)
+            userSettingsRef.getDocument { snapshot, error in
+                if let error = error {
+                    print("❌ Firebase connection test failed: \(error.localizedDescription)")
+                    completion(false, "Connection failed: \(error.localizedDescription)")
+                    return
+                }
+                
+                print("✅ Firebase connection test passed!")
+                
+                // Test 2: Try to write a test document
+                let testData = [
+                    "testTimestamp": Timestamp(date: Date()),
+                    "testString": "Firebase connection working!",
+                    "userEmail": self.currentUserEmail,
+                    "offlinePersistenceEnabled": true
+                ]
+                
+                self.db.collection("connectionTest").document(self.userId).setData(testData) { error in
+                    if let error = error {
+                        print("❌ Firebase write test failed: \(error.localizedDescription)")
+                        completion(false, "Write test failed: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Firebase write test passed!")
+                        completion(true, "All Firebase tests passed! Offline persistence enabled.")
+                    }
+                }
+            }
+        }
     
     // MARK: - Test account creation methods removed for security
     // Note: No longer creating test accounts programmatically

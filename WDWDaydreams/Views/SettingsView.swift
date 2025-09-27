@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     @Environment(\.dismiss) private var dismiss
     @State private var showClearConfirmation = false
+    @State private var testResults: String = ""
     
     var body: some View {
         NavigationView {
@@ -91,6 +92,22 @@ struct SettingsView: View {
                         }
                         .listRowBackground(theme.cardBackground)
 
+                        // System Tests Section
+                        Section(header: SectionHeader(title: "System Tests", theme: theme)) {
+                            Button("Test Firebase Connection") {
+                                testFirebaseConnection()
+                            }
+                            .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                            
+                            if !testResults.isEmpty {
+                                Text(testResults)
+                                    .font(.caption)
+                                    .foregroundColor(testResults.contains("✅") ? .green : .red)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .listRowBackground(theme.cardBackground)
+
                         // Danger Zone Section
                         Section(header: Text("Danger Zone").foregroundColor(theme.mickeyRed).font(.headline)) {
                             Button(action: {
@@ -139,6 +156,17 @@ struct SettingsView: View {
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
+    }
+    
+    // Test Firebase connection
+    private func testFirebaseConnection() {
+        testResults = "Testing..."
+        
+        FirebaseDataService.shared.testFirebaseConnection { success, message in
+            DispatchQueue.main.async {
+                testResults = success ? "✅ \(message)" : "❌ \(message)"
+            }
+        }
     }
 }
 

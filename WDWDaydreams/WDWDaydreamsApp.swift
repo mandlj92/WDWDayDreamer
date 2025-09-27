@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import FirebaseFirestore
 import FirebaseRemoteConfig
 import FirebaseMessaging
 import GoogleSignIn
@@ -32,6 +33,17 @@ struct WDWDaydreamsApp: App {
     init() {
         AppCheck.setAppCheckProviderFactory(YourAppCheckProviderFactory())
         FirebaseApp.configure()
+        
+        // Enable Firestore offline persistence
+        do {
+            let settings = Firestore.firestore().settings
+            settings.isPersistenceEnabled = true
+            settings.cacheSizeBytes = 50 * 1024 * 1024 // 50MB cache
+            Firestore.firestore().settings = settings
+            print("✅ Firestore offline persistence enabled with 50MB cache")
+        } catch {
+            print("❌ Failed to enable Firestore offline persistence: \(error.localizedDescription)")
+        }
         
         Self.configureRemoteConfig()
         Self.configureGoogleSignIn()
