@@ -577,15 +577,13 @@ class FirebaseDataService {
                 completion(false)
             } else {
                 print("✅ Shared story updated for both users")
-                // ** NEW: Trigger a local notification for the other user **
-                NotificationManager.shared.sendLocalCompletionNotification(from: story.assignedAuthor.displayName)
                 completion(true)
             }
         }
     }
 
     
-    // MARK: - Listeners
+    // MARK: - Listeners (FIXED)
     
     func listenForSharedStoryChanges(onChange: @escaping () -> Void) -> ListenerRegistration {
         guard ensureAuthenticated() else {
@@ -627,6 +625,7 @@ class FirebaseDataService {
         }
         
         let currentAuthor = isCurrentUserJon ? StoryAuthor.user : StoryAuthor.wife
+        var lastProcessedStories: Set<String> = []
         
         // Listen to the shared stories collection
         return db.collection("sharedStories")
@@ -637,19 +636,36 @@ class FirebaseDataService {
                 }
                 
                 snapshot.documentChanges.forEach { change in
-                    if change.type == .added || change.type == .modified {
+                    if change.type == .modified {
                         let data = change.document.data()
+                        let documentId = change.document.documentID
                         
                         guard let authorString = data["author"] as? String,
                               let author = StoryAuthor(rawValue: authorString),
                               let dateTimestamp = data["date"] as? Timestamp,
-                              let _ = data["text"] as? String // Ensure text exists
-                        else { return }
+                              let storyText = data["text"] as? String,
+                              !storyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        else {
+                            print("📝 Story update detected but missing required fields or empty text")
+                            return
+                        }
                         
-                        // Only notify if this story was written by the other user and today
-                        if author != currentAuthor && Calendar.current.isDateInToday(dateTimestamp.dateValue()) {
-                            print("🔔 Showing notification for story by \(author.displayName)")
+                        // Create a unique identifier for this story completion
+                        let storyCompletionId = "\(documentId)_\(author.rawValue)_completed"
+                        
+                        // Only notify if:
+                        // 1. This story was written by the other user
+                        // 2. Today's date (to avoid old stories triggering)
+                        // 3. We haven't already processed this completion
+                        if author != currentAuthor &&
+                           Calendar.current.isDateInToday(dateTimestamp.dateValue()) &&
+                           !lastProcessedStories.contains(storyCompletionId) {
+                            
+                            print("🔔 NEW story completion detected: \(author.displayName) completed story for \(documentId)")
+                            lastProcessedStories.insert(storyCompletionId)
                             onCompleted(author.displayName)
+                        } else {
+                            print("📝 Story update ignored: author=\(author.rawValue), currentAuthor=\(currentAuthor.rawValue), isToday=\(Calendar.current.isDateInToday(dateTimestamp.dateValue())), alreadyProcessed=\(lastProcessedStories.contains(storyCompletionId))")
                         }
                     }
                 }
@@ -684,49 +700,46 @@ class FirebaseDataService {
             return false
         }
     }
+    
     // MARK: - System Testing
+    
+    // Test Firebase connection and permissions
+    func testFirebaseConnection(completion: @escaping (Bool, String) -> Void) {
+        guard ensureAuthenticated() else {
+            completion(false, "User not authenticated")
+            return
+        }
         
-        // Test Firebase connection and permissions
-        func testFirebaseConnection(completion: @escaping (Bool, String) -> Void) {
-            guard ensureAuthenticated() else {
-                completion(false, "User not authenticated")
+        print("🧪 Testing Firebase connection...")
+        
+        // Test 1: Try to read user settings
+        let userSettingsRef = db.collection("userSettings").document(userId)
+        userSettingsRef.getDocument { snapshot, error in
+            if let error = error {
+                print("❌ Firebase connection test failed: \(error.localizedDescription)")
+                completion(false, "Connection failed: \(error.localizedDescription)")
                 return
             }
             
-            print("🧪 Testing Firebase connection...")
+            print("✅ Firebase connection test passed!")
             
-            // Test 1: Try to read user settings
-            let userSettingsRef = db.collection("userSettings").document(userId)
-            userSettingsRef.getDocument { snapshot, error in
+            // Test 2: Try to write a test document
+            let testData = [
+                "testTimestamp": Timestamp(date: Date()),
+                "testString": "Firebase connection working!",
+                "userEmail": self.currentUserEmail,
+                "offlinePersistenceEnabled": true
+            ]
+            
+            self.db.collection("connectionTest").document(self.userId).setData(testData) { error in
                 if let error = error {
-                    print("❌ Firebase connection test failed: \(error.localizedDescription)")
-                    completion(false, "Connection failed: \(error.localizedDescription)")
-                    return
-                }
-                
-                print("✅ Firebase connection test passed!")
-                
-                // Test 2: Try to write a test document
-                let testData = [
-                    "testTimestamp": Timestamp(date: Date()),
-                    "testString": "Firebase connection working!",
-                    "userEmail": self.currentUserEmail,
-                    "offlinePersistenceEnabled": true
-                ]
-                
-                self.db.collection("connectionTest").document(self.userId).setData(testData) { error in
-                    if let error = error {
-                        print("❌ Firebase write test failed: \(error.localizedDescription)")
-                        completion(false, "Write test failed: \(error.localizedDescription)")
-                    } else {
-                        print("✅ Firebase write test passed!")
-                        completion(true, "All Firebase tests passed! Offline persistence enabled.")
-                    }
+                    print("❌ Firebase write test failed: \(error.localizedDescription)")
+                    completion(false, "Write test failed: \(error.localizedDescription)")
+                } else {
+                    print("✅ Firebase write test passed!")
+                    completion(true, "All Firebase tests passed! Offline persistence enabled.")
                 }
             }
         }
-    
-    // MARK: - Test account creation methods removed for security
-    // Note: No longer creating test accounts programmatically
-    // All user accounts should be created through proper authentication flows
+    }
 }

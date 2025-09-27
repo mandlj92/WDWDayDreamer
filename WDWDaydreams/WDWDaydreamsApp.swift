@@ -34,16 +34,18 @@ struct WDWDaydreamsApp: App {
         AppCheck.setAppCheckProviderFactory(YourAppCheckProviderFactory())
         FirebaseApp.configure()
         
-        // Enable Firestore offline persistence
-        do {
-            let settings = Firestore.firestore().settings
+        // Enable Firestore offline persistence (modern way)
+        let settings = Firestore.firestore().settings
+        if #available(iOS 15.0, *) {
+            // Modern cache settings for iOS 15+
+            settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: 50 * 1024 * 1024)) // 50MB
+        } else {
+            // Fallback for older iOS versions
             settings.isPersistenceEnabled = true
-            settings.cacheSizeBytes = 50 * 1024 * 1024 // 50MB cache
-            Firestore.firestore().settings = settings
-            print("✅ Firestore offline persistence enabled with 50MB cache")
-        } catch {
-            print("❌ Failed to enable Firestore offline persistence: \(error.localizedDescription)")
+            settings.cacheSizeBytes = 50 * 1024 * 1024 // 50MB
         }
+        Firestore.firestore().settings = settings
+        print("✅ Firestore offline persistence enabled with 50MB cache")
         
         Self.configureRemoteConfig()
         Self.configureGoogleSignIn()
@@ -121,6 +123,10 @@ struct MainAppView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 print("App became active.")
+                
+                // Clear notification badge when app becomes active
+                NotificationManager.shared.clearBadge()
+                
                 weatherManager.fetchWeather()
                 // Refresh FCM token when app becomes active
                 fcmService.retrieveFCMToken()

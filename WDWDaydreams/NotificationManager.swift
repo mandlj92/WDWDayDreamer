@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import UIKit
 
 class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
@@ -19,17 +20,33 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
+    // Clear badge count when app becomes active (iOS 17+ compatible)
+    func clearBadge() {
+        DispatchQueue.main.async {
+            if #available(iOS 16.0, *) {
+                UNUserNotificationCenter.current().setBadgeCount(0) { error in
+                    if let error = error {
+                        print("Error clearing badge: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                // Fallback for older iOS versions
+                UIApplication.shared.applicationIconBadgeNumber = 0
+            }
+        }
+    }
+    
     // Local notification for when partner completes story (triggered by FCM or locally)
     func sendLocalCompletionNotification(from author: String) {
         let content = UNMutableNotificationContent()
-        content.title = "Story Complete! ✨"
-        content.body = "\(author) finished writing today's Daydream! Your turn now!"
+        content.title = "New Disney Story! ✨"
+        content.body = "\(author) just wrote a magical Disney Daydream! Check it out!"
         content.sound = .default
         content.badge = 1
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
+            identifier: "story_completion_\(UUID().uuidString)",
             content: content,
             trigger: trigger
         )
@@ -38,7 +55,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             if let error = error {
                 print("Error showing local completion notification: \(error.localizedDescription)")
             } else {
-                print("Local notification triggered for completed story.")
+                print("Local notification triggered for completed story by \(author)")
             }
         }
     }
@@ -55,6 +72,9 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
+        // Clear badge when user taps notification
+        clearBadge()
+        
         // Handle what happens when user taps notification
         let userInfo = response.notification.request.content.userInfo
         
