@@ -1,0 +1,423 @@
+[debug] [2025-09-27T14:22:06.642Z] ----------------------------------------------------------------------
+[debug] [2025-09-27T14:22:06.647Z] Command:       /opt/homebrew/Cellar/node/23.11.0/bin/node /opt/homebrew/bin/firebase deploy --only functions
+[debug] [2025-09-27T14:22:06.648Z] CLI Version:   14.17.0
+[debug] [2025-09-27T14:22:06.648Z] Platform:      darwin
+[debug] [2025-09-27T14:22:06.648Z] Node Version:  v23.11.0
+[debug] [2025-09-27T14:22:06.648Z] Time:          Sat Sep 27 2025 10:22:06 GMT-0400 (Eastern Daylight Time)
+[debug] [2025-09-27T14:22:06.648Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-27T14:22:06.738Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-27T14:22:06.738Z] > authorizing via signed-in user (jonathanfmandl@gmail.com)
+[debug] [2025-09-27T14:22:06.738Z] [iam] checking project wdwdaydreams-e4e4e for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-09-27T14:22:06.739Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:06.739Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:06.739Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions [none]
+[debug] [2025-09-27T14:22:06.739Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions x-goog-quota-user=projects/wdwdaydreams-e4e4e
+[debug] [2025-09-27T14:22:06.739Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-09-27T14:22:06.992Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions 200
+[debug] [2025-09-27T14:22:06.992Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-09-27T14:22:06.992Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:06.993Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:06.993Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/wdwdaydreams-e4e4e/serviceAccounts/wdwdaydreams-e4e4e@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-09-27T14:22:06.993Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/wdwdaydreams-e4e4e/serviceAccounts/wdwdaydreams-e4e4e@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-09-27T14:22:07.215Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/wdwdaydreams-e4e4e/serviceAccounts/wdwdaydreams-e4e4e@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-09-27T14:22:07.216Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/wdwdaydreams-e4e4e/serviceAccounts/wdwdaydreams-e4e4e@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'wdwdaydreams-e4e4e'...
+[info] 
+[info] i  deploying functions 
+[debug] [2025-09-27T14:22:07.220Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.220Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.220Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e [none]
+[debug] [2025-09-27T14:22:07.337Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e 200
+[debug] [2025-09-27T14:22:07.337Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e {"projectNumber":"457077840315","projectId":"wdwdaydreams-e4e4e","lifecycleState":"ACTIVE","name":"WDWDaydreams","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-04-20T23:41:10.279496Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:07.340Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.340Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.340Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/adminSdkConfig [none]
+[debug] [2025-09-27T14:22:07.650Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/adminSdkConfig 200
+[debug] [2025-09-27T14:22:07.650Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/adminSdkConfig {"projectId":"wdwdaydreams-e4e4e","storageBucket":"wdwdaydreams-e4e4e.firebasestorage.app"}
+[debug] [2025-09-27T14:22:07.651Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.651Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:07.651Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/configs [none]
+[debug] [2025-09-27T14:22:08.027Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/configs 200
+[debug] [2025-09-27T14:22:08.029Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/wdwdaydreams-e4e4e/configs {}
+[debug] [2025-09-27T14:22:08.035Z] Validating nodejs source
+[warn] ⚠  functions: Runtime Node.js 18 was deprecated on 2025-04-30 and will be decommissioned on 2025-10-30, after which you will not be able to deploy without upgrading. Consider upgrading now to avoid disruption. See https://cloud.google.com/functions/docs/runtime-support for full details on the lifecycle policy 
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-09-27T14:22:08.560Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-09-27T14:22:08.560Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2025-09-27T14:22:08.561Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-09-27T14:22:08.569Z] Found firebase-functions binary at '/Users/jonathanmandl/WDWDreams/WDWDaydreams/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8267
+
+[debug] [2025-09-27T14:22:08.746Z] Got response from /__/functions.yaml {"endpoints":{"onStoryCompleted":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"sharedStories/{storyId}"},"retry":false},"entryPoint":"onStoryCompleted"},"processNotificationQueue":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"notificationQueue/{queueId}"},"retry":false},"entryPoint":"processNotificationQueue"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:12.769Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:12.769Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:12.769Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com [none]
+[debug] [2025-09-27T14:22:12.769Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com x-goog-quota-user=projects/wdwdaydreams-e4e4e
+[debug] [2025-09-27T14:22:13.164Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com 200
+[debug] [2025-09-27T14:22:13.164Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com [omitted]
+[warn] ⚠  extensions: missing required API firebaseextensions.googleapis.com. Enabling now... 
+[debug] [2025-09-27T14:22:13.165Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:13.166Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:13.166Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com:enable [none]
+[debug] [2025-09-27T14:22:13.166Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com:enable x-goog-quota-user=projects/wdwdaydreams-e4e4e
+[debug] [2025-09-27T14:22:13.762Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com:enable 200
+[debug] [2025-09-27T14:22:13.762Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/wdwdaydreams-e4e4e/services/firebaseextensions.googleapis.com:enable [omitted]
+[debug] [2025-09-27T14:22:23.777Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-27T14:22:23.779Z] > authorizing via signed-in user (jonathanfmandl@gmail.com)
+[debug] [2025-09-27T14:22:23.779Z] [iam] checking project wdwdaydreams-e4e4e for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2025-09-27T14:22:23.780Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:23.780Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:23.780Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions [none]
+[debug] [2025-09-27T14:22:23.780Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions x-goog-quota-user=projects/wdwdaydreams-e4e4e
+[debug] [2025-09-27T14:22:23.780Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2025-09-27T14:22:24.000Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions 200
+[debug] [2025-09-27T14:22:24.000Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2025-09-27T14:22:24.001Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:24.001Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:24.002Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/wdwdaydreams-e4e4e/instances pageSize=100&pageToken=
+[debug] [2025-09-27T14:22:25.298Z] <<< [apiv2][status] GET https://firebaseextensions.googleapis.com/v1beta/projects/wdwdaydreams-e4e4e/instances 200
+[debug] [2025-09-27T14:22:25.298Z] <<< [apiv2][body] GET https://firebaseextensions.googleapis.com/v1beta/projects/wdwdaydreams-e4e4e/instances {}
+[info] i  functions: preparing functions directory for uploading... 
+[info] i  functions: packaged /Users/jonathanmandl/WDWDreams/WDWDaydreams/functions (64.78 KB) for uploading 
+[debug] [2025-09-27T14:22:25.341Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:25.341Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:25.341Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/-/functions [none]
+[debug] [2025-09-27T14:22:26.047Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/-/functions 200
+[debug] [2025-09-27T14:22:26.048Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/-/functions {}
+[debug] [2025-09-27T14:22:26.049Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.049Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.049Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2025-09-27T14:22:26.532Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/-/functions 200
+[debug] [2025-09-27T14:22:26.532Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/-/functions {}
+[debug] [2025-09-27T14:22:26.534Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.535Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.535Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/wdwdaydreams-e4e4e/databases/(default) [none]
+[debug] [2025-09-27T14:22:26.887Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/wdwdaydreams-e4e4e/databases/(default) 200
+[debug] [2025-09-27T14:22:26.888Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/wdwdaydreams-e4e4e/databases/(default) {"name":"projects/wdwdaydreams-e4e4e/databases/(default)","uid":"54696c50-c0ea-4034-b505-63994a0e3401","createTime":"2025-04-21T01:39:50.845058Z","updateTime":"2025-04-21T01:39:50.845058Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2025-09-27T13:22:26.935915Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"etag":"IOWk342S+Y8DMM2N1dq66o8D"}
+[info] i  functions: ensuring required API run.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[info] i  functions: ensuring required API eventarc.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[info] i  functions: ensuring required API pubsub.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[info] i  functions: ensuring required API storage.googleapis.com is enabled... 
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.891Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:26.892Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com [none]
+[debug] [2025-09-27T14:22:26.892Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:26.893Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com [none]
+[debug] [2025-09-27T14:22:26.894Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:26.895Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/pubsub.googleapis.com [none]
+[debug] [2025-09-27T14:22:26.895Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/pubsub.googleapis.com x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:26.896Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/storage.googleapis.com [none]
+[debug] [2025-09-27T14:22:26.896Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/storage.googleapis.com x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:27.227Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/storage.googleapis.com 200
+[debug] [2025-09-27T14:22:27.227Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/storage.googleapis.com [omitted]
+[info] ✔  functions: required API storage.googleapis.com is enabled 
+[debug] [2025-09-27T14:22:27.240Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/pubsub.googleapis.com 200
+[debug] [2025-09-27T14:22:27.240Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/pubsub.googleapis.com [omitted]
+[info] ✔  functions: required API pubsub.googleapis.com is enabled 
+[debug] [2025-09-27T14:22:27.267Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com 200
+[debug] [2025-09-27T14:22:27.267Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com [omitted]
+[warn] ⚠  functions: missing required API eventarc.googleapis.com. Enabling now... 
+[debug] [2025-09-27T14:22:27.267Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:27.267Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:27.267Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com:enable [none]
+[debug] [2025-09-27T14:22:27.267Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com:enable x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:27.306Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com 200
+[debug] [2025-09-27T14:22:27.306Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com [omitted]
+[warn] ⚠  functions: missing required API run.googleapis.com. Enabling now... 
+[debug] [2025-09-27T14:22:27.307Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:27.307Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:27.307Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com:enable [none]
+[debug] [2025-09-27T14:22:27.307Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com:enable x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:27.892Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com:enable 200
+[debug] [2025-09-27T14:22:27.892Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/eventarc.googleapis.com:enable [omitted]
+[debug] [2025-09-27T14:22:27.964Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com:enable 200
+[debug] [2025-09-27T14:22:27.964Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/457077840315/services/run.googleapis.com:enable [omitted]
+[info] i  functions: generating the service identity for pubsub.googleapis.com... 
+[debug] [2025-09-27T14:22:37.978Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:37.979Z] Checked if tokens are valid: true, expires at: 1758985441135
+[info] i  functions: generating the service identity for eventarc.googleapis.com... 
+[debug] [2025-09-27T14:22:37.979Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:37.979Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:37.979Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/pubsub.googleapis.com:generateServiceIdentity [none]
+[debug] [2025-09-27T14:22:37.979Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/pubsub.googleapis.com:generateServiceIdentity x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:37.979Z] >>> [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/pubsub.googleapis.com:generateServiceIdentity {}
+[debug] [2025-09-27T14:22:37.984Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/eventarc.googleapis.com:generateServiceIdentity [none]
+[debug] [2025-09-27T14:22:37.985Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/eventarc.googleapis.com:generateServiceIdentity x-goog-quota-user=projects/457077840315
+[debug] [2025-09-27T14:22:37.985Z] >>> [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/eventarc.googleapis.com:generateServiceIdentity {}
+[debug] [2025-09-27T14:22:38.749Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/pubsub.googleapis.com:generateServiceIdentity 200
+[debug] [2025-09-27T14:22:38.749Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/pubsub.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-457077840315@gcp-sa-pubsub.iam.gserviceaccount.com","uniqueId":"111821978513821851320"}}
+[debug] [2025-09-27T14:22:38.750Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/eventarc.googleapis.com:generateServiceIdentity 200
+[debug] [2025-09-27T14:22:38.751Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/457077840315/services/eventarc.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-457077840315@gcp-sa-eventarc.iam.gserviceaccount.com","uniqueId":"100305816949086823562"}}
+[debug] [2025-09-27T14:22:38.755Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:38.755Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:38.755Z] >>> [apiv2][query] GET https://compute.googleapis.com/compute/v1/projects/457077840315 [none]
+[debug] [2025-09-27T14:22:38.947Z] <<< [apiv2][status] GET https://compute.googleapis.com/compute/v1/projects/457077840315 403
+[debug] [2025-09-27T14:22:38.947Z] <<< [apiv2][body] GET https://compute.googleapis.com/compute/v1/projects/457077840315 {"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315","serviceTitle":"Compute Engine API","service":"compute.googleapis.com","containerInfo":"457077840315","consumer":"projects/457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}}
+[debug] [2025-09-27T14:22:38.949Z] unable to look up default compute service account. Falling back to 457077840315-compute@developer.gserviceaccount.com. Error: {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315","serviceTitle":"Compute Engine API","service":"compute.googleapis.com","containerInfo":"457077840315","consumer":"projects/457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}},"response":{"statusCode":403}},"exit":1,"message":"Request to https://compute.googleapis.com/compute/v1/projects/457077840315 had HTTP Error: 403, Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","status":403}
+[debug] [2025-09-27T14:22:38.950Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:38.950Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:38.950Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:getIamPolicy [none]
+[debug] [2025-09-27T14:22:39.341Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:getIamPolicy 200
+[debug] [2025-09-27T14:22:39.341Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:getIamPolicy {"version":1,"etag":"BwY/ySHzX4M=","bindings":[{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:457077840315@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/cloudconfig.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/cloudfunctions.serviceAgent","members":["serviceAccount:service-457077840315@gcf-admin-robot.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-457077840315@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:457077840315@cloudservices.gserviceaccount.com","serviceAccount:wdwdaydreams-e4e4e@appspot.gserviceaccount.com","serviceAccount:457077840315-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseappcheck.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseauth.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebasemods.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebasemods.iam.gserviceaccount.com"]},{"role":"roles/firebaserules.system","members":["serviceAccount:service-457077840315@firebase-rules.iam.gserviceaccount.com"]},{"role":"roles/firestore.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firestore.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/owner","members":["user:JonathanFMandl@gmail.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-457077840315@serverless-robot-prod.iam.gserviceaccount.com"]}]}
+[debug] [2025-09-27T14:22:39.341Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:39.341Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:39.341Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:setIamPolicy [none]
+[debug] [2025-09-27T14:22:39.342Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:setIamPolicy {"policy":{"version":1,"etag":"BwY/ySHzX4M=","bindings":[{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:457077840315@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/cloudconfig.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/cloudfunctions.serviceAgent","members":["serviceAccount:service-457077840315@gcf-admin-robot.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-457077840315@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:457077840315@cloudservices.gserviceaccount.com","serviceAccount:wdwdaydreams-e4e4e@appspot.gserviceaccount.com","serviceAccount:457077840315-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseappcheck.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseauth.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebasemods.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebasemods.iam.gserviceaccount.com"]},{"role":"roles/firebaserules.system","members":["serviceAccount:service-457077840315@firebase-rules.iam.gserviceaccount.com"]},{"role":"roles/firestore.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firestore.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com","serviceAccount:service-457077840315@gcp-sa-pubsub.iam.gserviceaccount.com"]},{"role":"roles/owner","members":["user:JonathanFMandl@gmail.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-457077840315@serverless-robot-prod.iam.gserviceaccount.com"]},{"role":"roles/run.invoker","members":["serviceAccount:457077840315-compute@developer.gserviceaccount.com"]},{"role":"roles/eventarc.eventReceiver","members":["serviceAccount:457077840315-compute@developer.gserviceaccount.com"]}]},"updateMask":"bindings"}
+[debug] [2025-09-27T14:22:40.181Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:setIamPolicy 200
+[debug] [2025-09-27T14:22:40.181Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/457077840315:setIamPolicy {"version":1,"etag":"BwY/ySKCR9k=","bindings":[{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:457077840315@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/cloudconfig.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/cloudfunctions.serviceAgent","members":["serviceAccount:service-457077840315@gcf-admin-robot.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-457077840315@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:457077840315-compute@developer.gserviceaccount.com","serviceAccount:457077840315@cloudservices.gserviceaccount.com","serviceAccount:wdwdaydreams-e4e4e@appspot.gserviceaccount.com"]},{"role":"roles/eventarc.eventReceiver","members":["serviceAccount:457077840315-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseappcheck.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebaseauth.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com"]},{"role":"roles/firebasemods.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firebasemods.iam.gserviceaccount.com"]},{"role":"roles/firebaserules.system","members":["serviceAccount:service-457077840315@firebase-rules.iam.gserviceaccount.com"]},{"role":"roles/firestore.serviceAgent","members":["serviceAccount:service-457077840315@gcp-sa-firestore.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@wdwdaydreams-e4e4e.iam.gserviceaccount.com","serviceAccount:service-457077840315@gcp-sa-pubsub.iam.gserviceaccount.com"]},{"role":"roles/owner","members":["user:JonathanFMandl@gmail.com"]},{"role":"roles/run.invoker","members":["serviceAccount:457077840315-compute@developer.gserviceaccount.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-457077840315@serverless-robot-prod.iam.gserviceaccount.com"]}]}
+[debug] [2025-09-27T14:22:40.183Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.183Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.183Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e [none]
+[debug] [2025-09-27T14:22:40.308Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e 200
+[debug] [2025-09-27T14:22:40.308Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/wdwdaydreams-e4e4e {"projectNumber":"457077840315","projectId":"wdwdaydreams-e4e4e","lifecycleState":"ACTIVE","name":"WDWDaydreams","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-04-20T23:41:10.279496Z"}
+[debug] [2025-09-27T14:22:40.308Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.308Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.308Z] >>> [apiv2][query] GET https://compute.googleapis.com/compute/v1/projects/457077840315 [none]
+[debug] [2025-09-27T14:22:40.385Z] <<< [apiv2][status] GET https://compute.googleapis.com/compute/v1/projects/457077840315 403
+[debug] [2025-09-27T14:22:40.385Z] <<< [apiv2][body] GET https://compute.googleapis.com/compute/v1/projects/457077840315 {"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"containerInfo":"457077840315","serviceTitle":"Compute Engine API","consumer":"projects/457077840315","service":"compute.googleapis.com","activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}}
+[debug] [2025-09-27T14:22:40.386Z] unable to look up default compute service account. Falling back to 457077840315-compute@developer.gserviceaccount.com. Error: {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"containerInfo":"457077840315","serviceTitle":"Compute Engine API","consumer":"projects/457077840315","service":"compute.googleapis.com","activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}},"response":{"statusCode":403}},"exit":1,"message":"Request to https://compute.googleapis.com/compute/v1/projects/457077840315 had HTTP Error: 403, Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","status":403}
+[debug] [2025-09-27T14:22:40.386Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.386Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.386Z] >>> [apiv2][query] GET https://compute.googleapis.com/compute/v1/projects/457077840315 [none]
+[debug] [2025-09-27T14:22:40.461Z] <<< [apiv2][status] GET https://compute.googleapis.com/compute/v1/projects/457077840315 403
+[debug] [2025-09-27T14:22:40.461Z] <<< [apiv2][body] GET https://compute.googleapis.com/compute/v1/projects/457077840315 {"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"service":"compute.googleapis.com","serviceTitle":"Compute Engine API","consumer":"projects/457077840315","activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315","containerInfo":"457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}}
+[debug] [2025-09-27T14:22:40.462Z] unable to look up default compute service account. Falling back to 457077840315-compute@developer.gserviceaccount.com. Error: {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":403,"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","errors":[{"message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","domain":"usageLimits","reason":"accessNotConfigured","extendedHelp":"https://console.developers.google.com"}],"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"service":"compute.googleapis.com","serviceTitle":"Compute Engine API","consumer":"projects/457077840315","activationUrl":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315","containerInfo":"457077840315"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developers console API activation","url":"https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315"}]}]}},"response":{"statusCode":403}},"exit":1,"message":"Request to https://compute.googleapis.com/compute/v1/projects/457077840315 had HTTP Error: 403, Compute Engine API has not been used in project 457077840315 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/compute.googleapis.com/overview?project=457077840315 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.","status":403}
+[debug] [2025-09-27T14:22:40.466Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.466Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.466Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/wdwdaydreams-e4e4e/billingInfo [none]
+[debug] [2025-09-27T14:22:40.734Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/wdwdaydreams-e4e4e/billingInfo 200
+[debug] [2025-09-27T14:22:40.735Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/wdwdaydreams-e4e4e/billingInfo {"name":"projects/wdwdaydreams-e4e4e/billingInfo","projectId":"wdwdaydreams-e4e4e","billingAccountName":"billingAccounts/010ABC-C72A98-FFDC93","billingEnabled":true}
+[debug] [2025-09-27T14:22:40.737Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.737Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:40.737Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions:generateUploadUrl [none]
+[debug] [2025-09-27T14:22:42.077Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions:generateUploadUrl 200
+[debug] [2025-09-27T14:22:42.077Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions:generateUploadUrl {"uploadUrl":"https://storage.googleapis.com/gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com/495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip?GoogleAccessId=service-457077840315@gcf-admin-robot.iam.gserviceaccount.com&Expires=1758984762&Signature=U8%2BK%2Bqs3mEePt4iYNr0DrSEZ0O1uQ2wmMJvi32dne%2Bm7ykT%2FbVZUr2aPWKmfNBSD6JAw7RQq7yNiFYDJ5d5fKKpycseft6cgDCo54gDW6o8eAhimEPi3Q%2B7Jl4T4Y6ZxNKcnnmG7%2BRsob82XmwBt2ph8BnYTC7rW0P%2Bhn4ZYPjit5ecDVEAT%2F2jZv%2FA2QP3FlnVgrqES2f9hepR8dYXT3oxbhx7yvNWNRZy%2FF9wwDH5iuwsuu7%2BDE%2B%2BV13Tg8KabA%2FSaSkKl9ldo1kA5R%2BsKBpqLJutm4PgPNlDSkmm6lgxW%2Fw5BtYr9dz9RTUeiPF1Czm3kZtT%2FiStnHEcppQ91Ag%3D%3D","storageSource":{"bucket":"gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com","object":"495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip"}}
+[debug] [2025-09-27T14:22:42.079Z] >>> [apiv2][query] PUT https://storage.googleapis.com/gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com/495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip GoogleAccessId=service-457077840315%40gcf-admin-robot.iam.gserviceaccount.com&Expires=1758984762&Signature=U8%2BK%2Bqs3mEePt4iYNr0DrSEZ0O1uQ2wmMJvi32dne%2Bm7ykT%2FbVZUr2aPWKmfNBSD6JAw7RQq7yNiFYDJ5d5fKKpycseft6cgDCo54gDW6o8eAhimEPi3Q%2B7Jl4T4Y6ZxNKcnnmG7%2BRsob82XmwBt2ph8BnYTC7rW0P%2Bhn4ZYPjit5ecDVEAT%2F2jZv%2FA2QP3FlnVgrqES2f9hepR8dYXT3oxbhx7yvNWNRZy%2FF9wwDH5iuwsuu7%2BDE%2B%2BV13Tg8KabA%2FSaSkKl9ldo1kA5R%2BsKBpqLJutm4PgPNlDSkmm6lgxW%2Fw5BtYr9dz9RTUeiPF1Czm3kZtT%2FiStnHEcppQ91Ag%3D%3D
+[debug] [2025-09-27T14:22:42.079Z] >>> [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com/495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip [stream]
+[debug] [2025-09-27T14:22:42.454Z] <<< [apiv2][status] PUT https://storage.googleapis.com/gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com/495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip 200
+[debug] [2025-09-27T14:22:42.454Z] <<< [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com/495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip [omitted]
+[info] ✔  functions: functions source uploaded successfully 
+[info] i  functions: creating Node.js 18 (2nd Gen) function onStoryCompleted(us-central1)... 
+[info] i  functions: creating Node.js 18 (2nd Gen) function processNotificationQueue(us-central1)... 
+[debug] [2025-09-27T14:22:42.462Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:42.463Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:42.463Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions functionId=onStoryCompleted
+[debug] [2025-09-27T14:22:42.463Z] >>> [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions {"name":"projects/wdwdaydreams-e4e4e/locations/us-central1/functions/onStoryCompleted","buildConfig":{"runtime":"nodejs18","entryPoint":"onStoryCompleted","source":{"storageSource":{"bucket":"gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com","object":"495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""}},"serviceConfig":{"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"wdwdaydreams-e4e4e\",\"storageBucket\":\"wdwdaydreams-e4e4e.firebasestorage.app\"}","GCLOUD_PROJECT":"wdwdaydreams-e4e4e","EVENTARC_CLOUD_EVENT_SOURCE":"projects/wdwdaydreams-e4e4e/locations/us-central1/services/onStoryCompleted","FUNCTION_SIGNATURE_TYPE":"cloudevent","FUNCTION_TARGET":"onStoryCompleted","LOG_EXECUTION_ID":"true"},"ingressSettings":null,"timeoutSeconds":null,"serviceAccountEmail":null,"availableMemory":"256Mi","minInstanceCount":null,"maxInstanceCount":null,"maxInstanceRequestConcurrency":80,"availableCpu":"1","vpcConnector":null,"vpcConnectorEgressSettings":null},"labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"c4fb59fe2c48db8538d6476ae040a8558b00d0e9"},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.updated","retryPolicy":"RETRY_POLICY_DO_NOT_RETRY","eventFilters":[{"attribute":"database","value":"(default)"},{"attribute":"namespace","value":"(default)"},{"attribute":"document","value":"sharedStories/{storyId}","operator":"match-path-pattern"}],"triggerRegion":"nam5"}}
+[debug] [2025-09-27T14:22:58.923Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions 400
+[debug] [2025-09-27T14:22:58.924Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions {"error":{"code":400,"message":"Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/onstorycompleted-881451: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.","status":"FAILED_PRECONDITION"}}
+[warn] ⚠  functions: Request to https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions?functionId=onStoryCompleted had HTTP Error: 400, Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/onstorycompleted-881451: Invalid resource state for "": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role. 
+[warn] ⚠  functions: Since this is your first time using 2nd gen functions, we need a little bit longer to finish setting everything up. Retry the deployment in a few minutes. 
+[warn] ⚠  functions:  failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/onStoryCompleted 
+[error] Failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/onStoryCompleted
+[debug] [2025-09-27T14:22:58.928Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:58.928Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:22:58.928Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions functionId=processNotificationQueue
+[debug] [2025-09-27T14:22:58.929Z] >>> [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions {"name":"projects/wdwdaydreams-e4e4e/locations/us-central1/functions/processNotificationQueue","buildConfig":{"runtime":"nodejs18","entryPoint":"processNotificationQueue","source":{"storageSource":{"bucket":"gcf-v2-uploads-457077840315.us-central1.cloudfunctions.appspot.com","object":"495edbdc-1f1d-4fe7-8aa3-e193090b7d4b.zip"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""}},"serviceConfig":{"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"wdwdaydreams-e4e4e\",\"storageBucket\":\"wdwdaydreams-e4e4e.firebasestorage.app\"}","GCLOUD_PROJECT":"wdwdaydreams-e4e4e","EVENTARC_CLOUD_EVENT_SOURCE":"projects/wdwdaydreams-e4e4e/locations/us-central1/services/processNotificationQueue","FUNCTION_SIGNATURE_TYPE":"cloudevent","FUNCTION_TARGET":"processNotificationQueue","LOG_EXECUTION_ID":"true"},"ingressSettings":null,"timeoutSeconds":null,"serviceAccountEmail":null,"availableMemory":"256Mi","minInstanceCount":null,"maxInstanceCount":null,"maxInstanceRequestConcurrency":80,"availableCpu":"1","vpcConnector":null,"vpcConnectorEgressSettings":null},"labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"c4fb59fe2c48db8538d6476ae040a8558b00d0e9"},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.created","retryPolicy":"RETRY_POLICY_DO_NOT_RETRY","eventFilters":[{"attribute":"database","value":"(default)"},{"attribute":"namespace","value":"(default)"},{"attribute":"document","value":"notificationQueue/{queueId}","operator":"match-path-pattern"}],"triggerRegion":"nam5"}}
+[debug] [2025-09-27T14:23:14.284Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions 400
+[debug] [2025-09-27T14:23:14.285Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions {"error":{"code":400,"message":"Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/processnotificationqueue-824410: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.","status":"FAILED_PRECONDITION"}}
+[warn] ⚠  functions: Request to https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions?functionId=processNotificationQueue had HTTP Error: 400, Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/processnotificationqueue-824410: Invalid resource state for "": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role. 
+[warn] ⚠  functions: Since this is your first time using 2nd gen functions, we need a little bit longer to finish setting everything up. Retry the deployment in a few minutes. 
+[warn] ⚠  functions:  failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/processNotificationQueue 
+[error] Failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/processNotificationQueue
+[debug] [2025-09-27T14:23:14.290Z] Total Function Deployment time: 31830
+[debug] [2025-09-27T14:23:14.290Z] 2 Functions Deployed
+[debug] [2025-09-27T14:23:14.290Z] 2 Functions Errored
+[debug] [2025-09-27T14:23:14.290Z] 0 Function Deployments Aborted
+[debug] [2025-09-27T14:23:14.290Z] Average Function Deployment time: 24148.5
+[info] 
+[info] Functions deploy had errors with the following functions:
+	onStoryCompleted(us-central1)
+	processNotificationQueue(us-central1)
+[debug] [2025-09-27T14:23:14.293Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:23:14.293Z] Checked if tokens are valid: true, expires at: 1758985441135
+[debug] [2025-09-27T14:23:14.293Z] >>> [apiv2][query] GET https://artifactregistry.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/us-central1/repositories/gcf-artifacts [none]
+[debug] [2025-09-27T14:23:14.640Z] <<< [apiv2][status] GET https://artifactregistry.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/us-central1/repositories/gcf-artifacts 404
+[debug] [2025-09-27T14:23:14.640Z] <<< [apiv2][body] GET https://artifactregistry.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/us-central1/repositories/gcf-artifacts {"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}}
+[debug] [2025-09-27T14:23:14.640Z] Failed to check artifact cleanup policy for region us-central1: Request to https://artifactregistry.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/us-central1/repositories/gcf-artifacts had HTTP Error: 404, Requested entity was not found. {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://artifactregistry.googleapis.com/v1/projects/wdwdaydreams-e4e4e/locations/us-central1/repositories/gcf-artifacts had HTTP Error: 404, Requested entity was not found.","status":404}
+[debug] [2025-09-27T14:23:14.642Z] Functions deploy failed.
+[debug] [2025-09-27T14:23:14.642Z] {
+  "endpoint": {
+    "id": "onStoryCompleted",
+    "project": "wdwdaydreams-e4e4e",
+    "region": "us-central1",
+    "entryPoint": "onStoryCompleted",
+    "platform": "gcfv2",
+    "runtime": "nodejs18",
+    "eventTrigger": {
+      "eventType": "google.cloud.firestore.document.v1.updated",
+      "retry": false,
+      "eventFilters": {
+        "database": "(default)",
+        "namespace": "(default)"
+      },
+      "eventFilterPathPatterns": {
+        "document": "sharedStories/{storyId}"
+      },
+      "region": "nam5"
+    },
+    "labels": {
+      "deployment-tool": "cli-firebase"
+    },
+    "serviceAccount": null,
+    "ingressSettings": null,
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "maxInstances": null,
+    "minInstances": null,
+    "concurrency": 80,
+    "vpc": null,
+    "environmentVariables": {
+      "FIREBASE_CONFIG": "{\"projectId\":\"wdwdaydreams-e4e4e\",\"storageBucket\":\"wdwdaydreams-e4e4e.firebasestorage.app\"}",
+      "GCLOUD_PROJECT": "wdwdaydreams-e4e4e",
+      "EVENTARC_CLOUD_EVENT_SOURCE": "projects/wdwdaydreams-e4e4e/locations/us-central1/services/onStoryCompleted"
+    },
+    "codebase": "default",
+    "cpu": 1,
+    "targetedByOnly": false,
+    "hash": "c4fb59fe2c48db8538d6476ae040a8558b00d0e9"
+  },
+  "op": "create",
+  "original": {
+    "name": "FirebaseError",
+    "children": [],
+    "context": {
+      "function": "projects/wdwdaydreams-e4e4e/locations/us-central1/functions/onStoryCompleted"
+    },
+    "exit": 1,
+    "message": "Failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/onStoryCompleted",
+    "original": {
+      "name": "FirebaseError",
+      "children": [],
+      "context": {
+        "body": {
+          "error": {
+            "code": 400,
+            "message": "Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/onstorycompleted-881451: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.",
+            "status": "FAILED_PRECONDITION"
+          }
+        },
+        "response": {
+          "statusCode": 400
+        }
+      },
+      "exit": 1,
+      "message": "Request to https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions?functionId=onStoryCompleted had HTTP Error: 400, Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/onstorycompleted-881451: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.",
+      "status": 400
+    },
+    "status": 400,
+    "code": 400
+  }
+}
+[debug] [2025-09-27T14:23:14.642Z] {
+  "endpoint": {
+    "id": "processNotificationQueue",
+    "project": "wdwdaydreams-e4e4e",
+    "region": "us-central1",
+    "entryPoint": "processNotificationQueue",
+    "platform": "gcfv2",
+    "runtime": "nodejs18",
+    "eventTrigger": {
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "retry": false,
+      "eventFilters": {
+        "database": "(default)",
+        "namespace": "(default)"
+      },
+      "eventFilterPathPatterns": {
+        "document": "notificationQueue/{queueId}"
+      },
+      "region": "nam5"
+    },
+    "labels": {
+      "deployment-tool": "cli-firebase"
+    },
+    "serviceAccount": null,
+    "ingressSettings": null,
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "maxInstances": null,
+    "minInstances": null,
+    "concurrency": 80,
+    "vpc": null,
+    "environmentVariables": {
+      "FIREBASE_CONFIG": "{\"projectId\":\"wdwdaydreams-e4e4e\",\"storageBucket\":\"wdwdaydreams-e4e4e.firebasestorage.app\"}",
+      "GCLOUD_PROJECT": "wdwdaydreams-e4e4e",
+      "EVENTARC_CLOUD_EVENT_SOURCE": "projects/wdwdaydreams-e4e4e/locations/us-central1/services/processNotificationQueue"
+    },
+    "codebase": "default",
+    "cpu": 1,
+    "targetedByOnly": false,
+    "hash": "c4fb59fe2c48db8538d6476ae040a8558b00d0e9"
+  },
+  "op": "create",
+  "original": {
+    "name": "FirebaseError",
+    "children": [],
+    "context": {
+      "function": "projects/wdwdaydreams-e4e4e/locations/us-central1/functions/processNotificationQueue"
+    },
+    "exit": 1,
+    "message": "Failed to create function projects/wdwdaydreams-e4e4e/locations/us-central1/functions/processNotificationQueue",
+    "original": {
+      "name": "FirebaseError",
+      "children": [],
+      "context": {
+        "body": {
+          "error": {
+            "code": 400,
+            "message": "Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/processnotificationqueue-824410: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.",
+            "status": "FAILED_PRECONDITION"
+          }
+        },
+        "response": {
+          "statusCode": 400
+        }
+      },
+      "exit": 1,
+      "message": "Request to https://cloudfunctions.googleapis.com/v2/projects/wdwdaydreams-e4e4e/locations/us-central1/functions?functionId=processNotificationQueue had HTTP Error: 400, Validation failed for trigger projects/wdwdaydreams-e4e4e/locations/nam5/triggers/processnotificationqueue-824410: Invalid resource state for \"\": Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.",
+      "status": 400
+    },
+    "status": 400,
+    "code": 400
+  }
+}
+[error] Error: There was an error deploying functions:
+[error] - Error Failed to create function onStoryCompleted in region us-central1
+[error] - Error Failed to create function processNotificationQueue in region us-central1

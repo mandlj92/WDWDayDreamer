@@ -1,32 +1,148 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const {onDocumentUpdated, onDocumentCreated} = require('firebase-functions/v2/firestore');
+const {initializeApp} = require('firebase-admin/app');
+const {getFirestore} = require('firebase-admin/firestore');
+const {getMessaging} = require('firebase-admin/messaging');
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+// Initialize Firebase Admin
+initializeApp();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+// Notification when story is completed
+exports.onStoryCompleted = onDocumentUpdated('sharedStories/{storyId}', async (event) => {
+    const newData = event.data.after.data();
+    const oldData = event.data.before.data();
+    
+    // Check if story text was added (story completed)
+    if (!oldData.text && newData.text) {
+        console.log(`Story completed by ${newData.author} for date ${event.params.storyId}`);
+        
+        const authorName = newData.author;
+        const storyPrompt = Object.entries(newData.items || {})
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+        
+        // Get all users to send notification to partner
+        const db = getFirestore();
+        const usersSnapshot = await db.collection('users').get();
+        
+        if (usersSnapshot.empty) {
+            console.log('No users found in users collection');
+            return null;
+        }
+        
+        // Send notification to each user (will be filtered to partner only)
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const fcmToken = userData.fcmToken;
+            
+            if (!fcmToken) {
+                console.log(`No FCM token for user ${userDoc.id}`);
+                continue;
+            }
+            
+            // Don't send notification to the author themselves
+            const userEmail = userData.email || '';
+            const isAuthor = (authorName === 'Jon' && userEmail.toLowerCase().includes('jonathan')) ||
+                            (authorName === 'Carolyn' && userEmail.toLowerCase().includes('carolyn'));
+            
+            if (isAuthor) {
+                console.log(`Skipping notification to author ${authorName}`);
+                continue;
+            }
+            
+            const message = {
+                token: fcmToken,
+                notification: {
+                    title: 'Story Complete! ✨',
+                    body: `${authorName} just finished their Disney Daydream!`
+                },
+                data: {
+                    type: 'story_completed',
+                    author: authorName,
+                    prompt: storyPrompt,
+                    storyId: event.params.storyId
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            alert: {
+                                title: 'Story Complete! ✨',
+                                body: `${authorName} just finished their Disney Daydream!`
+                            },
+                            sound: 'default',
+                            badge: 1
+                        }
+                    }
+                }
+            };
+            
+            try {
+                await getMessaging().send(message);
+                console.log('Notification sent successfully to:', userDoc.id);
+            } catch (error) {
+                console.error('Error sending notification:', error);
+                
+                if (error.code === 'messaging/registration-token-not-registered') {
+                    console.log('Removing invalid token for user:', userDoc.id);
+                    await userDoc.ref.update({
+                        fcmToken: getFirestore().FieldValue.delete()
+                    });
+                }
+            }
+        }
+    } else {
+        console.log('Story update did not include text completion');
+    }
+    
+    return null;
+});
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// Process notification queue
+exports.processNotificationQueue = onDocumentCreated('notificationQueue/{queueId}', async (event) => {
+    const data = event.data.data();
+    
+    if (data.processed) {
+        console.log('Notification already processed');
+        return null;
+    }
+    
+    const message = {
+        token: data.targetToken,
+        notification: {
+            title: data.title,
+            body: data.body
+        },
+        data: data.data || {},
+        apns: {
+            payload: {
+                aps: {
+                    alert: {
+                        title: data.title,
+                        body: data.body
+                    },
+                    sound: 'default',
+                    badge: 1
+                }
+            }
+        }
+    };
+    
+    try {
+        await getMessaging().send(message);
+        console.log('Queued notification sent successfully');
+        
+        // Mark as processed
+        await event.data.ref.update({
+            processed: true,
+            processedAt: getFirestore().FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Error sending queued notification:', error);
+        await event.data.ref.update({
+            processed: true,
+            error: error.message,
+            processedAt: getFirestore().FieldValue.serverTimestamp()
+        });
+    }
+    
+    return null;
+});

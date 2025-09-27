@@ -19,68 +19,13 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
-    // Updated function to accept whose turn it might be
-    func scheduleDailyNotification(atHour hour: Int, minute: Int, authorName: String?) {
-        let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized else {
-                print("Cannot schedule notification: Not authorized.")
-                return
-            }
-            
-            // Remove existing pending requests to avoid duplicates
-            center.removeAllPendingNotificationRequests()
-            
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = minute
-            
-            let trigger = UNCalendarNotificationTrigger(
-                dateMatching: dateComponents,
-                repeats: true // Repeats daily at the specified time
-            )
-            
-            let content = UNMutableNotificationContent()
-            content.title = "Time for a Disney Daydream! ✨"
-            
-            // Customize body based on whose turn it is (if known)
-            if let author = authorName {
-                content.body = "It's \(author)'s turn to write today's Disney story. Tap to see the prompt!"
-            } else {
-                content.body = "Let's imagine a magical Disney moment! Tap to open WDW Daydreams."
-            }
-            
-            content.sound = .default
-            
-            let request = UNNotificationRequest(
-                identifier: "dailyDaydreamPrompt", // Use a unique identifier
-                content: content,
-                trigger: trigger
-            )
-            
-            center.add(request) { error in
-                if let error = error {
-                    print("Error scheduling daily notification: \(error.localizedDescription)")
-                } else {
-                    print("Daily notification scheduled successfully for \(hour):\(String(format: "%02d", minute)).")
-                }
-            }
-        }
-    }
-    
-    // Helper to update the notification when the app starts or author changes
-    // You might call this from WDWDaydreamsApp init or when a new prompt is generated
-    func updateScheduledNotification(basedOn manager: ScenarioManager) {
-        let authorName = manager.currentStoryPrompt?.assignedAuthor.displayName
-        // Schedule for 9:00 AM, for example
-        scheduleDailyNotification(atHour: 9, minute: 0, authorName: authorName)
-    }
-    
+    // Local notification for when partner completes story (triggered by FCM or locally)
     func sendLocalCompletionNotification(from author: String) {
         let content = UNMutableNotificationContent()
         content.title = "Story Complete! ✨"
         content.body = "\(author) finished writing today's Daydream! Your turn now!"
         content.sound = .default
+        content.badge = 1
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
@@ -98,9 +43,35 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
+    // Handle notification display when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+        // Show notification even when app is in foreground
+        completionHandler([.banner, .sound, .badge])
+    }
+    
+    // Handle notification tap
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        // Handle what happens when user taps notification
+        let userInfo = response.notification.request.content.userInfo
+        
+        if let type = userInfo["type"] as? String {
+            switch type {
+            case "story_completed":
+                // Maybe navigate to the completed story or refresh data
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("StoryCompletedTapped"),
+                    object: nil,
+                    userInfo: userInfo
+                )
+            default:
+                break
+            }
+        }
+        
+        completionHandler()
     }
 }
