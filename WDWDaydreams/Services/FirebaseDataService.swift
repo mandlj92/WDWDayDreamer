@@ -343,19 +343,45 @@ class FirebaseDataService {
             
             // Use batched writes for better performance
             let batch = self.db.batch()
-            
-            // Add delete operations to batch
+
+            let calendar = Calendar.current
+            let todayStart = calendar.startOfDay(for: Date())
+            var didQueueDeletion = false
+
+            // Add delete operations to batch, skipping today's prompt so the active
+            // story remains available for determining the next author.
             for document in documents {
+                var shouldSkip = false
+
+                if let timestamp = document.data()["date"] as? Timestamp {
+                    let documentDate = calendar.startOfDay(for: timestamp.dateValue())
+                    shouldSkip = documentDate == todayStart
+                } else if let idDate = DateFormatter.shared.date(from: document.documentID) {
+                    shouldSkip = calendar.isDate(idDate, inSameDayAs: todayStart)
+                }
+
+                if shouldSkip {
+                    print("Skipping deletion of today's prompt (\(document.documentID)) to preserve active story")
+                    continue
+                }
+
                 batch.deleteDocument(document.reference)
+                didQueueDeletion = true
             }
-            
+
+            guard didQueueDeletion else {
+                print("No historical shared stories to delete (today's prompt preserved)")
+                completion(true)
+                return
+            }
+
             // Commit the batch
             batch.commit { error in
                 if let error = error {
                     print("Error clearing shared stories: \(error.localizedDescription)")
                     completion(false)
                 } else {
-                    print("Shared stories cleared successfully")
+                    print("Shared stories cleared successfully (today's prompt preserved)")
                     completion(true)
                 }
             }
