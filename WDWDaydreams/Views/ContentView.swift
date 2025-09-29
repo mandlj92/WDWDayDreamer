@@ -41,8 +41,9 @@ struct ContentView: View {
             .edgesIgnoringSafeArea(.bottom)
 
             // Main Content
-            if !authViewModel.isAuthorized {
-                UnauthorizedView()
+            if !authViewModel.isAuthenticated {
+                LoginView()
+                    .environmentObject(authViewModel)
                     .environment(\.theme, currentTheme)
             } else {
                 NavigationView {
@@ -163,31 +164,6 @@ struct ContentView: View {
 }
 
 // MARK: - Subviews
-struct UnauthorizedView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
-    @Environment(\.theme) var theme: Theme
-    
-    var body: some View {
-        VStack(spacing: 30) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 80))
-            Text("Access Restricted")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            Text("This app is private and only for authorized users.")
-                .multilineTextAlignment(.center)
-            Button("Try Different Account") {
-                authViewModel.signOut()
-            }
-            .buttonStyle(DisneyButtonStyle(color: theme.mickeyRed))
-            Spacer()
-        }
-        .foregroundColor(theme.mickeyRed)
-        .padding()
-        .background(theme.backgroundCream)
-    }
-}
-
 struct LoadingOverlayView: View {
     let theme: Theme
     
