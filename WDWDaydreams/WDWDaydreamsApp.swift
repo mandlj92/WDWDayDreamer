@@ -8,21 +8,29 @@ import FirebaseAuth
 import FirebaseAppCheck
 import UserNotifications
 
-// Custom class to provide a debug App Check provider
+// Enhanced App Check provider with better security
 class YourAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
-  func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
-    #if DEBUG
-      return AppCheckDebugProvider(app: app)
-    #else
-      return AppAttestProvider(app: app)
-    #endif
-  }
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        #if DEBUG
+        // Debug mode: Use debug provider for testing
+        print("⚠️ Using AppCheckDebugProvider - DEBUG MODE ONLY")
+        return AppCheckDebugProvider(app: app)
+        #else
+        // Production: Use AppAttest for iOS 14+, fallback to DeviceCheck
+        if #available(iOS 14.0, *) {
+            print("✅ Using AppAttestProvider for App Check")
+            return AppAttestProvider(app: app)
+        } else {
+            print("✅ Using DeviceCheckProvider for App Check")
+            return DeviceCheckProvider(app: app)
+        }
+        #endif
+    }
 }
 
 @main
 struct WDWDaydreamsApp: App {
     @StateObject private var authViewModel: AuthViewModel
-    @StateObject var weatherManager = WDWWeatherManager()
     @StateObject var themeManager = ThemeManager()
     @StateObject var fcmService = FCMService.shared
     @StateObject var feedbackCenter = UIFeedbackCenter()
@@ -66,8 +74,7 @@ struct WDWDaydreamsApp: App {
         settings.minimumFetchInterval = 3600
         #endif
         remoteConfig.configSettings = settings
-        let defaults: [String: NSObject] = ["weather_api_key": "" as NSString]
-        remoteConfig.setDefaults(defaults)
+        remoteConfig.setDefaults([:])
         print("✅ Remote Config initialized")
     }
     
@@ -86,7 +93,6 @@ struct WDWDaydreamsApp: App {
         WindowGroup {
             MainAppView()
                 .environmentObject(authViewModel)
-                .environmentObject(weatherManager)
                 .environmentObject(themeManager)
                 .environmentObject(fcmService)
                 .environmentObject(feedbackCenter)
@@ -100,7 +106,6 @@ struct WDWDaydreamsApp: App {
 // MARK: - Main App View (handles scene phase)
 struct MainAppView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    @EnvironmentObject var weatherManager: WDWWeatherManager
     @EnvironmentObject var fcmService: FCMService
     @Environment(\.scenePhase) var scenePhase
     
@@ -130,11 +135,10 @@ struct MainAppView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 print("App became active.")
-                
+
                 // Clear notification badge when app becomes active
                 NotificationManager.shared.clearBadge()
-                
-                weatherManager.fetchWeather()
+
                 // Refresh FCM token when app becomes active
                 fcmService.retrieveFCMToken()
             }

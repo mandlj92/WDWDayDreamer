@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var manager: ScenarioManager
-    @EnvironmentObject var weatherManager: WDWWeatherManager
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var feedbackCenter: UIFeedbackCenter
@@ -50,6 +49,7 @@ struct ContentView: View {
                     VStack {
                         Picker("View", selection: $currentView) {
                             Text("Today").tag("Today")
+                            Text("Pals").tag("Pals")
                             Text("History").tag("History")
                             Text("Favorites").tag("Favorites")
                         }
@@ -61,6 +61,9 @@ struct ContentView: View {
                         switch currentView {
                         case "Today":
                             TodayView()
+                                .environment(\.theme, currentTheme)
+                        case "Pals":
+                            PalsView()
                                 .environment(\.theme, currentTheme)
                         case "History":
                             HistoryView()
@@ -79,10 +82,6 @@ struct ContentView: View {
                             Text("Disney Daydreams")
                                 .font(.disneyTitle(24))
                                 .foregroundColor(currentTheme.magicBlue)
-                        }
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            WeatherWidget(weatherManager: weatherManager)
-                                .environment(\.theme, currentTheme)
                         }
                         ToolbarItem(placement: .navigationBarTrailing) {
                             HStack {
@@ -124,7 +123,6 @@ struct ContentView: View {
         .onAppear {
             updateTheme()
             setupApp()
-            weatherManager.fetchWeather()
         }
         .onChange(of: themeManager.selectedTheme) { _, _ in
             updateTheme()
@@ -150,13 +148,18 @@ struct ContentView: View {
 
     private func setupApp() {
         isInitializing = true
-        FirebaseDataService.shared.ensureDatabaseSetup { success in
+        FirebaseDataService.shared.ensureDatabaseSetup { [weak authViewModel, weak manager] success in
             if success {
-                manager.generateOrUpdateDailyPrompt()
+                Task { @MainActor in
+                    if let userId = authViewModel?.userProfile?.id, let manager = manager {
+                        await manager.initialize(userId: userId)
+                    }
+                    self.isInitializing = false
+                }
             } else {
-                errorMessage = "Error setting up database."
+                self.errorMessage = "Error setting up database."
+                self.isInitializing = false
             }
-            isInitializing = false
         }
     }
 }

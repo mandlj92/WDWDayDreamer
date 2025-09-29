@@ -40,9 +40,9 @@ class FirebaseDataService {
         Auth.auth().currentUser?.email ?? ""
     }
     
-    var isCurrentUserJon: Bool {
-        let email = currentUserEmail.lowercased()
-        return email.contains("jon") || email.contains("jonathan")
+    // Helper to get current user's display name
+    var currentUserDisplayName: String {
+        Auth.auth().currentUser?.displayName ?? "User"
     }
     
     // Safety check for authenticated operations
@@ -229,9 +229,17 @@ class FirebaseDataService {
                     }
                 }
                 
-                // Get author or default to user
-                let authorString = data["author"] as? String ?? StoryAuthor.user.rawValue
-                let author = StoryAuthor(rawValue: authorString) ?? .user
+                // Get author - try new format first, then legacy
+                let author: StoryAuthor
+                if let authorId = data["authorId"] as? String,
+                   let authorName = data["authorName"] as? String {
+                    author = StoryAuthor(userId: authorId, displayName: authorName)
+                } else if let legacyAuthor = data["author"] as? String {
+                    // Legacy migration support
+                    author = StoryAuthor(legacyValue: legacyAuthor) ?? StoryAuthor(userId: "unknown", displayName: "Unknown")
+                } else {
+                    author = StoryAuthor(userId: self.userId, displayName: self.currentUserDisplayName)
+                }
                 
                 // Create DaydreamStory
                 let story = DaydreamStory(
@@ -259,9 +267,14 @@ class FirebaseDataService {
         // Convert to Firebase-friendly format
         var firebaseData: [String: Any] = [
             "date": Timestamp(date: story.dateAssigned),
-            "author": story.assignedAuthor.rawValue,
+            "authorId": story.assignedAuthor.userId,
+            "authorName": story.assignedAuthor.displayName,
             "isFavorite": story.isFavorite
         ]
+
+        if let partnershipId = story.partnershipId {
+            firebaseData["partnershipId"] = partnershipId
+        }
         
         // Add items as a dictionary with string keys
         var itemsDict: [String: String] = [:]
@@ -316,14 +329,17 @@ class FirebaseDataService {
         }
     }
     
-    func clearStoryHistory(completion: @escaping (Bool) -> Void) {
+    func clearStoryHistory(partnershipId: String, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated() else {
             completion(false)
             return
         }
-        
-        // Clear shared stories (affects both users)
-        db.collection("sharedStories").getDocuments { [weak self] snapshot, error in
+
+        // Clear stories for this partnership
+        db.collection("partnerships")
+            .document(partnershipId)
+            .collection("stories")
+            .getDocuments { [weak self] snapshot, error in
             guard let self = self else {
                 completion(false)
                 return
@@ -378,112 +394,204 @@ class FirebaseDataService {
             // Commit the batch
             batch.commit { error in
                 if let error = error {
-                    print("Error clearing shared stories: \(error.localizedDescription)")
+                    print("Error clearing partnership stories: \(error.localizedDescription)")
                     completion(false)
                 } else {
-                    print("Shared stories cleared successfully (today's prompt preserved)")
+                    print("Partnership stories cleared successfully (today's prompt preserved)")
                     completion(true)
                 }
             }
         }
     }
+
+    // MARK: - Partnership Story Fetching
+
+    func fetchPartnershipStories(partnershipId: String, completion: @escaping ([DaydreamStory]) -> Void) {
+        guard ensureAuthenticated() else {
+            completion([])
+            return
+        }
+
+        db.collection("partnerships")
+            .document(partnershipId)
+            .collection("stories")
+            .order(by: "date", descending: true)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching partnership stories: \(error.localizedDescription)")
+                    completion([])
+                    return
+                }
+
+                guard let documents = snapshot?.documents else {
+                    completion([])
+                    return
+                }
+
+                let stories = documents.compactMap { doc -> DaydreamStory? in
+                    let data = doc.data()
+                    guard let dateTimestamp = data["date"] as? Timestamp,
+                          let itemsDict = data["items"] as? [String: String] else {
+                        return nil
+                    }
+
+                    var items: [Category: String] = [:]
+                    for (key, value) in itemsDict {
+                        if let category = Category(rawValue: key) {
+                            items[category] = value
+                        }
+                    }
+
+                    // Get author - try new format first, then legacy
+                    let author: StoryAuthor
+                    if let authorId = data["authorId"] as? String,
+                       let authorName = data["authorName"] as? String {
+                        author = StoryAuthor(userId: authorId, displayName: authorName)
+                    } else if let legacyAuthor = data["author"] as? String {
+                        author = StoryAuthor(legacyValue: legacyAuthor) ?? StoryAuthor(userId: "unknown", displayName: "Unknown")
+                    } else {
+                        author = StoryAuthor(userId: self.userId, displayName: self.currentUserDisplayName)
+                    }
+
+                    return DaydreamStory(
+                        id: UUID(),
+                        dateAssigned: dateTimestamp.dateValue(),
+                        items: items,
+                        assignedAuthor: author,
+                        partnershipId: partnershipId,
+                        storyText: data["text"] as? String,
+                        isFavorite: data["isFavorite"] as? Bool ?? false
+                    )
+                }
+
+                completion(stories)
+            }
+    }
     
-    // MARK: - Daily Prompt Management
-    
-    func saveDailyPrompt(_ prompt: DaydreamStory, completion: @escaping (Bool) -> Void) {
+    // MARK: - Daily Prompt Management (Partnership-based)
+
+    func saveDailyPrompt(_ prompt: DaydreamStory, partnershipId: String, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated() else {
             completion(false)
             return
         }
-        
+
         // Convert to Firebase-friendly format
         var firebaseData: [String: Any] = [
             "date": Timestamp(date: prompt.dateAssigned),
-            "author": prompt.assignedAuthor.rawValue,
-            "isFavorite": prompt.isFavorite
+            "authorId": prompt.assignedAuthor.userId,
+            "authorName": prompt.assignedAuthor.displayName,
+            "isFavorite": prompt.isFavorite,
+            "partnershipId": partnershipId
         ]
-        
+
         // Add items as a dictionary with string keys
         var itemsDict: [String: String] = [:]
         for (category, value) in prompt.items {
             itemsDict[category.rawValue] = value
         }
         firebaseData["items"] = itemsDict
-        
+
         // Add story text if available
         if let text = prompt.storyText {
             firebaseData["text"] = text
         }
-        
-        // Save to shared stories to make it immediately visible to both users
+
+        // Save to partnership's stories collection
         let dateKey = DateFormatter.shared.string(from: prompt.dateAssigned)
-        let sharedRef = db.collection("sharedStories").document(dateKey)
-        
-        sharedRef.setData(firebaseData, merge: true) { error in
+        let partnershipRef = db.collection("partnerships")
+            .document(partnershipId)
+            .collection("stories")
+            .document(dateKey)
+
+        partnershipRef.setData(firebaseData, merge: true) { error in
             if let error = error {
-                print("❌ Error saving shared prompt: \(error.localizedDescription)")
+                print("❌ Error saving partnership story: \(error.localizedDescription)")
                 completion(false)
             } else {
-                print("✅ Shared prompt saved for both users")
+                print("✅ Partnership story saved")
                 completion(true)
             }
         }
     }
     
-    func determineNextAuthor(completion: @escaping (StoryAuthor) -> Void) {
+    func determineNextAuthor(partnership: StoryPartnership, currentUserId: String, partnerProfile: UserProfile, completion: @escaping (StoryAuthor) -> Void) {
         guard ensureAuthenticated() else {
-            completion(.user)
+            completion(StoryAuthor(userId: currentUserId, displayName: currentUserDisplayName))
             return
         }
-        
-        // Check the most recent prompt in shared stories
-        db.collection("sharedStories")
+
+        // Check if partnership has a nextAuthorId set
+        if let nextAuthorId = partnership.nextAuthorId {
+            let displayName = nextAuthorId == currentUserId ? currentUserDisplayName : partnerProfile.displayName
+            completion(StoryAuthor(userId: nextAuthorId, displayName: displayName))
+            return
+        }
+
+        // Check the most recent story in this partnership
+        db.collection("partnerships")
+            .document(partnership.id)
+            .collection("stories")
             .order(by: "date", descending: true)
             .limit(to: 1)
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error determining next author: \(error.localizedDescription)")
-                    // Default based on which user is signed in to keep turn order stable
-                    completion(self.isCurrentUserJon ? .user : .wife)
+                    // Default to current user
+                    completion(StoryAuthor(userId: currentUserId, displayName: self.currentUserDisplayName))
                     return
                 }
-                
+
                 if let document = snapshot?.documents.first,
-                   let authorString = document.data()["author"] as? String,
-                   let lastAuthor = StoryAuthor(rawValue: authorString) {
+                   let lastAuthorId = document.data()["authorId"] as? String {
                     // Alternate from the last author
-                    completion(lastAuthor == .user ? .wife : .user)
+                    let nextAuthorId = lastAuthorId == partnership.user1Id ? partnership.user2Id : partnership.user1Id
+                    let displayName = nextAuthorId == currentUserId ? self.currentUserDisplayName : partnerProfile.displayName
+                    completion(StoryAuthor(userId: nextAuthorId, displayName: displayName))
                 } else {
-                    // No previous stories, default to user
-                    completion(.user)
+                    // No previous stories, start with user1
+                    let displayName = partnership.user1Id == currentUserId ? self.currentUserDisplayName : partnerProfile.displayName
+                    completion(StoryAuthor(userId: partnership.user1Id, displayName: displayName))
                 }
             }
     }
     
     // MARK: - Story Completion Tracking
     
-    func markStoryAsCompleted(_ story: DaydreamStory, completion: @escaping (Bool) -> Void) {
+    func markStoryAsCompleted(_ story: DaydreamStory, partnershipId: String, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated(), let storyText = story.storyText else {
             completion(false)
             return
         }
-        
-        // Update the shared story document with the new text
+
+        // Update the partnership story document with the completed text
         let dateKey = DateFormatter.shared.string(from: story.dateAssigned)
-        let sharedRef = db.collection("sharedStories").document(dateKey)
-        
+        let storyRef = db.collection("partnerships")
+            .document(partnershipId)
+            .collection("stories")
+            .document(dateKey)
+
         let updateData: [String: Any] = [
             "text": storyText,
-            "author": story.assignedAuthor.rawValue
+            "authorId": story.assignedAuthor.userId,
+            "authorName": story.assignedAuthor.displayName,
+            "completedAt": Timestamp(date: Date())
         ]
-        
-        sharedRef.setData(updateData, merge: true) { error in
+
+        storyRef.setData(updateData, merge: true) { error in
             if let error = error {
-                print("❌ Error updating shared story: \(error.localizedDescription)")
+                print("❌ Error updating partnership story: \(error.localizedDescription)")
                 completion(false)
             } else {
-                print("✅ Shared story updated for both users")
-                completion(true)
+                print("✅ Partnership story marked as completed")
+
+                // Update partnership's lastStoryDate
+                let partnershipRef = self.db.collection("partnerships").document(partnershipId)
+                partnershipRef.updateData([
+                    "lastStoryDate": Timestamp(date: story.dateAssigned)
+                ]) { _ in
+                    completion(true)
+                }
             }
         }
     }

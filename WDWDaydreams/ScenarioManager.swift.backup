@@ -3,15 +3,11 @@ import Foundation
 import Combine
 import FirebaseFirestore
 
-@MainActor
 class ScenarioManager: ObservableObject {
     // MARK: - Published Properties
     @Published var currentStoryPrompt: DaydreamStory?
     @Published var storyHistory: [DaydreamStory] = []
     @Published var favorites: [DaydreamStory] = []
-    @Published var selectedPartnership: StoryPartnership?
-    @Published var userPartnerships: [StoryPartnership] = []
-    @Published var partnerProfiles: [String: UserProfile] = [:] // Map of userId to profile
     @Published var enabledCategories: [Category] = [.park, .ride, .food] {
         didSet {
             if enabledCategories.isEmpty {
@@ -21,7 +17,7 @@ class ScenarioManager: ObservableObject {
             }
             if enabledCategories != oldValue {
                 print("📝 Categories changed from \(oldValue.map{$0.rawValue}) to \(enabledCategories.map{$0.rawValue})")
-                savePartnershipSettings()
+                saveUserSettings()
                 rebuildDeck()
             }
         }
@@ -30,21 +26,18 @@ class ScenarioManager: ObservableObject {
         didSet {
             if tripDate != oldValue {
                 print("📅 Trip date changed from \(oldValue?.description ?? "nil") to \(tripDate?.description ?? "nil")")
-                savePartnershipSettings()
+                saveUserSettings()
             }
         }
     }
     @Published var isLoading: Bool = false
-
+    
     // MARK: - Private Properties
     private var deck: [DaydreamStory] = []
     private var deckIndex = 0
     private var firebaseService = FirebaseDataService.shared
-    private var palsService = PalsService()
-    private var userService = UserService()
     private var fcmService = FCMService.shared
     private var isGeneratingPrompt = false
-    private var currentUserId: String = ""
 
     // Consolidated listener for better performance
     private var dataListener: ListenerRegistration?
@@ -60,159 +53,101 @@ class ScenarioManager: ObservableObject {
         formatter.formatOptions = [.withYear, .withMonth, .withDay]
         return formatter
     }()
-
+    
     // MARK: - Initialization & Setup
-
+    
     init() {
         print("🚀 ScenarioManager initializing...")
         loadCompletionNotificationCache()
+        fetchUserSettings()
+        rebuildDeck()
+        fetchFavorites()
+        setupOptimizedListeners()
     }
-
+    
     deinit {
         // Clean up listeners
         dataListener?.remove()
     }
-
-    func initialize(userId: String) async {
-        self.currentUserId = userId
-        await loadPartnerships()
-        fetchFavorites()
-
-        // If user has partnerships, select the first one by default
-        if let firstPartnership = userPartnerships.first {
-            await selectPartnership(firstPartnership)
-        }
-    }
-
-    func loadPartnerships() async {
-        guard !currentUserId.isEmpty else { return }
-
-        do {
-            userPartnerships = try await palsService.getUserPartnerships(userId: currentUserId)
-            print("✅ Loaded \(userPartnerships.count) partnerships")
-
-            // Load partner profiles
-            for partnership in userPartnerships {
-                if let partnerId = partnership.getPartnerId(for: currentUserId) {
-                    if partnerProfiles[partnerId] == nil {
-                        if let profile = try await userService.getUserProfile(userId: partnerId) {
-                            partnerProfiles[partnerId] = profile
-                        }
-                    }
-                }
-            }
-        } catch {
-            print("❌ Error loading partnerships: \(error)")
-        }
-    }
-
-    func selectPartnership(_ partnership: StoryPartnership) async {
-        selectedPartnership = partnership
-
-        // Load settings from partnership
-        enabledCategories = partnership.enabledCategories.compactMap { Category(rawValue: $0) }
-        if enabledCategories.isEmpty {
-            enabledCategories = [.park, .ride, .food]
-        }
-        tripDate = partnership.sharedTripDate
-
-        rebuildDeck()
-        setupOptimizedListeners(for: partnership.id)
-        fetchPartnershipStories(partnershipId: partnership.id)
-        await generateOrUpdateDailyPrompt()
-    }
-
-    private func setupOptimizedListeners(for partnershipId: String) {
-        // Remove old listener
-        dataListener?.remove()
-
-        // Single listener for partnership stories with debouncing
+    
+    private func setupOptimizedListeners() {
+        // Single listener for shared stories with debouncing
         var lastProcessedTime = Date()
         let debounceInterval: TimeInterval = 0.5
-
-        dataListener = firebaseService.getFirestoreReference()
-            .collection("partnerships")
-            .document(partnershipId)
-            .collection("stories")
+        
+        dataListener = firebaseService.getFirestoreReference().collection("sharedStories")
             .order(by: "date", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
-
+                
                 if let error = error {
-                    print("❌ Error listening for partnership stories: \(error.localizedDescription)")
+                    print("❌ Error listening for shared stories: \(error.localizedDescription)")
                     return
                 }
-
+                
                 guard let documents = snapshot?.documents else {
-                    print("❌ No documents found in partnership stories")
+                    print("❌ No documents found in sharedStories collection")
                     return
                 }
-
+                
                 let now = Date()
                 if now.timeIntervalSince(lastProcessedTime) < debounceInterval {
                     print("🔄 Debouncing rapid changes...")
                     return
                 }
                 lastProcessedTime = now
-
-                print("📄 [Optimized] Received \(documents.count) partnership story documents")
-
+                
+                print("📄 [Optimized] Received \(documents.count) shared story documents")
+                
                 let stories = documents.compactMap { doc -> DaydreamStory? in
                     let data = doc.data()
                     guard let dateTimestamp = data["date"] as? Timestamp,
-                          let itemsDict = data["items"] as? [String: String] else {
+                          let itemsDict = data["items"] as? [String: String],
+                          let authorString = data["author"] as? String,
+                          let author = StoryAuthor(rawValue: authorString)
+                    else {
                         print("⚠️ Missing required fields in document: \(doc.documentID)")
                         return nil
                     }
-
+                    
                     var items: [Category: String] = [:]
                     for (key, value) in itemsDict {
                         if let category = Category(rawValue: key) {
                             items[category] = value
                         }
                     }
-
-                    // Get author
-                    let author: StoryAuthor
-                    if let authorId = data["authorId"] as? String,
-                       let authorName = data["authorName"] as? String {
-                        author = StoryAuthor(userId: authorId, displayName: authorName)
-                    } else if let legacyAuthor = data["author"] as? String {
-                        author = StoryAuthor(legacyValue: legacyAuthor) ?? StoryAuthor(userId: "unknown", displayName: "Unknown")
-                    } else {
-                        author = StoryAuthor(userId: self.currentUserId, displayName: self.firebaseService.currentUserDisplayName)
-                    }
-
+                    
                     return DaydreamStory(
                         id: UUID(),
                         dateAssigned: dateTimestamp.dateValue(),
                         items: items,
                         assignedAuthor: author,
-                        partnershipId: partnershipId,
                         storyText: data["text"] as? String,
                         isFavorite: false
                     )
                 }
-
-                Task { @MainActor in
+                
+                DispatchQueue.main.async {
                     self.storyHistory = stories
-
+                    
                     // Update current prompt if it's part of today's stories
                     if let todayStory = stories.first(where: { $0.isToday }) {
                         self.currentStoryPrompt = todayStory
                     }
-
+                    
                     // Check for story completions (for notifications)
                     self.checkForNewCompletions(in: stories)
                 }
             }
     }
-
+    
     private func checkForNewCompletions(in stories: [DaydreamStory]) {
+        let currentAuthor = firebaseService.isCurrentUserJon ? StoryAuthor.user : StoryAuthor.wife
+
         // Find recently completed stories by partner
         let recentCompletions = stories.filter { story in
             story.isWritten &&
-            story.assignedAuthor.userId != currentUserId &&
+            story.assignedAuthor != currentAuthor &&
             Calendar.current.isDateInToday(story.dateAssigned)
         }
 
@@ -223,88 +158,63 @@ class ScenarioManager: ObservableObject {
             let key = completionNotificationKey(for: latestCompletion)
             NotificationManager.shared.sendLocalCompletionNotification(from: latestCompletion.assignedAuthor.displayName)
             completionNotificationCache.insert(key)
-
-            // Trigger haptic feedback
-            HapticManager.instance.notification(type: .success)
         }
     }
-
+    
     // MARK: - Deck Management
-
+    
     private func rebuildDeck() {
         guard !enabledCategories.isEmpty else {
             print("⚠️ Cannot rebuild deck with no categories")
             return
         }
-
+        
         print("🔄 Rebuilding deck with categories: \(enabledCategories.map { $0.rawValue })")
         let cats = enabledCategories
         let lists = cats.map { DataModel.shared.list(for: $0) }
         let combos = cartesianProduct(lists)
-
-        guard let partnership = selectedPartnership else {
-            print("⚠️ No partnership selected")
-            return
-        }
-
-        let currentAuthor = StoryAuthor(
-            userId: currentUserId,
-            displayName: firebaseService.currentUserDisplayName
-        )
-
+        
         deck = combos.map { values in
             var dict: [Category: String] = [:]
             for (i, cat) in cats.enumerated() {
                 dict[cat] = values[i]
             }
-
+            
             return DaydreamStory(
                 dateAssigned: Date(),
                 items: dict,
-                assignedAuthor: currentAuthor,
-                partnershipId: partnership.id
+                assignedAuthor: .user
             )
         }
-
+        
         deck.shuffle()
         deckIndex = 0
         print("🎯 Deck rebuilt with \(deck.count) combinations")
     }
-
+    
     private func cartesianProduct<T>(_ arrays: [[T]]) -> [[T]] {
         guard let first = arrays.first else { return [[]] }
         let rest = Array(arrays.dropFirst())
         let restProd = cartesianProduct(rest)
         return first.flatMap { x in restProd.map { [x] + $0 } }
     }
-
-    func next() async {
+    
+    func next() {
         guard !isGeneratingPrompt else {
             print("⏳ Already generating a prompt, skipping...")
             return
         }
-
-        guard let partnership = selectedPartnership else {
-            print("❌ No partnership selected")
-            return
-        }
-
-        guard let partnerId = partnership.getPartnerId(for: currentUserId),
-              let partnerProfile = partnerProfiles[partnerId] else {
-            print("❌ Partner profile not found")
-            return
-        }
-
+        
         isGeneratingPrompt = true
         isLoading = true
-
+        
         print("🎲 Generating new prompt...")
-
+        
         // Ensure we have a deck
         if deck.isEmpty {
             print("❌ Deck is empty, rebuilding...")
             rebuildDeck()
-
+            
             // Check if rebuild was successful
             if deck.isEmpty {
                 print("❌ Still no deck after rebuild")
@@ -313,145 +223,133 @@ class ScenarioManager: ObservableObject {
                 return
             }
         }
-
+        
         // Reset deck if we've used all cards
         if deckIndex >= deck.count {
             print("🔄 Reached end of deck, shuffling...")
             deck.shuffle()
             deckIndex = 0
         }
-
+        
         var story = deck[deckIndex]
         deckIndex += 1
-
+        
         story.dateAssigned = Date()
-        story.partnershipId = partnership.id
-
+        
         print("🎯 Generated story with items: \(story.items)")
-
-        firebaseService.determineNextAuthor(
-            partnership: partnership,
-            currentUserId: currentUserId,
-            partnerProfile: partnerProfile
-        ) { nextAuthor in
-            Task { @MainActor in
-                story.assignedAuthor = nextAuthor
-                print("👤 Assigned to: \(nextAuthor.displayName)")
-
+        
+        firebaseService.determineNextAuthor { [weak self] nextAuthor in
+            guard let self = self else { return }
+            
+            story.assignedAuthor = nextAuthor
+            print("👤 Assigned to: \(nextAuthor.displayName)")
+            
+            DispatchQueue.main.async {
                 self.currentStoryPrompt = story
                 self.isLoading = false
                 self.isGeneratingPrompt = false
-
-                self.firebaseService.saveDailyPrompt(story, partnershipId: partnership.id) { success in
-                    if !success {
-                        print("❌ Failed to save daily prompt")
-                    } else {
-                        print("✅ Daily prompt saved to Firebase")
-
-                        // Send FCM notification to partner about new prompt
-                        let promptPreview = story.promptText
-                        self.fcmService.notifyPartnerOfNewPrompt(
-                            assignedAuthor: nextAuthor.displayName,
-                            promptPreview: promptPreview,
-                            partnerUserId: partnerId
-                        )
-
-                        // Trigger haptic feedback
-                        HapticManager.instance.impact(style: .medium)
-                    }
+            }
+            
+            self.firebaseService.saveDailyPrompt(story) { success in
+                if !success {
+                    print("❌ Failed to save daily prompt")
+                } else {
+                    print("✅ Daily prompt saved to Firebase")
+                    
+                    // Send FCM notification to partner about new prompt
+                    let promptPreview = story.promptText
+                    self.fcmService.notifyPartnerOfNewPrompt(
+                        assignedAuthor: nextAuthor.displayName,
+                        promptPreview: promptPreview
+                    )
                 }
             }
         }
     }
-
-    // MARK: - Partnership Settings
-
-    private func savePartnershipSettings() {
-        guard let partnership = selectedPartnership else { return }
-
-        var updatedPartnership = partnership
-        updatedPartnership.enabledCategories = enabledCategories.map { $0.rawValue }
-        updatedPartnership.sharedTripDate = tripDate
-
-        Task {
-            do {
-                try await palsService.updatePartnership(updatedPartnership)
-                print("✅ Partnership settings saved")
-            } catch {
-                print("❌ Failed to save partnership settings: \(error)")
+    
+    // MARK: - User Settings
+    
+    private func fetchUserSettings() {
+        print("⚙️ Fetching user settings...")
+        firebaseService.fetchUserSettings { [weak self] categories, tripDate in
+            DispatchQueue.main.async {
+                if self?.enabledCategories != categories {
+                    self?.enabledCategories = categories
+                    print("✅ Categories loaded: \(categories.map { $0.rawValue })")
+                }
+                
+                if self?.tripDate != tripDate {
+                    self?.tripDate = tripDate
+                    print("✅ Trip date loaded: \(tripDate?.description ?? "nil")")
+                }
             }
         }
     }
-
+    
+    private func saveUserSettings() {
+        firebaseService.saveUserSettings(enabledCategories: enabledCategories, tripDate: tripDate) { success in
+            if !success {
+                print("❌ Failed to save user settings")
+            } else {
+                print("✅ User settings saved")
+            }
+        }
+    }
+    
     // MARK: - Story History & Favorites
-
-    func fetchPartnershipStories(partnershipId: String) {
-        firebaseService.fetchPartnershipStories(partnershipId: partnershipId) { [weak self] stories in
-            Task { @MainActor in
-                self?.storyHistory = stories
-                print("✅ Loaded \(stories.count) partnership stories")
-            }
-        }
-    }
-
+    
     func fetchFavorites() {
         firebaseService.fetchFavorites { [weak self] favStories in
-            Task { @MainActor in
+            DispatchQueue.main.async {
                 self?.favorites = favStories
                 print("⭐ Loaded \(favStories.count) favorite stories")
             }
         }
     }
-
+    
     func toggleFavorite() {
         guard var story = currentStoryPrompt else { return }
-
+        
         story.isFavorite.toggle()
-
+        
         if story.isFavorite {
             firebaseService.saveStory(story, toCollection: "favorites") { [weak self] success in
                 if success {
-                    Task { @MainActor in
+                    DispatchQueue.main.async {
                         if !(self?.favorites.contains(where: { $0.id == story.id }) ?? true) {
                             self?.favorites.insert(story, at: 0)
                         }
                     }
-
-                    // Trigger haptic feedback
-                    HapticManager.instance.impact(style: .light)
                 }
             }
         } else {
             firebaseService.removeFavorite(storyId: story.id) { [weak self] success in
                 if success {
-                    Task { @MainActor in
+                    DispatchQueue.main.async {
                         self?.favorites.removeAll { $0.id == story.id }
                     }
-
-                    // Trigger haptic feedback
-                    HapticManager.instance.impact(style: .light)
                 }
             }
         }
-
+        
         if let index = storyHistory.firstIndex(where: { $0.id == story.id }) {
             storyHistory[index].isFavorite = story.isFavorite
         }
-
+        
         currentStoryPrompt = story
     }
-
+    
     func removeFavorite(at offsets: IndexSet) {
         let storiesToRemove = offsets.map { favorites[$0] }
-
+        
         for story in storiesToRemove {
             firebaseService.removeFavorite(storyId: story.id) { [weak self] success in
                 if success {
-                    Task { @MainActor in
+                    DispatchQueue.main.async {
                         if let index = self?.storyHistory.firstIndex(where: { $0.id == story.id }) {
                             self?.storyHistory[index].isFavorite = false
                         }
-
+                        
                         if self?.currentStoryPrompt?.id == story.id {
                             self?.currentStoryPrompt?.isFavorite = false
                         }
@@ -459,108 +357,89 @@ class ScenarioManager: ObservableObject {
                 }
             }
         }
-
+        
         favorites.remove(atOffsets: offsets)
-
-        // Trigger haptic feedback
-        HapticManager.instance.impact(style: .light)
     }
-
+    
     func clearHistory() {
-        guard let partnershipId = selectedPartnership?.id else { return }
-
-        firebaseService.clearStoryHistory(partnershipId: partnershipId) { [weak self] success in
+        firebaseService.clearStoryHistory { [weak self] success in
             if success {
-                Task { @MainActor in
+                DispatchQueue.main.async {
                     if let currentPrompt = self?.currentStoryPrompt {
                         self?.storyHistory = [currentPrompt]
                     } else {
                         self?.storyHistory = []
                     }
                 }
-
-                // Trigger haptic feedback
-                HapticManager.instance.notification(type: .warning)
             }
         }
     }
-
+    
     // MARK: - Daily Prompt Management
-
-    func generateOrUpdateDailyPrompt() async {
+    
+    func generateOrUpdateDailyPrompt() {
         guard !isGeneratingPrompt else {
             print("⏳ Already generating/updating prompt, skipping...")
             return
         }
-
+        
         print("🔍 Checking for today's prompt...")
-
+        
         if storyHistory.first(where: { $0.isToday }) != nil {
              print("✅ Prompt already exists for today.")
              return
         }
-
+        
         print("🆕 No prompt for today, creating new one...")
         resetCompletionNotificationCache()
-        await next()
+        next()
     }
-
+    
     // MARK: - Story Writing
-
+    
     func saveStoryText(_ text: String, for storyId: UUID) {
         guard !text.isEmpty else { return }
-        guard let partnershipId = selectedPartnership?.id else {
-            print("❌ No partnership selected")
-            return
-        }
-
+        
         print("💾 Saving story text for story: \(storyId)")
-
+        
         if let index = storyHistory.firstIndex(where: { $0.id == storyId }) {
             var storyToUpdate = storyHistory[index]
             storyToUpdate.storyText = text
-
+            
             // Update local state immediately for better UX
-            Task { @MainActor in
+            DispatchQueue.main.async {
                 self.storyHistory[index] = storyToUpdate
                 if self.currentStoryPrompt?.id == storyId {
                     self.currentStoryPrompt = storyToUpdate
                 }
             }
-
+            
             // This triggers the notification in FirebaseDataService
-            firebaseService.markStoryAsCompleted(storyToUpdate, partnershipId: partnershipId) { [weak self] success in
+            firebaseService.markStoryAsCompleted(storyToUpdate) { [weak self] success in
                 if success {
-                    print("✅ Story marked as completed and updated in partnership stories")
-
-                    // Get partner ID for notification
-                    if let partnership = self?.selectedPartnership,
-                       let partnerId = partnership.getPartnerId(for: self?.currentUserId ?? "") {
-                        // Send FCM notification to partner about story completion
-                        self?.fcmService.notifyPartnerOfStoryCompletion(
-                            authorName: storyToUpdate.assignedAuthor.displayName,
-                            storyPrompt: storyToUpdate.promptText,
-                            partnerUserId: partnerId
-                        )
-                    }
-
-                    // Trigger haptic feedback
-                    HapticManager.instance.notification(type: .success)
+                    print("✅ Story marked as completed and updated in shared stories")
+                    
+                    // Send FCM notification to partner about story completion
+                    self?.fcmService.notifyPartnerOfStoryCompletion(
+                        authorName: storyToUpdate.assignedAuthor.displayName,
+                        storyPrompt: storyToUpdate.promptText
+                    )
                 } else {
                     print("❌ Failed to mark story as completed")
-
-                    // Trigger haptic feedback
-                    HapticManager.instance.notification(type: .error)
                 }
             }
         }
     }
-
+    
     // MARK: - Public Helpers
-
+    
     func isCurrentUsersTurn() -> Bool {
         guard let prompt = currentStoryPrompt else { return false }
-        return prompt.assignedAuthor.userId == currentUserId
+        
+        let isJon = firebaseService.isCurrentUserJon
+        
+        return (isJon && prompt.assignedAuthor == .user) ||
+               (!isJon && prompt.assignedAuthor == .wife)
     }
 }
 

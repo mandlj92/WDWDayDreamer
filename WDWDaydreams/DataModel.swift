@@ -3,37 +3,50 @@ import SwiftUI // Added for Color
 
 // MARK: - Data Definitions
 
-// Represents who is assigned to write the story
-enum StoryAuthor: String, Codable, CaseIterable {
-    case user = "Jon" // Use "Jon" for display
-    case wife = "Carolyn"
+// Represents who is assigned to write the story - now using user IDs
+struct StoryAuthor: Codable, Equatable, Hashable {
+    let userId: String
+    let displayName: String
 
-    var displayName: String {
-        return self.rawValue
+    init(userId: String, displayName: String) {
+        self.userId = userId
+        self.displayName = displayName
     }
 
-    func next() -> StoryAuthor {
-        return self == .user ? .wife : .user
+    // Legacy support for migration from old enum-based system
+    init?(legacyValue: String) {
+        switch legacyValue {
+        case "Jon":
+            self.userId = "legacy_jon"
+            self.displayName = "Jon"
+        case "Carolyn":
+            self.userId = "legacy_carolyn"
+            self.displayName = "Carolyn"
+        default:
+            return nil
+        }
     }
 }
 
 // Represents a single day's prompt and response
-struct DaydreamStory: Identifiable, Codable, Equatable { // <-- ADDED EQUATABLE HERE
+struct DaydreamStory: Identifiable, Codable, Equatable {
     let id: UUID
     var dateAssigned: Date
     var items: [Category: String] // The generated scenario items
     var assignedAuthor: StoryAuthor
+    var partnershipId: String? // Links to the StoryPartnership
     var storyText: String? // The actual story written
-    var isFavorite: Bool // << --- ADDED THIS PROPERTY ---
+    var isFavorite: Bool
 
-    // Default initializer - UPDATED
-    init(id: UUID = UUID(), dateAssigned: Date, items: [Category: String], assignedAuthor: StoryAuthor, storyText: String? = nil, isFavorite: Bool = false) { // Added isFavorite here
+    // Default initializer
+    init(id: UUID = UUID(), dateAssigned: Date, items: [Category: String], assignedAuthor: StoryAuthor, partnershipId: String? = nil, storyText: String? = nil, isFavorite: Bool = false) {
         self.id = id
         self.dateAssigned = dateAssigned
         self.items = items
         self.assignedAuthor = assignedAuthor
+        self.partnershipId = partnershipId
         self.storyText = storyText
-        self.isFavorite = isFavorite // << --- ASSIGN isFavorite ---
+        self.isFavorite = isFavorite
     }
 
     // Helper to get a short prompt text from items

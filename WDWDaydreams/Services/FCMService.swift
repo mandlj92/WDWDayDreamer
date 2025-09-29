@@ -108,56 +108,40 @@ class FCMService: NSObject, ObservableObject {
     }
     
     // MARK: - Partner Token Retrieval
-    
-    func getPartnerFCMToken(completion: @escaping (String?) -> Void) {
-        guard Auth.auth().currentUser != nil else {
-            completion(nil)
-            return
-        }
-        
-        // Get all users to find the partner (the other user)
-        db.collection("users").getDocuments { snapshot, error in
+
+    func getUserFCMToken(userId: String, completion: @escaping (String?) -> Void) {
+        db.collection("users").document(userId).getDocument { document, error in
             if let error = error {
-                print("❌ FCM: Error fetching users: \(error.localizedDescription)")
+                print("❌ FCM: Error fetching user token: \(error.localizedDescription)")
                 completion(nil)
                 return
             }
-            
-            guard let documents = snapshot?.documents else {
+
+            guard let document = document, document.exists else {
+                print("❌ FCM: User document not found for userId: \(userId)")
                 completion(nil)
                 return
             }
-            
-            // Find the partner (not the current user)
-            let currentUserId = Auth.auth().currentUser?.uid ?? ""
-            
-            for document in documents {
-                if document.documentID != currentUserId {
-                    let token = document.data()["fcmToken"] as? String
-                    print("✅ FCM: Found partner token: \(token?.prefix(20) ?? "nil")...")
-                    completion(token)
-                    return
-                }
-            }
-            
-            print("❌ FCM: No partner found")
-            completion(nil)
+
+            let token = document.data()?["fcmToken"] as? String
+            print("✅ FCM: Found user token: \(token?.prefix(20) ?? "nil")...")
+            completion(token)
         }
     }
     
     // MARK: - Send Notifications
     
-    func notifyPartnerOfStoryCompletion(authorName: String, storyPrompt: String) {
-        getPartnerFCMToken { [weak self] partnerToken in
+    func notifyPartnerOfStoryCompletion(authorName: String, storyPrompt: String, partnerUserId: String) {
+        getUserFCMToken(userId: partnerUserId) { [weak self] partnerToken in
             guard let partnerToken = partnerToken else {
                 print("❌ FCM: No partner token available for notification")
                 return
             }
-            
+
             self?.sendPushNotification(
                 to: partnerToken,
                 title: "Story Complete! ✨",
-                body: "\(authorName) just finished their Disney Daydream! Your turn now!",
+                body: "\(authorName) just finished their Disney Daydream! Read it now!",
                 data: [
                     "type": "story_completed",
                     "author": authorName,
@@ -166,17 +150,17 @@ class FCMService: NSObject, ObservableObject {
             )
         }
     }
-    
-    func notifyPartnerOfNewPrompt(assignedAuthor: String, promptPreview: String) {
-        getPartnerFCMToken { [weak self] partnerToken in
+
+    func notifyPartnerOfNewPrompt(assignedAuthor: String, promptPreview: String, partnerUserId: String) {
+        getUserFCMToken(userId: partnerUserId) { [weak self] partnerToken in
             guard let partnerToken = partnerToken else {
                 print("❌ FCM: No partner token available for notification")
                 return
             }
-            
+
             let title = "New Disney Daydream! ✨"
             let body = "It's \(assignedAuthor)'s turn to write today's story!"
-            
+
             self?.sendPushNotification(
                 to: partnerToken,
                 title: title,
@@ -237,11 +221,11 @@ class FCMService: NSObject, ObservableObject {
     
     private func handleStoryCompletedNotification(_ userInfo: [AnyHashable: Any]) {
         let authorName = userInfo["author"] as? String ?? "Your partner"
-        
+
         DispatchQueue.main.async {
             // Trigger haptic feedback
             HapticManager.instance.notification(type: .success)
-            
+
             // Show local notification if app is active
             NotificationManager.shared.sendLocalCompletionNotification(from: authorName)
             
@@ -258,7 +242,7 @@ class FCMService: NSObject, ObservableObject {
         DispatchQueue.main.async {
             // Trigger haptic feedback
             HapticManager.instance.notification(type: .success)
-            
+
             // Post notification for the app to refresh data
             NotificationCenter.default.post(
                 name: NSNotification.Name("NewPromptAvailable"),
