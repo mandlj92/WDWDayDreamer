@@ -11,6 +11,7 @@ class AuthViewModel: NSObject, ObservableObject {
     @Published var authenticationError: AuthError?
     @Published var isLoading = false
     @Published var errorMessage: String = ""
+    @Published var requiresOnboarding = false
     
     private let userService = UserService()
     private var authStateListener: AuthStateDidChangeListenerHandle?
@@ -30,8 +31,10 @@ class AuthViewModel: NSObject, ObservableObject {
                 
                 if let user = user {
                     await self?.loadUserProfile(for: user.uid)
+                    await self?.refreshSession()
                 } else {
                     self?.userProfile = nil
+                    self?.requiresOnboarding = false
                 }
             }
         }
@@ -66,10 +69,12 @@ class AuthViewModel: NSObject, ObservableObject {
         do {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             await loadUserProfile(for: result.user.uid)
+            AnalyticsService.shared.log(.login)
         } catch {
             let authError = AuthError.signInFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
         }
         
         isLoading = false
@@ -95,17 +100,34 @@ class AuthViewModel: NSObject, ObservableObject {
                 pendingInvitations: [],
                 preferences: UserPreferences()
             )
-            
+
             try await userService.createUserProfile(userProfile)
             self.userProfile = userProfile
+            self.requiresOnboarding = true
+            AnalyticsService.shared.log(.login, parameters: ["method": "password"])
             
         } catch {
             let authError = AuthError.signUpFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
         }
         
         isLoading = false
+    }
+
+    func refreshSession() async {
+        guard let user = Auth.auth().currentUser else { return }
+
+        do {
+            _ = try await user.getIDTokenResult(forcingRefresh: true)
+            try await user.reload()
+        } catch {
+            let authError = AuthError.sessionRefreshFailed(error.localizedDescription)
+            authenticationError = authError
+            errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
+        }
     }
     
     // MARK: - Google Sign In
@@ -131,8 +153,9 @@ class AuthViewModel: NSObject, ObservableObject {
                 withIDToken: idToken,
                 accessToken: result.user.accessToken.tokenString
             )
-            
+
             let authResult = try await Auth.auth().signIn(with: credential)
+            AnalyticsService.shared.log(.login, parameters: ["method": "google"])
             
             // Check if user profile exists, create if needed
             let existingProfile = try await userService.getUserProfile(userId: authResult.user.uid)
@@ -159,6 +182,7 @@ class AuthViewModel: NSObject, ObservableObject {
             let authError = AuthError.googleSignInFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
         }
         
         isLoading = false
@@ -182,10 +206,12 @@ class AuthViewModel: NSObject, ObservableObject {
             try Auth.auth().signOut()
             GIDSignIn.sharedInstance.signOut()
             errorMessage = ""
+            AnalyticsService.shared.log(.logout)
         } catch {
             let authError = AuthError.signOutFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
         }
     }
     
@@ -194,11 +220,65 @@ class AuthViewModel: NSObject, ObservableObject {
     private func loadUserProfile(for userId: String) async {
         do {
             userProfile = try await userService.getUserProfile(userId: userId)
+            requiresOnboarding = !(userProfile?.preferences.hasCompletedOnboarding ?? false)
         } catch {
             let authError = AuthError.profileLoadFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
         }
+    }
+
+    func updatePreferences(_ preferences: UserPreferences) async {
+        guard var profile = userProfile else { return }
+
+        profile = UserProfile(
+            id: profile.id,
+            email: profile.email,
+            displayName: profile.displayName,
+            avatarURL: profile.avatarURL,
+            bio: profile.bio,
+            createdAt: profile.createdAt,
+            connectionIds: profile.connectionIds,
+            pendingInvitations: profile.pendingInvitations,
+            preferences: preferences
+        )
+
+        do {
+            try await userService.updateUserProfile(profile)
+            userProfile = profile
+            requiresOnboarding = !(preferences.hasCompletedOnboarding)
+        } catch {
+            let authError = AuthError.profileLoadFailed(error.localizedDescription)
+            authenticationError = authError
+            errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
+        }
+    }
+
+    func completeOnboarding(preferences: UserPreferences) async {
+        var updatedPreferences = preferences
+        updatedPreferences.hasCompletedOnboarding = true
+        await updatePreferences(updatedPreferences)
+        AnalyticsService.shared.log(.onboardingCompleted)
+    }
+
+    func deleteAccount() async {
+        guard let user = Auth.auth().currentUser else { return }
+        isLoading = true
+        do {
+            try await userService.deleteUserProfile(userId: user.uid)
+            try await user.delete()
+            userProfile = nil
+            isAuthenticated = false
+            AnalyticsService.shared.log(.accountDeleted)
+        } catch {
+            let authError = AuthError.accountDeletionFailed(error.localizedDescription)
+            authenticationError = authError
+            errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
+        }
+        isLoading = false
     }
 }
 
@@ -228,8 +308,9 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
                         idToken: idTokenString,
                         rawNonce: nonce
                     )
-                    
+
                     let authResult = try await Auth.auth().signIn(with: credential)
+                    AnalyticsService.shared.log(.login, parameters: ["method": "apple"])
                     
                     // Check if user profile exists, create if needed
                     let existingProfile = try await userService.getUserProfile(userId: authResult.user.uid)
@@ -260,6 +341,7 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
                 let authError = AuthError.appleSignInFailed(error.localizedDescription)
                 authenticationError = authError
                 errorMessage = authError.localizedDescription
+                AnalyticsService.shared.record(error: error)
             }
             
             isLoading = false
@@ -271,6 +353,7 @@ extension AuthViewModel: ASAuthorizationControllerDelegate {
             let authError = AuthError.appleSignInFailed(error.localizedDescription)
             authenticationError = authError
             errorMessage = authError.localizedDescription
+            AnalyticsService.shared.record(error: error)
             isLoading = false
         }
     }
@@ -315,6 +398,8 @@ enum AuthError: LocalizedError {
     case profileLoadFailed(String)
     case googleSignInFailed(String)
     case appleSignInFailed(String)
+    case sessionRefreshFailed(String)
+    case accountDeletionFailed(String)
     
     var errorDescription: String? {
         switch self {
@@ -330,6 +415,10 @@ enum AuthError: LocalizedError {
             return "Google sign in failed: \(message)"
         case .appleSignInFailed(let message):
             return "Apple sign in failed: \(message)"
+        case .sessionRefreshFailed(let message):
+            return "Session refresh failed: \(message)"
+        case .accountDeletionFailed(let message):
+            return "Account deletion failed: \(message)"
         }
     }
 }

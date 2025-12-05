@@ -25,6 +25,7 @@ struct WDWDaydreamsApp: App {
     @StateObject var weatherManager = WDWWeatherManager()
     @StateObject var themeManager = ThemeManager()
     @StateObject var fcmService = FCMService.shared
+    @StateObject var feedbackCenter = UIFeedbackCenter()
     let notificationManager = NotificationManager.shared
     
     // Create a UIApplicationDelegateAdaptor for handling push notifications
@@ -88,6 +89,7 @@ struct WDWDaydreamsApp: App {
                 .environmentObject(weatherManager)
                 .environmentObject(themeManager)
                 .environmentObject(fcmService)
+                .environmentObject(feedbackCenter)
                 .onOpenURL { url in
                     GIDSignIn.sharedInstance.handle(url)
                 }
@@ -105,7 +107,12 @@ struct MainAppView: View {
     var body: some View {
         Group {
             if authViewModel.isAuthenticated {
-                AuthenticatedView()
+                if authViewModel.requiresOnboarding {
+                    OnboardingView()
+                        .environmentObject(authViewModel)
+                } else {
+                    AuthenticatedView()
+                }
             } else {
                 LoginView()
             }

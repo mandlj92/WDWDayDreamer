@@ -75,28 +75,31 @@ struct UserProfile: Codable, Identifiable {
 }
 
 struct UserPreferences: Codable {
-    let notifications: NotificationPreferences
-    let privacy: PrivacySettings
-    let storyCategories: [String]
-    let tripDate: Date?
+    var notifications: NotificationPreferences
+    var privacy: PrivacySettings
+    var storyCategories: [String]
+    var tripDate: Date?
+    var hasCompletedOnboarding: Bool
     
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
             "notifications": notifications.dictionary,
             "privacy": privacy.dictionary,
-            "storyCategories": storyCategories
+            "storyCategories": storyCategories,
+            "hasCompletedOnboarding": hasCompletedOnboarding
         ]
         if let tripDate = tripDate {
             dict["tripDate"] = Timestamp(date: tripDate)
         }
         return dict
     }
-    
-    init(notifications: NotificationPreferences = NotificationPreferences(), privacy: PrivacySettings = PrivacySettings(), storyCategories: [String] = ["park", "ride", "food"], tripDate: Date? = nil) {
+
+    init(notifications: NotificationPreferences = NotificationPreferences(), privacy: PrivacySettings = PrivacySettings(), storyCategories: [String] = ["park", "ride", "food"], tripDate: Date? = nil, hasCompletedOnboarding: Bool = false) {
         self.notifications = notifications
         self.privacy = privacy
         self.storyCategories = storyCategories
         self.tripDate = tripDate
+        self.hasCompletedOnboarding = hasCompletedOnboarding
     }
     
     init?(dictionary: [String: Any]) {
@@ -106,11 +109,12 @@ struct UserPreferences: Codable {
               let notifications = NotificationPreferences(dictionary: notificationsData),
               let privacy = PrivacySettings(dictionary: privacyData)
         else { return nil }
-        
+
         self.notifications = notifications
         self.privacy = privacy
         self.storyCategories = storyCategories
-        
+        self.hasCompletedOnboarding = dictionary["hasCompletedOnboarding"] as? Bool ?? false
+
         if let tripDateTimestamp = dictionary["tripDate"] as? Timestamp {
             self.tripDate = tripDateTimestamp.dateValue()
         } else {

@@ -6,12 +6,12 @@ struct ContentView: View {
     @EnvironmentObject var weatherManager: WDWWeatherManager
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var feedbackCenter: UIFeedbackCenter
     
     @State private var showSettings = false
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
-    @State private var errorMessage = ""
 
     // Optimized theme computation - only changes when theme selection changes
     @State private var currentTheme: Theme = LightTheme()
@@ -115,9 +115,7 @@ struct ContentView: View {
             if isInitializing {
                 LoadingOverlayView(theme: currentTheme)
             }
-            if !errorMessage.isEmpty {
-                ErrorToastView(message: $errorMessage, theme: currentTheme)
-            }
+            FeedbackBannerView(banner: $feedbackCenter.currentBanner)
         }
         .preferredColorScheme(
             themeManager.selectedTheme == .light ? .light :
@@ -133,7 +131,7 @@ struct ContentView: View {
         }
         .onReceive(authViewModel.$errorMessage) { msg in
             if !msg.isEmpty {
-                errorMessage = msg
+                feedbackCenter.present(message: msg, style: .error)
                 authViewModel.errorMessage = ""
             }
         }
