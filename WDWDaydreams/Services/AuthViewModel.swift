@@ -11,9 +11,11 @@ class AuthViewModel: NSObject, ObservableObject {
     @Published var authenticationError: AuthError?
     @Published var isLoading = false
     @Published var errorMessage: String = ""
+    @Published var requiresOnboarding = false
 
     private let firebaseService: FirebaseDataService
-    private var authStateHandle: AuthStateDidChangeListenerHandle?
+    private var authStateListener: AuthStateDidChangeListenerHandle?
+    private var userRole: String = ""
     
     var isAuthorized: Bool {
         return isAuthenticated
@@ -194,6 +196,23 @@ class AuthViewModel: NSObject, ObservableObject {
     // MARK: - Helper Methods
     private func clearErrors() {
         errorMessage = ""
+    }
+    
+    private func checkUserAuthorization() {
+        // Placeholder implementation for user authorization check
+        // This should verify user profile and determine if onboarding is needed
+        Task { @MainActor in
+            if let user = Auth.auth().currentUser {
+                do {
+                    let profile = try await FirebaseDataService.shared.getUserProfile(userId: user.uid)
+                    if profile == nil {
+                        self.requiresOnboarding = true
+                    }
+                } catch {
+                    print("⚠️ Error checking user authorization: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     private func getRootViewController() -> UIViewController? {

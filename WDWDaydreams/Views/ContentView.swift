@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
+    @State private var errorMessage: String?
 
     // Optimized theme computation - only changes when theme selection changes
     @State private var currentTheme: Theme = LightTheme()
