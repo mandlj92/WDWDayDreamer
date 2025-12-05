@@ -42,15 +42,17 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationView { () -> AnyView in
+            AnyView(
             ZStack {
                 // Use the dynamic theme background color
                 theme.backgroundCream
                     .edgesIgnoringSafeArea(.all)
                 
                 Form {
-                    // Title Section
-                    Section {
+                    Group {
+                        // Title Section
+                        Section {
                         VStack(alignment: .center, spacing: 12) {
                             Image(systemName: "wand.and.stars")
                                 .font(.system(size: 40))
@@ -155,9 +157,11 @@ struct SettingsView: View {
                         ))
                     }
                     .listRowBackground(theme.cardBackground)
+                    }
 
+                    Group {
                     // Category Section
-                    Section(header: SectionHeader(title: "Enable Categories For Prompts", theme: theme)) {
+                    Section(header: Text("Enable Categories For Prompts").font(.headline).foregroundColor(theme.magicBlue)) {
                         ForEach(Category.allCases) { category in
                             CategoryToggleRow(
                                 category: category,
@@ -216,7 +220,7 @@ struct SettingsView: View {
                     }
                     .listRowBackground(theme.cardBackground)
 
-                    Section(header: SectionHeader(title: "Account & Support", theme: theme)) {
+                    Section(header: Text("Account & Support").font(.headline).foregroundColor(theme.magicBlue)) {
                         NavigationLink(destination: AchievementsView()
                                         .environmentObject(authViewModel)
                                         .environmentObject(manager)) {
@@ -257,6 +261,7 @@ struct SettingsView: View {
                         .buttonStyle(DisneyButtonStyle(color: theme.mickeyRed))
                         .listRowBackground(theme.backgroundCream)
                     }
+                    }
                 }
                 .scrollContentBackground(.hidden)
                 .alert(isPresented: $showClearConfirmation) {
@@ -281,6 +286,8 @@ struct SettingsView: View {
                     .fontWeight(.semibold)
                 }
             }
+            )
+        }
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $showingSupport) {
@@ -288,7 +295,7 @@ struct SettingsView: View {
                 .environment(\.theme, theme)
         }
         .onAppear {
-            preferences = authViewModel.userProfile?.preferences ?? UserPreferences(hasCompletedOnboarding: true)
+            preferences = authViewModel.userProfile?.preferences ?? UserPreferences()
         }
     }
     

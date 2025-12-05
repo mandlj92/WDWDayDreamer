@@ -121,6 +121,95 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
         }
     }
 
+    func signUp(email: String, password: String, displayName: String) async {
+        isLoading = true
+
+        // First, sign out any existing user
+        try? Auth.auth().signOut()
+
+        // Add a small delay to ensure clean state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+
+                    if let error = error {
+                        self.isLoading = false
+                        let nsError = error as NSError
+                        print("🔐 Sign up failed with error: \(error.localizedDescription)")
+                        print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
+
+                        // Map Firebase error codes to user-friendly messages
+                        switch nsError.code {
+                        case 17007: // Email already in use
+                            self.errorMessage = "This email is already registered. Please sign in instead."
+                        case 17008: // Invalid email
+                            self.errorMessage = "Invalid email address format."
+                        case 17026: // Weak password
+                            self.errorMessage = "Password is too weak. Please use at least 6 characters."
+                        default:
+                            self.errorMessage = "Sign up failed: \(error.localizedDescription)"
+                        }
+                        return
+                    }
+
+                    guard let user = result?.user else {
+                        self.isLoading = false
+                        self.errorMessage = "Sign up failed: Unable to create user account"
+                        return
+                    }
+
+                    print("🔐 User created successfully: \(user.email ?? "no email") - UID: \(user.uid)")
+
+                    // Set display name
+                    let changeRequest = user.createProfileChangeRequest()
+                    changeRequest.displayName = displayName
+                    changeRequest.commitChanges { [weak self] error in
+                        DispatchQueue.main.async {
+                            guard let self = self else { return }
+
+                            if let error = error {
+                                print("🔐 Failed to set display name: \(error.localizedDescription)")
+                                // Don't fail the signup for this - just log it
+                            } else {
+                                print("🔐 Display name set successfully: \(displayName)")
+                            }
+
+                            // Create UserProfile document in Firestore
+                            let userProfile = UserProfile(
+                                id: user.uid,
+                                email: user.email ?? email,
+                                displayName: displayName,
+                                createdAt: Date()
+                            )
+
+                            Task {
+                                do {
+                                    try await self.userService.createUserProfile(userProfile)
+
+                                    await MainActor.run {
+                                        self.isLoading = false
+                                        print("🔐 User profile created in Firestore successfully")
+                                        self.currentUser = user
+                                        self.isAuthenticated = true
+                                        self.requiresOnboarding = true
+                                        self.clearErrors()
+                                    }
+                                } catch {
+                                    await MainActor.run {
+                                        self.isLoading = false
+                                        print("🔐 Failed to create user profile in Firestore: \(error.localizedDescription)")
+                                        self.errorMessage = "Account created but profile setup failed. Please try signing in."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Google Sign-In (Enhanced)
     func signInWithGoogle() {
         print("🔐 Attempting Google Sign-In")
@@ -324,7 +413,7 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
                 return
             }
 
-            let credential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: nonce)
+            let credential = OAuthProvider.credential(providerID: AuthProviderID.apple, idToken: idTokenString, rawNonce: nonce)
 
             Auth.auth().signIn(with: credential) { [weak self] authResult, error in
                 DispatchQueue.main.async {
