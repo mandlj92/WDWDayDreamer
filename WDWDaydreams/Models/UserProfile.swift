@@ -79,10 +79,10 @@ struct UserProfile: Codable, Identifiable {
 }
 
 struct UserPreferences: Codable {
-    let notifications: NotificationPreferences
-    let privacy: PrivacySettings
-    let storyCategories: [String]
-    let tripDate: Date?
+    var notifications: NotificationPreferences
+    var privacy: PrivacySettings
+    var storyCategories: [String]
+    var tripDate: Date?
     
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
@@ -124,10 +124,10 @@ struct UserPreferences: Codable {
 }
 
 struct NotificationPreferences: Codable {
-    let storyReminders: Bool
-    let connectionRequests: Bool
-    let newStoryNotifications: Bool
-    let weeklyDigest: Bool
+    var storyReminders: Bool
+    var connectionRequests: Bool
+    var newStoryNotifications: Bool
+    var weeklyDigest: Bool
     
     var dictionary: [String: Any] {
         return [
@@ -160,9 +160,9 @@ struct NotificationPreferences: Codable {
 }
 
 struct PrivacySettings: Codable {
-    let profileVisibility: ProfileVisibility
-    let allowStorySharing: Bool
-    let allowConnectionDiscovery: Bool
+    var profileVisibility: ProfileVisibility
+    var allowStorySharing: Bool
+    var allowConnectionDiscovery: Bool
     
     var dictionary: [String: Any] {
         return [

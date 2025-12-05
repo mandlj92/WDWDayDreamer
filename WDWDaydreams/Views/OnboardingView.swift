@@ -96,16 +96,24 @@ struct OnboardingView: View {
     private func savePreferences() {
         isSaving = true
         Task {
-            do {
-                if let user = authViewModel.currentUser {
-                    try await FirebaseDataService.shared.saveUserPreferences(userId: user.uid, preferences: preferences)
-                    authViewModel.requiresOnboarding = false
-                    feedbackCenter.present(message: "Preferences saved", style: .success)
+            if let user = authViewModel.currentUser {
+                // Map stored category strings to Category enum values
+                let categories = preferences.storyCategories.compactMap { Category(rawValue: $0) }
+                FirebaseDataService.shared.saveUserSettings(enabledCategories: categories, tripDate: preferences.tripDate) { success in
+                    DispatchQueue.main.async {
+                        if success {
+                            authViewModel.requiresOnboarding = false
+                            feedbackCenter.present(message: "Preferences saved", style: .success)
+                        } else {
+                            feedbackCenter.present(message: "Error saving preferences", style: .error)
+                        }
+                        isSaving = false
+                    }
                 }
-            } catch {
-                feedbackCenter.present(message: "Error saving preferences", style: .error)
+            } else {
+                feedbackCenter.present(message: "Not signed in", style: .error)
+                isSaving = false
             }
-            isSaving = false
         }
     }
 }
@@ -114,5 +122,5 @@ struct OnboardingView: View {
     OnboardingView()
         .environmentObject(AuthViewModel())
         .environmentObject(ThemeManager())
-        .environmentObject(UIFeedbackCenter())
+    .environmentObject(UIFeedbackCenter.shared)
 }
