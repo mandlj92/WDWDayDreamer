@@ -96,7 +96,7 @@ struct OnboardingView: View {
     private func savePreferences() {
         isSaving = true
         Task {
-            if let user = authViewModel.currentUser {
+            if authViewModel.currentUser != nil {
                 // Map stored category strings to Category enum values
                 let categories = preferences.storyCategories.compactMap { Category(rawValue: $0) }
                 FirebaseDataService.shared.saveUserSettings(enabledCategories: categories, tripDate: preferences.tripDate) { success in

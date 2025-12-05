@@ -250,9 +250,11 @@ struct DisneyPromptView: View {
     private func presentShare() {
         let textToShare = ShareService.shared.shareText(for: prompt.promptText, storyText: prompt.storyText)
         let activityVC = UIActivityViewController(activityItems: [textToShare], applicationActivities: nil)
-        if let window = UIApplication.shared.windows.first,
-           let root = window.rootViewController {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController {
             root.present(activityVC, animated: true, completion: nil)
+        } else {
+            print("⚠️ Could not find window to present share sheet")
         }
     }
 }

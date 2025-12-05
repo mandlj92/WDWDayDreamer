@@ -2,6 +2,7 @@ import FirebaseAuth
 import FirebaseCore
 import GoogleSignIn
 import AuthenticationServices
+import CryptoKit
 import Foundation
 
 enum AuthError: Error, LocalizedError {
@@ -21,7 +22,7 @@ enum AuthError: Error, LocalizedError {
 }
 
 @MainActor
-class AuthViewModel: NSObject, ObservableObject {
+class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     @Published var isAuthenticated = false
     @Published var currentUser: User?
     @Published var userProfile: UserProfile?
@@ -33,6 +34,8 @@ class AuthViewModel: NSObject, ObservableObject {
     private let firebaseService = FirebaseDataService.shared
     private let userService = UserService()
     private var authStateListener: AuthStateDidChangeListenerHandle?
+    // For Sign in with Apple
+    private var currentNonce: String?
     private var userRole: String = ""
     @Published var isAuthorized = false
     
@@ -253,5 +256,103 @@ class AuthViewModel: NSObject, ObservableObject {
                 print("🔐 Token refreshed successfully")
             }
         }
+    }
+
+    // MARK: - Sign in with Apple Helpers
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remaining = length
+
+        while remaining > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                _ = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                return random
+            }
+
+            randoms.forEach { random in
+                if remaining == 0 { return }
+                if random < charset.count {
+                    result.append(charset[Int(random) % charset.count])
+                    remaining -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
+    func signInWithApple() {
+        clearErrors()
+        isLoading = true
+
+        let nonce = randomNonceString()
+        currentNonce = nonce
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = sha256(nonce)
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
+
+    // MARK: - ASAuthorizationControllerDelegate
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+        defer { isLoading = false }
+
+        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            guard let nonce = currentNonce else {
+                errorMessage = "Invalid state: missing nonce"
+                return
+            }
+            guard let identityToken = appleIDCredential.identityToken,
+                  let idTokenString = String(data: identityToken, encoding: .utf8) else {
+                errorMessage = "Failed to fetch identity token"
+                return
+            }
+
+            let credential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: nonce)
+
+            Auth.auth().signIn(with: credential) { [weak self] authResult, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self?.errorMessage = "Apple Sign-In failed: \(error.localizedDescription)"
+                        print("🔐 Apple Sign-In error: \(error)")
+                    } else if let user = authResult?.user {
+                        print("🔐 Apple Sign-In succeeded for user: \(user.uid)")
+                        self?.checkUserAuthorization()
+                    }
+                }
+            }
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        isLoading = false
+        errorMessage = "Apple Sign-In error: \(error.localizedDescription)"
+        print("🔐 Apple Sign-In failed: \(error)")
+    }
+
+    // MARK: - ASAuthorizationControllerPresentationContextProviding
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window
+        }
+        // Fallback: force-create a UIWindow (should rarely happen in normal app lifecycle)
+        return UIWindow()
     }
 }
