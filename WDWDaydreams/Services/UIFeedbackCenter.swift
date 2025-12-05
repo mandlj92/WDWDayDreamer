@@ -17,10 +17,20 @@ enum FeedbackStyle {
     }
 }
 
-struct FeedbackBanner: Identifiable {
-    let id = UUID()
+struct FeedbackBanner: Identifiable, Equatable {
+    let id: UUID
     let message: String
     let style: FeedbackStyle
+    
+    init(message: String, style: FeedbackStyle) {
+        self.id = UUID()
+        self.message = message
+        self.style = style
+    }
+    
+    static func == (lhs: FeedbackBanner, rhs: FeedbackBanner) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 final class UIFeedbackCenter: ObservableObject {

@@ -96,8 +96,15 @@ struct OnboardingView: View {
     private func savePreferences() {
         isSaving = true
         Task {
-            await authViewModel.completeOnboarding(preferences: preferences)
-            feedbackCenter.present(message: "Preferences saved", style: .success)
+            do {
+                if let user = authViewModel.currentUser {
+                    try await FirebaseDataService.shared.saveUserPreferences(userId: user.uid, preferences: preferences)
+                    authViewModel.requiresOnboarding = false
+                    feedbackCenter.present(message: "Preferences saved", style: .success)
+                }
+            } catch {
+                feedbackCenter.present(message: "Error saving preferences", style: .error)
+            }
             isSaving = false
         }
     }
