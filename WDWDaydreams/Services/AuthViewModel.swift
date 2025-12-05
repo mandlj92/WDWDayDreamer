@@ -1,4 +1,5 @@
 import FirebaseAuth
+import FirebaseCore
 import GoogleSignIn
 import AuthenticationServices
 import Foundation
@@ -29,7 +30,8 @@ class AuthViewModel: NSObject, ObservableObject {
     @Published var errorMessage: String = ""
     @Published var requiresOnboarding = false
 
-    private let firebaseService: FirebaseDataService
+    private let firebaseService = FirebaseDataService.shared
+    private let userService = UserService()
     private var authStateListener: AuthStateDidChangeListenerHandle?
     private var userRole: String = ""
     @Published var isAuthorized = false
@@ -217,7 +219,7 @@ class AuthViewModel: NSObject, ObservableObject {
         Task { @MainActor in
             if let user = Auth.auth().currentUser {
                 do {
-                    let profile = try await FirebaseDataService.shared.getUserProfile(userId: user.uid)
+                    let profile = try await userService.getUserProfile(userId: user.uid)
                     if profile == nil {
                         self.requiresOnboarding = true
                     }
