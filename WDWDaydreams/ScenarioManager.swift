@@ -26,6 +26,56 @@ class ScenarioManager: ObservableObject {
             }
         }
     }
+
+    // MARK: - Achievements
+    func checkAndAwardBadges() async {
+        guard !currentUserId.isEmpty else { return }
+
+        var toAward: [String] = []
+
+        if totalStoriesCount >= 1 { toAward.append("first_story") }
+        if totalStoriesCount >= 10 { toAward.append("ten_stories") }
+        if currentStreak >= 7 { toAward.append("week_streak") }
+
+        do {
+            if let profile = try await userService.getUserProfile(userId: currentUserId) {
+                var updatedAchievements = profile.achievements
+                var changed = false
+                for id in toAward {
+                    if !updatedAchievements.contains(id) {
+                        updatedAchievements.append(id)
+                        changed = true
+                    }
+                }
+
+                if changed {
+                    // Build a new UserProfile with updated achievements and save
+                    let updatedProfile = UserProfile(id: profile.id,
+                                                     email: profile.email,
+                                                     displayName: profile.displayName,
+                                                     avatarURL: profile.avatarURL,
+                                                     bio: profile.bio,
+                                                     createdAt: profile.createdAt,
+                                                     connectionIds: profile.connectionIds,
+                                                     pendingInvitations: profile.pendingInvitations,
+                                                     achievements: updatedAchievements,
+                                                     preferences: profile.preferences)
+
+                    try await userService.updateUserProfile(updatedProfile)
+
+                    // Notify user about new badge(s)
+                    let newly = toAward.filter { updatedAchievements.contains($0) }
+                    if !newly.isEmpty {
+                        let names = newly.map { id in Badge.allBadges.first(where: { $0.id == id })?.name ?? id }
+                        let message = "Achievement unlocked: \(names.joined(separator: ", "))"
+                        UIFeedbackCenter.shared.present(message: message, style: .success)
+                    }
+                }
+            }
+        } catch {
+            print("⚠️ Failed to check/award badges: \(error)")
+        }
+    }
     @Published var tripDate: Date? {
         didSet {
             if tripDate != oldValue {
@@ -546,6 +596,9 @@ class ScenarioManager: ObservableObject {
 
                     // Trigger haptic feedback
                     HapticManager.instance.notification(type: .success)
+                    Task {
+                        await self?.checkAndAwardBadges()
+                    }
                 } else {
                     print("❌ Failed to mark story as completed")
 
@@ -557,6 +610,44 @@ class ScenarioManager: ObservableObject {
     }
 
     // MARK: - Public Helpers
+
+    // MARK: - Computed Stats
+    var totalStoriesCount: Int {
+        storyHistory.count
+    }
+
+    var totalWordsWritten: Int {
+        storyHistory.compactMap { $0.storyText }
+            .reduce(0) { $0 + $1.split(whereSeparator: { $0.isWhitespace }).count }
+    }
+
+    var favoriteCategory: String {
+        var counts: [String: Int] = [:]
+        for story in storyHistory {
+            for (_, value) in story.items {
+                counts[value, default: 0] += 1
+            }
+        }
+        return counts.max(by: { $0.value < $1.value })?.key ?? "None"
+    }
+
+    var currentStreak: Int {
+        let sorted = storyHistory.sorted { $0.dateAssigned > $1.dateAssigned }
+        var streak = 0
+        var checkDate = Calendar.current.startOfDay(for: Date())
+
+        for story in sorted {
+            let storyDay = Calendar.current.startOfDay(for: story.dateAssigned)
+            if storyDay == checkDate || Calendar.current.dateComponents([.day], from: storyDay, to: checkDate).day == 1 {
+                streak += 1
+                checkDate = Calendar.current.date(byAdding: .day, value: -1, to: checkDate) ?? checkDate
+            } else if storyDay < checkDate {
+                break
+            }
+        }
+
+        return streak
+    }
 
     func isCurrentUsersTurn() -> Bool {
         guard let prompt = currentStoryPrompt else { return false }

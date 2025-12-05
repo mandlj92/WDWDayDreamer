@@ -36,6 +36,11 @@ struct FeedbackBanner: Identifiable, Equatable {
 final class UIFeedbackCenter: ObservableObject {
     @Published var currentBanner: FeedbackBanner?
 
+    // Shared singleton for easy access from services
+    static let shared = UIFeedbackCenter()
+
+    private init() {}
+
     func present(message: String, style: FeedbackStyle = .info) {
         DispatchQueue.main.async {
             self.currentBanner = FeedbackBanner(message: message, style: style)

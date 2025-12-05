@@ -11,6 +11,7 @@ struct UserProfile: Codable, Identifiable {
     let lastActiveAt: Date
     let connectionIds: [String] // Array of connected user IDs
     let pendingInvitations: [String] // Invitation codes they've sent
+    let achievements: [String]
     let preferences: UserPreferences
     
     // Firestore document representation
@@ -25,13 +26,14 @@ struct UserProfile: Codable, Identifiable {
             "lastActiveAt": Timestamp(date: lastActiveAt),
             "connectionIds": connectionIds,
             "pendingInvitations": pendingInvitations,
+            "achievements": achievements,
             "preferences": preferences.dictionary
         ]
     }
     
     // Initialize from Firestore document
     init?(document: DocumentSnapshot) {
-        guard let data = document.data(),
+          guard let data = document.data(),
               let id = data["id"] as? String,
               let email = data["email"] as? String,
               let displayName = data["displayName"] as? String,
@@ -51,11 +53,12 @@ struct UserProfile: Codable, Identifiable {
         self.lastActiveAt = lastActiveAtTimestamp.dateValue()
         self.connectionIds = connectionIds
         self.pendingInvitations = pendingInvitations
+        self.achievements = data["achievements"] as? [String] ?? []
         self.preferences = UserPreferences(dictionary: preferencesData) ?? UserPreferences()
     }
     
     // Manual initializer for creating new profiles
-    init(id: String, email: String, displayName: String, avatarURL: String? = nil, bio: String? = nil, createdAt: Date = Date(), connectionIds: [String] = [], pendingInvitations: [String] = [], preferences: UserPreferences = UserPreferences()) {
+    init(id: String, email: String, displayName: String, avatarURL: String? = nil, bio: String? = nil, createdAt: Date = Date(), connectionIds: [String] = [], pendingInvitations: [String] = [], achievements: [String] = [], preferences: UserPreferences = UserPreferences()) {
         self.id = id
         self.email = email
         self.displayName = displayName
@@ -65,6 +68,7 @@ struct UserProfile: Codable, Identifiable {
         self.lastActiveAt = Date()
         self.connectionIds = connectionIds
         self.pendingInvitations = pendingInvitations
+        self.achievements = achievements
         self.preferences = preferences
     }
     

@@ -217,6 +217,12 @@ struct SettingsView: View {
                     .listRowBackground(theme.cardBackground)
 
                     Section(header: SectionHeader(title: "Account & Support", theme: theme)) {
+                        NavigationLink(destination: AchievementsView()
+                                        .environmentObject(authViewModel)
+                                        .environmentObject(manager)) {
+                            Label("Achievements", systemImage: "rosette")
+                        }
+
                         Button("Save Preferences") {
                             Task {
                                 await authViewModel.updatePreferences(preferences)

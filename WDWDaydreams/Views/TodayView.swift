@@ -62,6 +62,16 @@ struct TodayView: View {
                         NoPartnershipsView(theme: theme)
                     }
 
+                    // Stats dashboard (quick glance)
+                    if !manager.userPartnerships.isEmpty {
+                        HStack(spacing: 12) {
+                            StatCard(icon: "pencil.circle.fill", value: "\(manager.totalStoriesCount)", label: "Stories", color: theme.magicBlue)
+                            StatCard(icon: "flame.fill", value: "\(manager.currentStreak)", label: "Streak", color: .orange)
+                            StatCard(icon: "star.fill", value: manager.favoriteCategory.capitalized, label: "Top", color: theme.mainStreetGold)
+                        }
+                        .padding(.horizontal)
+                    }
+
                     // Error message
                     if let error = errorMessage {
                         ErrorBannerView(message: error, theme: theme)
@@ -191,6 +201,34 @@ struct TodayView: View {
     private func generatePrompt() async {
         errorMessage = nil
         await manager.next()
+    }
+}
+
+// MARK: - Small UI Components
+
+struct StatCard: View {
+    let icon: String
+    let value: String
+    let label: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundColor(color)
+            Text(value)
+                .font(.headline)
+                .foregroundColor(color)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
     }
 }
 

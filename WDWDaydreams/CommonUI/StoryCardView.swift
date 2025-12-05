@@ -1,5 +1,6 @@
 // CommonUI/Views/StoryCardView.swift
 import SwiftUI
+import UIKit
 
 /// A reusable card view for displaying Disney daydream stories
 struct StoryCardView: View {
@@ -141,11 +142,19 @@ struct DisneyPromptView: View {
                 Spacer()
                 
                 // Favorite button
-                Button(action: onToggleFavorite) {
-                    Image(systemName: prompt.isFavorite ? "heart.fill" : "heart")
-                        .foregroundColor(prompt.isFavorite ? theme.mickeyRed : theme.secondaryText)
-                        .scaleEffect(prompt.isFavorite ? 1.1 : 1.0)
-                        .animation(.spring(), value: prompt.isFavorite)
+                HStack(spacing: 12) {
+                    Button(action: onToggleFavorite) {
+                        Image(systemName: prompt.isFavorite ? "heart.fill" : "heart")
+                            .foregroundColor(prompt.isFavorite ? theme.mickeyRed : theme.secondaryText)
+                            .scaleEffect(prompt.isFavorite ? 1.1 : 1.0)
+                            .animation(.spring(), value: prompt.isFavorite)
+                    }
+
+                    // Share button
+                    Button(action: { presentShare() }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(theme.magicBlue)
+                    }
                 }
             }
             
@@ -235,6 +244,15 @@ struct DisneyPromptView: View {
             if prompt.isWritten {
                 storyText = prompt.storyText ?? ""
             }
+        }
+    }
+
+    private func presentShare() {
+        let textToShare = ShareService.shared.shareText(for: prompt.promptText, storyText: prompt.storyText)
+        let activityVC = UIActivityViewController(activityItems: [textToShare], applicationActivities: nil)
+        if let window = UIApplication.shared.windows.first,
+           let root = window.rootViewController {
+            root.present(activityVC, animated: true, completion: nil)
         }
     }
 }

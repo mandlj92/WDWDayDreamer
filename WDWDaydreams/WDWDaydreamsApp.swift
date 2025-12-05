@@ -33,7 +33,7 @@ struct WDWDaydreamsApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject var themeManager = ThemeManager()
     @StateObject var fcmService = FCMService.shared
-    @StateObject var feedbackCenter = UIFeedbackCenter()
+    @StateObject var feedbackCenter: UIFeedbackCenter
     let notificationManager = NotificationManager.shared
     
     // Create a UIApplicationDelegateAdaptor for handling push notifications
@@ -60,6 +60,7 @@ struct WDWDaydreamsApp: App {
         Self.configureGoogleSignIn()
         
         _authViewModel = StateObject(wrappedValue: AuthViewModel())
+        _feedbackCenter = StateObject(wrappedValue: UIFeedbackCenter.shared)
         
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
