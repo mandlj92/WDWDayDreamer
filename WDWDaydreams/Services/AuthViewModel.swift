@@ -3,6 +3,22 @@ import GoogleSignIn
 import AuthenticationServices
 import Foundation
 
+enum AuthError: Error, LocalizedError {
+    case invalidCredentials
+    case userNotFound
+    case network
+    case unknown(message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidCredentials: return "Invalid credentials"
+        case .userNotFound: return "User not found"
+        case .network: return "Network error"
+        case .unknown(let message): return message
+        }
+    }
+}
+
 @MainActor
 class AuthViewModel: NSObject, ObservableObject {
     @Published var isAuthenticated = false
