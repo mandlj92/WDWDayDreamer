@@ -16,10 +16,7 @@ class AuthViewModel: NSObject, ObservableObject {
     private let firebaseService: FirebaseDataService
     private var authStateListener: AuthStateDidChangeListenerHandle?
     private var userRole: String = ""
-    
-    var isAuthorized: Bool {
-        return isAuthenticated
-    }
+    @Published var isAuthorized = false
     
     override init() {
         super.init()

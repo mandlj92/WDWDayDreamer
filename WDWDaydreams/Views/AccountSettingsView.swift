@@ -44,7 +44,7 @@ struct AccountSettingsView: View {
                                 Text("User ID")
                                     .foregroundColor(theme.primaryText)
                                 Spacer()
-                                Text(user.uid.prefix(8) + "...")
+                                Text(String(user.uid.prefix(8)) + "...")
                                     .foregroundColor(.gray)
                                     .font(.caption)
                             }

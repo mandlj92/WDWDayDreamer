@@ -150,7 +150,7 @@ class PalsService {
 
     private func generateInvitationCode() -> String {
         let characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Removed ambiguous characters
-        return String((0..<6).map { _ in characters.randomElement()! })
+        return String((0..<6).compactMap { _ in characters.randomElement() })
     }
 
     func cleanupExpiredInvitations() async throws {
