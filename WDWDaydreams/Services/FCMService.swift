@@ -43,12 +43,14 @@ class FCMService: NSObject, ObservableObject {
         ) { [weak self] granted, error in
             DispatchQueue.main.async {
                 self?.hasPermission = granted
-                
+
                 if granted {
                     print("🔔 FCM: Notification permission granted")
-                    DispatchQueue.main.async {
-                        UIApplication.shared.registerForRemoteNotifications()
-                    }
+                    // Note: Remote notifications require a paid Apple Developer account
+                    // Commenting out to avoid errors with free account
+                    // DispatchQueue.main.async {
+                    //     UIApplication.shared.registerForRemoteNotifications()
+                    // }
                 } else {
                     print("❌ FCM: Notification permission denied")
                     if let error = error {

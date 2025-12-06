@@ -14,8 +14,8 @@ struct SupportView: View {
                 }
 
                 Section(header: Text("Contact")) {
-                    Link("Email support", destination: URL(string: "mailto:support@wdwdaydreams.example")!)
-                    Link("View privacy policy", destination: URL(string: "https://example.com/privacy")!)
+                    Link("Email support", destination: URL(string: "mailto:support@wdwdaydreams.com")!)
+                    Link("View privacy policy", destination: URL(string: "https://wdwdaydreams.com/privacy")!)
                 }
             }
             .listStyle(InsetGroupedListStyle())

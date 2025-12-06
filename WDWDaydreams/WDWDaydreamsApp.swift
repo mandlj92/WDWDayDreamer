@@ -154,13 +154,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         print("✅ AppDelegate: Application did finish launching")
-        
+
         // Set messaging delegate
         Messaging.messaging().delegate = FCMService.shared
-        
+
         // Register for remote notifications
         application.registerForRemoteNotifications()
-        
+
         return true
     }
     
