@@ -39,7 +39,7 @@ struct PalInvitation: Codable, Identifiable {
          invitationCode: String,
          status: InvitationStatus = .pending,
          createdAt: Date = Date(),
-         expiresAt: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date())!) {
+         expiresAt: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date().addingTimeInterval(7 * 24 * 60 * 60)) {
         self.id = id
         self.fromUserId = fromUserId
         self.fromUserName = fromUserName

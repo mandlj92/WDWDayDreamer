@@ -1,5 +1,6 @@
 import FirebaseAuth
 import FirebaseCore
+import FirebaseFirestore
 import GoogleSignIn
 import AuthenticationServices
 import CryptoKit
@@ -84,38 +85,44 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
     func signIn(email: String, password: String) async {
         isLoading = true
 
-        // First, sign out any existing user
-        try? Auth.auth().signOut()
-        
-        // Add a small delay to ensure clean state
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.isLoading = false
-                    
-                    if let error = error {
-                        let nsError = error as NSError
-                        print("🔐 Login failed with error: \(error.localizedDescription)")
-                        print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
-                        
-                        // Handle specific error cases
-                        switch nsError.code {
-                        case 17008: // FIRAuthErrorCodeInvalidCredential
-                            self.errorMessage = "Invalid email or password. Please check your credentials."
-                        case 17011: // FIRAuthErrorCodeUserNotFound
-                            self.errorMessage = "No account found with this email address."
-                        case 17009: // FIRAuthErrorCodeWrongPassword
-                            self.errorMessage = "Incorrect password. Please try again."
-                        case 17020: // FIRAuthErrorCodeNetworkError
-                            self.errorMessage = "Network error. Please check your connection and try again."
-                        default:
-                            self.errorMessage = "Login failed: \(error.localizedDescription)"
-                        }
-                    } else if let user = result?.user {
-                        print("🔐 Login successful for user: \(user.email ?? "no email")")
-                        self.checkUserAuthorization()
-                    }
+        do {
+            // Validate email format before attempting sign-in
+            let validatedEmail = try Validator.validateEmail(email)
+
+            let result = try await Auth.auth().signIn(withEmail: validatedEmail, password: password)
+            await MainActor.run {
+                self.isLoading = false
+                self.currentUser = result.user
+                print("🔐 Login successful for user: \(result.user.email ?? "no email")")
+                self.checkUserAuthorization()
+                self.clearErrors()
+            }
+        } catch let validationError as ValidationError {
+            // Handle validation errors
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = validationError.localizedDescription
+            }
+        } catch {
+            let nsError = error as NSError
+            print("🔐 Login failed with error: \(error.localizedDescription)")
+            print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
+
+            await MainActor.run {
+                self.isLoading = false
+
+                // Handle specific error cases
+                switch nsError.code {
+                case 17008: // FIRAuthErrorCodeInvalidCredential
+                    self.errorMessage = "Invalid email or password. Please check your credentials."
+                case 17011: // FIRAuthErrorCodeUserNotFound
+                    self.errorMessage = "No account found with this email address."
+                case 17009: // FIRAuthErrorCodeWrongPassword
+                    self.errorMessage = "Incorrect password. Please try again."
+                case 17020: // FIRAuthErrorCodeNetworkError
+                    self.errorMessage = "Network error. Please check your connection and try again."
+                default:
+                    self.errorMessage = "Login failed: \(error.localizedDescription)"
                 }
             }
         }
@@ -124,87 +131,79 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
     func signUp(email: String, password: String, displayName: String) async {
         isLoading = true
 
-        // First, sign out any existing user
-        try? Auth.auth().signOut()
+        do {
+            // Validate all inputs before creating account
+            let validatedEmail = try Validator.validateEmail(email)
+            let validatedPassword = try Validator.validatePassword(password)
+            let validatedDisplayName = try Validator.validateDisplayName(displayName)
 
-        // Add a small delay to ensure clean state
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
+            let result = try await Auth.auth().createUser(withEmail: validatedEmail, password: validatedPassword)
+            let user = result.user
 
-                    if let error = error {
-                        self.isLoading = false
-                        let nsError = error as NSError
-                        print("🔐 Sign up failed with error: \(error.localizedDescription)")
-                        print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
+            print("🔐 User created successfully: \(user.email ?? "no email") - UID: \(user.uid)")
 
-                        // Map Firebase error codes to user-friendly messages
-                        switch nsError.code {
-                        case 17007: // Email already in use
-                            self.errorMessage = "This email is already registered. Please sign in instead."
-                        case 17008: // Invalid email
-                            self.errorMessage = "Invalid email address format."
-                        case 17026: // Weak password
-                            self.errorMessage = "Password is too weak. Please use at least 6 characters."
-                        default:
-                            self.errorMessage = "Sign up failed: \(error.localizedDescription)"
-                        }
-                        return
-                    }
+            // Set display name
+            let changeRequest = user.createProfileChangeRequest()
+            changeRequest.displayName = validatedDisplayName
 
-                    guard let user = result?.user else {
-                        self.isLoading = false
-                        self.errorMessage = "Sign up failed: Unable to create user account"
-                        return
-                    }
+            do {
+                try await changeRequest.commitChanges()
+                print("🔐 Display name set successfully: \(validatedDisplayName)")
+            } catch {
+                print("🔐 Failed to set display name: \(error.localizedDescription)")
+                // Don't fail the signup for this - just log it
+            }
 
-                    print("🔐 User created successfully: \(user.email ?? "no email") - UID: \(user.uid)")
+            // Create UserProfile document in Firestore
+            let userProfile = UserProfile(
+                id: user.uid,
+                email: user.email ?? validatedEmail,
+                displayName: validatedDisplayName,
+                createdAt: Date()
+            )
 
-                    // Set display name
-                    let changeRequest = user.createProfileChangeRequest()
-                    changeRequest.displayName = displayName
-                    changeRequest.commitChanges { [weak self] error in
-                        DispatchQueue.main.async {
-                            guard let self = self else { return }
+            do {
+                try await userService.createUserProfile(userProfile)
 
-                            if let error = error {
-                                print("🔐 Failed to set display name: \(error.localizedDescription)")
-                                // Don't fail the signup for this - just log it
-                            } else {
-                                print("🔐 Display name set successfully: \(displayName)")
-                            }
+                await MainActor.run {
+                    self.isLoading = false
+                    print("🔐 User profile created in Firestore successfully")
+                    self.currentUser = user
+                    self.isAuthenticated = true
+                    self.requiresOnboarding = true
+                    self.clearErrors()
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    print("🔐 Failed to create user profile in Firestore: \(error.localizedDescription)")
+                    self.errorMessage = "Account created but profile setup failed. Please try signing in."
+                }
+            }
+        } catch let validationError as ValidationError {
+            // Handle validation errors
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = validationError.localizedDescription
+            }
+        } catch {
+            let nsError = error as NSError
+            print("🔐 Sign up failed with error: \(error.localizedDescription)")
+            print("🔐 Error code: \(nsError.code), domain: \(nsError.domain)")
 
-                            // Create UserProfile document in Firestore
-                            let userProfile = UserProfile(
-                                id: user.uid,
-                                email: user.email ?? email,
-                                displayName: displayName,
-                                createdAt: Date()
-                            )
+            await MainActor.run {
+                self.isLoading = false
 
-                            Task {
-                                do {
-                                    try await self.userService.createUserProfile(userProfile)
-
-                                    await MainActor.run {
-                                        self.isLoading = false
-                                        print("🔐 User profile created in Firestore successfully")
-                                        self.currentUser = user
-                                        self.isAuthenticated = true
-                                        self.requiresOnboarding = true
-                                        self.clearErrors()
-                                    }
-                                } catch {
-                                    await MainActor.run {
-                                        self.isLoading = false
-                                        print("🔐 Failed to create user profile in Firestore: \(error.localizedDescription)")
-                                        self.errorMessage = "Account created but profile setup failed. Please try signing in."
-                                    }
-                                }
-                            }
-                        }
-                    }
+                // Map Firebase error codes to user-friendly messages
+                switch nsError.code {
+                case 17007: // Email already in use
+                    self.errorMessage = "This email is already registered. Please sign in instead."
+                case 17008: // Invalid email
+                    self.errorMessage = "Invalid email address format."
+                case 17026: // Weak password
+                    self.errorMessage = "Password is too weak. Please use at least 8 characters with uppercase, lowercase, and number."
+                default:
+                    self.errorMessage = "Sign up failed: \(error.localizedDescription)"
                 }
             }
         }
@@ -287,16 +286,61 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
         do {
             try Auth.auth().signOut()
             GIDSignIn.sharedInstance.signOut()
-            
+
+            // Clear Firestore cache for security (prevents data exposure on stolen/lost devices)
+            clearFirestoreCache()
+
             // Reset authorization state
             isAuthorized = false
             userRole = ""
             clearErrors()
-            
+
             print("🔐 Sign out successful")
         } catch {
             errorMessage = "Unable to sign out: \(error.localizedDescription)"
             print("🔐 Sign out error: \(error)")
+        }
+    }
+
+    /// Clear Firestore offline cache on sign-out for security
+    /// Prevents unauthorized access to cached data if device is stolen/lost
+    private func clearFirestoreCache() {
+        Task {
+            do {
+                // First, disable the network to prevent active queries
+                Firestore.firestore().disableNetwork { error in
+                    if let error = error {
+                        print("⚠️ Failed to disable network: \(error.localizedDescription)")
+                    }
+                }
+
+                // Wait a moment for queries to complete
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+                // Now try to clear persistence
+                try await Firestore.firestore().clearPersistence()
+                print("🔐 Firestore cache cleared successfully")
+
+                // Re-enable network for next user
+                Firestore.firestore().enableNetwork { error in
+                    if let error = error {
+                        print("⚠️ Failed to re-enable network: \(error.localizedDescription)")
+                    }
+                }
+            } catch {
+                // Note: clearPersistence() can only be called when Firestore is not actively used
+                // If it fails, we log it but don't block sign-out
+                print("⚠️ Failed to clear Firestore cache (may be in use): \(error.localizedDescription)")
+
+                // Re-enable network if disabled
+                Firestore.firestore().enableNetwork { error in
+                    if let error = error {
+                        print("⚠️ Failed to re-enable network: \(error.localizedDescription)")
+                    } else {
+                        print("🔐 Firestore network re-enabled - cache will persist until next app restart")
+                    }
+                }
+            }
         }
     }
     

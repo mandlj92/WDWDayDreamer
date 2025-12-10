@@ -9,6 +9,26 @@ class PalsService {
     // MARK: - Invitation Management
 
     func createInvitation(fromUser: UserProfile) async throws -> PalInvitation {
+        // Rate limiting: Check pending invitations count
+        let pendingCount = try await getPendingInvitationCount(userId: fromUser.id)
+        guard pendingCount < 10 else {
+            throw NSError(
+                domain: "PalsService",
+                code: 429,
+                userInfo: [NSLocalizedDescriptionKey: "You have reached the maximum of 10 pending invitations. Please wait for some to be accepted or expire before creating more."]
+            )
+        }
+
+        // Rate limiting: Check recent invitation creation (last hour)
+        let recentCount = try await getRecentInvitationCount(userId: fromUser.id, withinHours: 1)
+        guard recentCount < 5 else {
+            throw NSError(
+                domain: "PalsService",
+                code: 429,
+                userInfo: [NSLocalizedDescriptionKey: "You can only create 5 invitations per hour. Please try again later."]
+            )
+        }
+
         // Generate a unique 6-character invitation code
         let invitationCode = generateInvitationCode()
 
@@ -153,6 +173,29 @@ class PalsService {
         return String((0..<6).compactMap { _ in characters.randomElement() })
     }
 
+    /// Get the count of pending invitations for a user (for rate limiting)
+    private func getPendingInvitationCount(userId: String) async throws -> Int {
+        let query = try await db.collection(invitationsCollection)
+            .whereField("fromUserId", isEqualTo: userId)
+            .whereField("status", isEqualTo: InvitationStatus.pending.rawValue)
+            .getDocuments()
+
+        return query.documents.count
+    }
+
+    /// Get the count of invitations created within the last N hours (for rate limiting)
+    private func getRecentInvitationCount(userId: String, withinHours hours: Int) async throws -> Int {
+        let cutoffDate = Calendar.current.date(byAdding: .hour, value: -hours, to: Date()) ?? Date()
+
+        let query = try await db.collection(invitationsCollection)
+            .whereField("fromUserId", isEqualTo: userId)
+            .whereField("createdAt", isGreaterThan: Timestamp(date: cutoffDate))
+            .getDocuments()
+
+        return query.documents.count
+    }
+
+    /// Cleanup expired invitations - should be called periodically (e.g., daily via Cloud Function)
     func cleanupExpiredInvitations() async throws {
         let query = try await db.collection(invitationsCollection)
             .whereField("status", isEqualTo: InvitationStatus.pending.rawValue)
@@ -172,6 +215,32 @@ class PalsService {
         if updateCount > 0 {
             try await batch.commit()
             print("✅ Cleaned up \(updateCount) expired invitations")
+        }
+    }
+
+    /// Delete old expired and declined invitations (cleanup for database size management)
+    func deleteOldInvitations(olderThanDays days: Int = 30) async throws {
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+
+        let query = try await db.collection(invitationsCollection)
+            .whereField("createdAt", isLessThan: Timestamp(date: cutoffDate))
+            .getDocuments()
+
+        let batch = db.batch()
+        var deleteCount = 0
+
+        for document in query.documents {
+            if let invitation = PalInvitation(document: document),
+               invitation.status == .expired || invitation.status == .declined {
+                let ref = db.collection(invitationsCollection).document(document.documentID)
+                batch.deleteDocument(ref)
+                deleteCount += 1
+            }
+        }
+
+        if deleteCount > 0 {
+            try await batch.commit()
+            print("✅ Deleted \(deleteCount) old invitations")
         }
     }
 }

@@ -84,51 +84,86 @@ class FCMService: NSObject, ObservableObject {
         }
     }
     
+    /// SECURITY: Save FCM token to secure private subcollection
+    /// Tokens are stored in /users/{userId}/private/notifications for privacy
     private func saveFCMToken(_ token: String) {
         guard let currentUser = Auth.auth().currentUser else {
             print("❌ FCM: No authenticated user to save token for")
             return
         }
-        
+
         let userId = currentUser.uid
-        let userRef = db.collection("users").document(userId)
-        
+
+        // SECURITY: Store token in private subcollection with restricted access
+        let privateTokenRef = db.collection("users")
+            .document(userId)
+            .collection("private")
+            .document("notifications")
+
         let tokenData: [String: Any] = [
             "fcmToken": token,
             "platform": "ios",
             "lastUpdated": Timestamp(date: Date()),
-            "email": currentUser.email ?? ""
+            "tokenVersion": 1, // For future token rotation
+            "createdAt": Timestamp(date: Date())
         ]
-        
-        userRef.setData(tokenData, merge: true) { error in
+
+        privateTokenRef.setData(tokenData, merge: true) { [weak self] error in
             if let error = error {
-                print("❌ FCM: Error saving token to Firestore: \(error.localizedDescription)")
+                print("❌ FCM: Error saving token to secure storage: \(error.localizedDescription)")
             } else {
-                print("✅ FCM: Token saved to Firestore successfully")
+                print("✅ FCM: Token saved to secure private subcollection")
+
+                // Also update a flag in the main user document to indicate token exists
+                // This doesn't expose the actual token
+                self?.updateUserTokenStatus(userId: userId, hasToken: true)
+            }
+        }
+    }
+
+    /// Update user's token status without exposing the actual token
+    private func updateUserTokenStatus(userId: String, hasToken: Bool) {
+        let userRef = db.collection("users").document(userId)
+
+        userRef.setData([
+            "hasNotificationToken": hasToken,
+            "lastTokenUpdate": Timestamp(date: Date())
+        ], merge: true) { error in
+            if let error = error {
+                print("❌ FCM: Error updating token status: \(error.localizedDescription)")
             }
         }
     }
     
     // MARK: - Partner Token Retrieval
 
+    /// Retrieves a user's FCM token from secure private subcollection
+    /// - Parameters:
+    ///   - userId: The user ID whose FCM token to retrieve
+    ///   - completion: Completion handler with the FCM token (or nil if not found)
     func getUserFCMToken(userId: String, completion: @escaping (String?) -> Void) {
-        db.collection("users").document(userId).getDocument { document, error in
-            if let error = error {
-                print("❌ FCM: Error fetching user token: \(error.localizedDescription)")
-                completion(nil)
-                return
-            }
+        // SECURITY: Read from secure private subcollection instead of public user document
+        db.collection("users")
+            .document(userId)
+            .collection("private")
+            .document("notifications")
+            .getDocument { document, error in
+                if let error = error {
+                    print("❌ FCM: Error fetching secure token: \(error.localizedDescription)")
+                    completion(nil)
+                    return
+                }
 
-            guard let document = document, document.exists else {
-                print("❌ FCM: User document not found for userId: \(userId)")
-                completion(nil)
-                return
-            }
+                guard let document = document, document.exists else {
+                    print("❌ FCM: No secure token document found for userId: \(userId)")
+                    completion(nil)
+                    return
+                }
 
-            let token = document.data()?["fcmToken"] as? String
-            print("✅ FCM: Found user token: \(token?.prefix(20) ?? "nil")...")
-            completion(token)
-        }
+                let token = document.data()?["fcmToken"] as? String
+                print("✅ FCM: Retrieved token from secure storage: \(token?.prefix(20) ?? "nil")...")
+                completion(token)
+            }
     }
     
     // MARK: - Send Notifications
@@ -180,21 +215,28 @@ class FCMService: NSObject, ObservableObject {
         // This will be handled by Cloud Functions
         // For now, we'll save the notification request to Firestore
         // and let Cloud Functions pick it up and send it
-        
+
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            print("❌ FCM: No authenticated user to send notification from")
+            return
+        }
+
+        // SECURITY: Include requesterId for audit trail and spam prevention
         let notificationData: [String: Any] = [
             "targetToken": token,
             "title": title,
             "body": body,
             "data": data,
+            "requesterId": currentUserId, // SECURITY: Track who requested this notification
             "timestamp": Timestamp(date: Date()),
             "processed": false
         ]
-        
+
         db.collection("notificationQueue").addDocument(data: notificationData) { error in
             if let error = error {
                 print("❌ FCM: Error queuing notification: \(error.localizedDescription)")
             } else {
-                print("✅ FCM: Notification queued for Cloud Functions processing")
+                print("✅ FCM: Notification queued with requester ID for security validation")
             }
         }
     }

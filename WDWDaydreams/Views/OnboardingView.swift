@@ -4,13 +4,17 @@ struct OnboardingView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var feedbackCenter: UIFeedbackCenter
+    @Environment(\.theme) var theme: Theme
     @State private var preferences: UserPreferences = UserPreferences()
     @State private var isRequestingNotifications = false
     @State private var isSaving = false
+    @State private var showWelcomeTour = true
 
     var body: some View {
-        NavigationView {
-            Form {
+        ZStack {
+            // Main Onboarding Form
+            NavigationView {
+                Form {
                 Section(header: Text("Stay in the loop")) {
                     Toggle("Story reminders", isOn: binding(for: \.notifications.storyReminders))
                     Toggle("Connection requests", isOn: binding(for: \.notifications.connectionRequests))
@@ -58,17 +62,49 @@ struct OnboardingView: View {
                     ), displayedComponents: .date)
                 }
 
-                Section {
-                    Button(action: savePreferences) {
-                        HStack {
-                            if isSaving { ProgressView() }
-                            Text("Finish onboarding")
+                Section(header: Text("Ready to begin?")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("You're all set!")
+                            .font(.headline)
+                            .foregroundColor(theme.magicBlue)
+
+                        Text("Next step: Invite a Story Pal to start creating magical Disney stories together.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+
+                        Button(action: savePreferences) {
+                            HStack {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(isSaving ? "Saving..." : "Complete Setup")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .foregroundColor(.white)
+                            .background(theme.magicBlue)
+                            .cornerRadius(12)
                         }
+                        .disabled(isSaving)
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .disabled(isSaving)
+                    .padding(.vertical, 8)
+                    .listRowBackground(theme.backgroundCream)
                 }
             }
-            .navigationTitle("Welcome")
+            .navigationTitle("Set Up Your Profile")
+            .scrollContentBackground(.hidden)
+            .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
+            }
+
+            // Welcome Tour Overlay
+            if showWelcomeTour {
+                WelcomeTourView(showTour: $showWelcomeTour)
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
         }
         .onAppear {
             if let profile = authViewModel.userProfile {

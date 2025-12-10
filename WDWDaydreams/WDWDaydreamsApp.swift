@@ -42,26 +42,29 @@ struct WDWDaydreamsApp: App {
     init() {
         AppCheck.setAppCheckProviderFactory(YourAppCheckProviderFactory())
         FirebaseApp.configure()
-        
-        // Enable Firestore offline persistence (modern way)
+
+        // Enable Firestore offline persistence with security hardening
         let settings = Firestore.firestore().settings
         if #available(iOS 15.0, *) {
-            // Modern cache settings for iOS 15+
-            settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: 50 * 1024 * 1024)) // 50MB
+            // Modern cache settings for iOS 15+ with reduced size for security
+            settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: 10 * 1024 * 1024)) // 10MB (reduced from 50MB)
         } else {
             // Fallback for older iOS versions
             settings.isPersistenceEnabled = true
-            settings.cacheSizeBytes = 50 * 1024 * 1024 // 50MB
+            settings.cacheSizeBytes = 10 * 1024 * 1024 // 10MB (reduced from 50MB)
         }
         Firestore.firestore().settings = settings
-        print("✅ Firestore offline persistence enabled with 50MB cache")
-        
+        print("✅ Firestore offline persistence enabled with 10MB cache (security hardened)")
+
+        // Apply file protection to Firestore cache directory
+        Self.applyFileLevelEncryption()
+
         Self.configureRemoteConfig()
         Self.configureGoogleSignIn()
-        
+
         _authViewModel = StateObject(wrappedValue: AuthViewModel())
         _feedbackCenter = StateObject(wrappedValue: UIFeedbackCenter.shared)
-        
+
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
     }
@@ -88,6 +91,38 @@ struct WDWDaydreamsApp: App {
         }
         print("✅ Configuring Google Sign-In with CLIENT_ID: \(clientId)")
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
+    }
+
+    /// Apply file-level encryption to Firestore cache directory
+    /// Uses iOS Data Protection API to encrypt cache at rest
+    private static func applyFileLevelEncryption() {
+        // Get Firestore cache directory path
+        guard let libraryPath = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            print("⚠️ Failed to locate Library directory for cache protection")
+            return
+        }
+
+        // Firestore stores cache in Library/Application Support/firestore
+        let firestoreCachePath = libraryPath
+            .appendingPathComponent("Application Support")
+            .appendingPathComponent("firestore")
+
+        do {
+            // Create directory if it doesn't exist
+            try FileManager.default.createDirectory(at: firestoreCachePath, withIntermediateDirectories: true)
+
+            // Apply Data Protection: .completeUnlessOpen
+            // This ensures data is encrypted when device is locked
+            // but allows Firestore to access cache when app is in use
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUnlessOpen],
+                ofItemAtPath: firestoreCachePath.path
+            )
+
+            print("✅ File-level encryption applied to Firestore cache (.completeUnlessOpen)")
+        } catch {
+            print("⚠️ Failed to apply file-level encryption to Firestore cache: \(error.localizedDescription)")
+        }
     }
 
     var body: some Scene {

@@ -8,9 +8,14 @@ class UserService {
     // MARK: - User Profile Operations
     
     func createUserProfile(_ userProfile: UserProfile) async throws {
+        var profileData = userProfile.dictionary
+
+        // SECURITY: Add denormalized searchable field for efficient privacy-aware queries
+        profileData["searchable"] = userProfile.preferences.privacy.allowConnectionDiscovery
+
         try await db.collection(usersCollection)
             .document(userProfile.id)
-            .setData(userProfile.dictionary)
+            .setData(profileData)
     }
     
     func getUserProfile(userId: String) async throws -> UserProfile? {
@@ -24,7 +29,10 @@ class UserService {
     func updateUserProfile(_ userProfile: UserProfile) async throws {
         var updateData = userProfile.dictionary
         updateData["lastActiveAt"] = Timestamp(date: Date())
-        
+
+        // SECURITY: Sync denormalized searchable field with privacy settings
+        updateData["searchable"] = userProfile.preferences.privacy.allowConnectionDiscovery
+
         try await db.collection(usersCollection)
             .document(userProfile.id)
             .updateData(updateData)
@@ -77,21 +85,28 @@ class UserService {
     }
     
     // MARK: - Search and Discovery
-    
+
+    /// SECURITY: Search users with proper privacy settings enforcement
+    /// Users can only be found if they've enabled connection discovery in their privacy settings
     func searchUsers(query: String, currentUserId: String) async throws -> [UserProfile] {
         let queryLower = query.lowercased()
-        
+
+        // SECURITY: Query using denormalized searchable field for performance
+        // This field is synced with the nested preferences.privacy.allowConnectionDiscovery
         let documents = try await db.collection(usersCollection)
-            .whereField("allowConnectionDiscovery", isEqualTo: true)
+            .whereField("searchable", isEqualTo: true)
             .getDocuments()
-        
+
+        // Double-check privacy settings in the actual nested structure
         return documents.documents.compactMap { document in
             guard let profile = UserProfile(document: document),
                   profile.id != currentUserId,
+                  // SECURITY: Verify the actual nested privacy setting
+                  profile.preferences.privacy.allowConnectionDiscovery,
                   (profile.displayName.lowercased().contains(queryLower) ||
                    profile.email.lowercased().contains(queryLower))
             else { return nil }
-            
+
             return profile
         }
     }
