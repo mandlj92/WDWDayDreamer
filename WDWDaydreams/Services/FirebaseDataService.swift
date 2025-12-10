@@ -558,9 +558,9 @@ class FirebaseDataService {
     
     // MARK: - Story Completion Tracking
     
-    func markStoryAsCompleted(_ story: DaydreamStory, partnershipId: String, completion: @escaping (Bool) -> Void) {
+    func markStoryAsCompleted(_ story: DaydreamStory, partnershipId: String, completion: @escaping (Bool, String?) -> Void) {
         guard ensureAuthenticated(), let storyText = story.storyText else {
-            completion(false)
+            completion(false, "Missing story text or not authenticated")
             return
         }
 
@@ -571,27 +571,68 @@ class FirebaseDataService {
             .collection("stories")
             .document(dateKey)
 
-        let updateData: [String: Any] = [
-            "text": storyText,
-            "authorId": story.assignedAuthor.userId,
-            "authorName": story.assignedAuthor.displayName,
-            "completedAt": Timestamp(date: Date())
-        ]
+        // Use transaction to prevent race conditions with optimistic locking
+        db.runTransaction({ (transaction, errorPointer) -> Any? in
+            let document: DocumentSnapshot
+            do {
+                try document = transaction.getDocument(storyRef)
+            } catch let error as NSError {
+                errorPointer?.pointee = error
+                return nil
+            }
 
-        storyRef.setData(updateData, merge: true) { error in
+            // Check if document exists and get current version
+            let currentVersion = document.data()?["version"] as? Int ?? 0
+            let storyVersion = story.version ?? 0
+
+            // If versions don't match, there's a conflict
+            if document.exists && currentVersion > storyVersion {
+                print("⚠️ Version conflict detected: current=\(currentVersion), story=\(storyVersion)")
+                errorPointer?.pointee = NSError(
+                    domain: "StoryWriteError",
+                    code: 409,
+                    userInfo: [NSLocalizedDescriptionKey: "Story was modified by another user"]
+                )
+                return nil
+            }
+
+            // Increment version and update
+            let newVersion = currentVersion + 1
+            let now = Date()
+
+            let updateData: [String: Any] = [
+                "text": storyText,
+                "authorId": story.assignedAuthor.userId,
+                "authorName": story.assignedAuthor.displayName,
+                "completedAt": Timestamp(date: now),
+                "lastModified": Timestamp(date: now),
+                "version": newVersion
+            ]
+
+            transaction.setData(updateData, forDocument: storyRef, merge: true)
+
+            // Update partnership's lastStoryDate
+            let partnershipRef = self.db.collection("partnerships").document(partnershipId)
+            transaction.updateData([
+                "lastStoryDate": Timestamp(date: story.dateAssigned)
+            ], forDocument: partnershipRef)
+
+            return newVersion
+
+        }) { (object, error) in
             if let error = error {
-                print("❌ Error updating partnership story: \(error.localizedDescription)")
-                completion(false)
-            } else {
-                print("✅ Partnership story marked as completed")
-
-                // Update partnership's lastStoryDate
-                let partnershipRef = self.db.collection("partnerships").document(partnershipId)
-                partnershipRef.updateData([
-                    "lastStoryDate": Timestamp(date: story.dateAssigned)
-                ]) { _ in
-                    completion(true)
+                let nsError = error as NSError
+                if nsError.code == 409 {
+                    // Conflict detected
+                    print("❌ Conflict error: Story was modified by another user")
+                    completion(false, "conflict")
+                } else {
+                    print("❌ Error updating partnership story: \(error.localizedDescription)")
+                    completion(false, error.localizedDescription)
                 }
+            } else {
+                print("✅ Partnership story marked as completed with version \(object ?? 0)")
+                completion(true, nil)
             }
         }
     }

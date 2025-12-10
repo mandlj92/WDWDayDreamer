@@ -10,6 +10,9 @@ struct TodayView: View {
     @State private var isEditing: Bool = false
     @State private var showPartnershipPicker = false
     @State private var errorMessage: String?
+    @State private var lastFailedStoryText: String?
+    @State private var lastFailedStoryId: UUID?
+    @State private var draftLoaded = false
 
     // Computed properties to replace ViewModel
     private var currentPrompt: DaydreamStory? {
@@ -78,6 +81,27 @@ struct TodayView: View {
                             .onTapGesture {
                                 errorMessage = nil
                             }
+                    }
+
+                    // Retry button for failed save
+                    if lastFailedStoryText != nil {
+                        Button(action: {
+                            retrySave()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.subheadline)
+                                Text("Retry Save")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(theme.magicBlue)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(theme.magicBlue.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
                     }
 
                     // Loading state
@@ -159,6 +183,21 @@ struct TodayView: View {
                     await manager.generateOrUpdateDailyPrompt()
                 }
             }
+
+            // Partnership loading overlay
+            if manager.isLoadingPartnership {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(theme.magicBlue)
+
+                    Text("Switching partnerships...")
+                        .font(.headline)
+                        .foregroundColor(theme.magicBlue)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(UIColor.systemBackground).opacity(0.95))
+            }
         }
         .sheet(isPresented: $showPartnershipPicker) {
             PartnershipPickerSheet(manager: manager)
@@ -166,9 +205,22 @@ struct TodayView: View {
         .onAppear {
             print("📱 TodayView appeared")
 
-            // Initialize text with existing story if available
-            if let prompt = currentPrompt, prompt.isWritten {
-                storyText = prompt.storyText ?? ""
+            // Load draft if available and not already loaded
+            if !draftLoaded, let prompt = currentPrompt {
+                // First check if there's a saved story
+                if prompt.isWritten {
+                    storyText = prompt.storyText ?? ""
+                } else if let draft = StoryDraftManager.shared.loadDraft(forStoryId: prompt.id) {
+                    // Load draft if no saved story exists
+                    storyText = draft
+
+                    // Show notification that draft was restored
+                    UIFeedbackCenter.shared.present(
+                        message: "Draft restored",
+                        style: .info
+                    )
+                }
+                draftLoaded = true
             }
 
             // Try to generate today's prompt if none exists
@@ -178,11 +230,25 @@ struct TodayView: View {
                     await manager.generateOrUpdateDailyPrompt()
                 }
             }
+
+            // Cleanup old drafts on app launch
+            StoryDraftManager.shared.cleanupOldDrafts()
         }
         .onChange(of: currentPrompt?.storyText) { _, newValue in
             // Update local text when story changes
             if let newText = newValue, !isEditing {
                 storyText = newText
+            }
+        }
+        .onChange(of: storyText) { _, newValue in
+            // Auto-save draft with debouncing
+            guard let prompt = currentPrompt, !prompt.isWritten, !newValue.isEmpty else { return }
+
+            // Debounce: save after 2 seconds of no typing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [newValue] in
+                if storyText == newValue {  // Check if text hasn't changed
+                    StoryDraftManager.shared.saveDraft(text: newValue, forStoryId: prompt.id)
+                }
             }
         }
     }
@@ -193,9 +259,27 @@ struct TodayView: View {
             errorMessage = "Unable to save story. Please try again."
             return
         }
+
+        // Track this save attempt in case it fails
+        lastFailedStoryText = text
+        lastFailedStoryId = prompt.id
+
         storyText = text
         manager.saveStoryText(text, for: prompt.id)
         isEditing = false
+
+        // Delete draft after successful save
+        StoryDraftManager.shared.deleteDraft(forStoryId: prompt.id)
+    }
+
+    private func retrySave() {
+        guard let text = lastFailedStoryText,
+              let storyId = lastFailedStoryId else {
+            return
+        }
+
+        print("🔄 Retrying story save")
+        manager.saveStoryText(text, for: storyId)
     }
 
     private func generatePrompt() async {
@@ -374,12 +458,18 @@ struct PartnershipPickerSheet: View {
 
                             Spacer()
 
-                            if partnership.id == manager.selectedPartnership?.id {
+                            // Show loading indicator for selected partnership
+                            if manager.isLoadingPartnership && partnership.id == manager.selectedPartnership?.id {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                    .scaleEffect(0.8)
+                            } else if partnership.id == manager.selectedPartnership?.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(theme.mainStreetGold)
                             }
                         }
                     }
+                    .disabled(manager.isLoadingPartnership)
                 }
             }
             .navigationTitle("Select Story Partner")

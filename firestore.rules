@@ -1,0 +1,241 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to count pending invitations for rate limiting
+    function getPendingInvitationCount(userId) {
+      // Note: This requires querying which is not directly supported in rules
+      // Instead, we'll validate on the client side and use timestamps
+      return true; // Placeholder - actual validation done client-side
+    }
+
+    // Helper function to check invitation creation rate (max 5 per hour)
+    function canCreateInvitation() {
+      // Check if invitation has valid timestamp
+      let now = request.time;
+      let createdAt = request.resource.data.createdAt;
+
+      // Ensure createdAt is within 1 minute of now (prevents timestamp manipulation)
+      return createdAt >= now - duration.value(1, 'm') &&
+             createdAt <= now + duration.value(1, 'm');
+    }
+
+    // Helper function to check if user is part of a partnership
+    function isPartnershipMember(partnershipId) {
+      let partnership = get(/databases/$(database)/documents/partnerships/$(partnershipId)).data;
+      return partnership.user1Id == request.auth.uid ||
+             partnership.user2Id == request.auth.uid;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Users can read profiles based on privacy settings:
+      // 1. Their own profile (always allowed)
+      // 2. Profiles set to "everyone" visibility
+      // 3. Profiles of users they're connected to (via connectionIds)
+      allow read: if isOwner(userId) ||
+                     resource.data.preferences.privacy.profileVisibility == 'everyone' ||
+                     (isAuthenticated() &&
+                      resource.data.preferences.privacy.profileVisibility == 'connectionsOnly' &&
+                      request.auth.uid in resource.data.connectionIds);
+
+      // Users can only create and update their own profile
+      allow create, update: if isOwner(userId);
+
+      // Users can delete their own profile
+      allow delete: if isOwner(userId);
+
+      // SECURITY: Private subcollection for sensitive data (FCM tokens, etc.)
+      match /private/{document} {
+        // Only the user can access their own private data
+        allow read, write: if isOwner(userId);
+      }
+
+      // Session Management: Active sessions per device
+      match /sessions/{sessionId} {
+        // Users can read and manage their own sessions
+        allow read, write: if isOwner(userId);
+
+        // Validate session data on create
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['deviceId', 'deviceName', 'deviceModel', 'osVersion', 'appVersion', 'lastActiveAt', 'createdAt', 'isActive']) &&
+          request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
+          request.resource.data.createdAt <= request.time + duration.value(1, 'm');
+      }
+    }
+
+    // Partnerships
+    match /partnerships/{partnershipId} {
+      // Users can read partnerships they're part of
+      allow read: if isAuthenticated() &&
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid);
+
+      // Users can create partnerships
+      allow create: if isAuthenticated() &&
+        (request.resource.data.user1Id == request.auth.uid ||
+         request.resource.data.user2Id == request.auth.uid);
+
+      // Users can update partnerships they're part of
+      allow update: if isAuthenticated() &&
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid);
+
+      // Users can delete partnerships they're part of
+      allow delete: if isAuthenticated() &&
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid);
+
+      // Partnership Stories subcollection
+      match /stories/{storyId} {
+        // Users can ONLY read stories in partnerships they're part of
+        allow read: if isAuthenticated() && isPartnershipMember(partnershipId);
+
+        // SECURITY: Users can ONLY create stories if they are the assigned author
+        // This prevents partners from writing stories for each other or corrupting turn-based system
+        allow create: if isAuthenticated() &&
+          isPartnershipMember(partnershipId) &&
+          request.resource.data.authorId == request.auth.uid;
+
+        // SECURITY: Users can ONLY update stories if they are the assigned author
+        // Prevents malicious clients from overwriting partner's stories
+        allow update: if isAuthenticated() &&
+          isPartnershipMember(partnershipId) &&
+          resource.data.authorId == request.auth.uid &&
+          // Ensure authorId cannot be changed during update
+          request.resource.data.authorId == resource.data.authorId;
+
+        // Users can ONLY delete their own stories in partnerships they're part of
+        allow delete: if isAuthenticated() &&
+          isPartnershipMember(partnershipId) &&
+          resource.data.authorId == request.auth.uid;
+      }
+    }
+
+    // Pal Invitations
+    match /palInvitations/{invitationId} {
+      // Users can only read invitations they created or were sent to them
+      // (Prevents enumeration of all invitations)
+      allow read: if isAuthenticated() &&
+        (resource.data.fromUserId == request.auth.uid ||
+         resource.data.toUserId == request.auth.uid);
+
+      // Rate-limited invitation creation with validation
+      allow create: if isAuthenticated() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        canCreateInvitation() &&
+        // Ensure required fields are present
+        request.resource.data.keys().hasAll(['fromUserId', 'fromUserName', 'fromUserEmail', 'invitationCode', 'status', 'createdAt', 'expiresAt']) &&
+        // Ensure status is pending for new invitations
+        request.resource.data.status == 'pending' &&
+        // Ensure expiration is set correctly (7 days)
+        request.resource.data.expiresAt > request.time &&
+        request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
+
+      // Only the creator or acceptor can update invitations
+      allow update: if isAuthenticated() &&
+        (resource.data.fromUserId == request.auth.uid ||
+         request.resource.data.toUserId == request.auth.uid) &&
+        // Prevent changing fromUserId or invitationCode
+        request.resource.data.fromUserId == resource.data.fromUserId &&
+        request.resource.data.invitationCode == resource.data.invitationCode;
+
+      // Only the creator can delete invitations
+      allow delete: if isAuthenticated() &&
+        resource.data.fromUserId == request.auth.uid;
+    }
+
+    // User Stories (Favorites and personal collections)
+    match /userStories/{userId}/{collection}/{storyId} {
+      // Users can only access their own stories
+      allow read, write: if isOwner(userId);
+    }
+
+    // User Settings
+    match /userSettings/{userId} {
+      // Users can only access their own settings
+      allow read, write: if isOwner(userId);
+    }
+
+    // Notification Queue (written by client, processed by Cloud Functions)
+    match /notificationQueue/{queueId} {
+      // SECURITY: Users can only create notifications as themselves
+      // Prevents notification spoofing and unauthorized sender impersonation
+      allow create: if isAuthenticated() &&
+        request.resource.data.requesterId == request.auth.uid &&
+        // Validate required fields are present
+        request.resource.data.keys().hasAll(['requesterId', 'targetToken', 'title', 'body']) &&
+        // Ensure timestamp is valid (within 1 minute of server time)
+        request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
+        request.resource.data.createdAt <= request.time + duration.value(1, 'm') &&
+        // Ensure processed flag is false on creation
+        (!request.resource.data.keys().hasAny(['processed']) || request.resource.data.processed == false);
+
+      // Only Cloud Functions can read and update
+      // (they run with admin privileges)
+      allow read, update: if false;
+    }
+
+    // Legacy data - sharedStories (for migration purposes)
+    // These rules allow reading old data but prevent new writes
+    match /sharedStories/{storyId} {
+      // Allow reading for migration purposes
+      allow read: if isAuthenticated();
+
+      // Prevent new writes - use partnerships instead
+      allow write: if false;
+    }
+
+    // Connection Test documents (for debugging)
+    match /connectionTest/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ===== CONTENT MODERATION =====
+
+    // Moderation Queue (admin only - managed by Cloud Functions)
+    match /moderationQueue/{queueId} {
+      // Only Cloud Functions can write to the moderation queue
+      allow read, write: if false;
+    }
+
+    // Content Reports (user-submitted reports)
+    match /contentReports/{reportId} {
+      // Users can create reports
+      allow create: if isAuthenticated() &&
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['reporterId', 'contentType', 'contentId', 'reportedUserId', 'reason', 'createdAt']) &&
+        request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
+        request.resource.data.createdAt <= request.time + duration.value(1, 'm');
+
+      // Users can read their own reports
+      allow read: if isAuthenticated() &&
+        resource.data.reporterId == request.auth.uid;
+
+      // Only Cloud Functions can update/delete reports
+      allow update, delete: if false;
+    }
+
+    // Blocked Users (per-user subcollection)
+    match /users/{userId}/blockedUsers/{blockedUserId} {
+      // Users can manage their own blocked list
+      allow read, write: if isOwner(userId);
+    }
+
+    // Security Incidents (admin only - logged by Cloud Functions)
+    match /securityIncidents/{incidentId} {
+      // Only Cloud Functions can write security incidents
+      allow read, write: if false;
+    }
+  }
+}

@@ -230,9 +230,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 struct AuthenticatedView: View {
     @StateObject private var manager = ScenarioManager()
-    
+    @Environment(\.scenePhase) var scenePhase
+
     var body: some View {
         ContentView()
             .environmentObject(manager)
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    print("🔄 App became active - refreshing data...")
+
+                    Task {
+                        // Refresh current partnership data
+                        if manager.selectedPartnership != nil {
+                            await manager.refreshPartnershipData()
+                        }
+
+                        // Refresh user partnerships list
+                        await manager.refreshUserPartnerships()
+                    }
+                }
+            }
     }
 }

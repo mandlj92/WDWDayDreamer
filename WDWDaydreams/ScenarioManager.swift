@@ -85,6 +85,7 @@ class ScenarioManager: ObservableObject {
         }
     }
     @Published var isLoading: Bool = false
+    @Published var isLoadingPartnership: Bool = false
 
     // MARK: - Private Properties
     private var deck: [DaydreamStory] = []
@@ -157,6 +158,9 @@ class ScenarioManager: ObservableObject {
     }
 
     func selectPartnership(_ partnership: StoryPartnership) async {
+        print("🔄 Selecting partnership...")
+        isLoadingPartnership = true
+
         selectedPartnership = partnership
 
         // Load settings from partnership
@@ -170,6 +174,9 @@ class ScenarioManager: ObservableObject {
         setupOptimizedListeners(for: partnership.id)
         fetchPartnershipStories(partnershipId: partnership.id)
         await generateOrUpdateDailyPrompt()
+
+        isLoadingPartnership = false
+        print("✅ Partnership selection complete")
     }
 
     private func setupOptimizedListeners(for partnershipId: String) {
@@ -233,6 +240,10 @@ class ScenarioManager: ObservableObject {
                         author = StoryAuthor(userId: self.currentUserId, displayName: self.firebaseService.currentUserDisplayName)
                     }
 
+                    // Get version and lastModified for optimistic locking
+                    let version = data["version"] as? Int
+                    let lastModified = (data["lastModified"] as? Timestamp)?.dateValue()
+
                     return DaydreamStory(
                         id: UUID(),
                         dateAssigned: dateTimestamp.dateValue(),
@@ -240,7 +251,9 @@ class ScenarioManager: ObservableObject {
                         assignedAuthor: author,
                         partnershipId: partnershipId,
                         storyText: data["text"] as? String,
-                        isFavorite: false
+                        isFavorite: false,
+                        lastModified: lastModified,
+                        version: version
                     )
                 }
 
@@ -567,6 +580,9 @@ class ScenarioManager: ObservableObject {
         print("💾 Saving story text for story: \(storyId)")
 
         if let index = storyHistory.firstIndex(where: { $0.id == storyId }) {
+            // Keep a copy of the original story for rollback
+            let originalStory = storyHistory[index]
+
             var storyToUpdate = storyHistory[index]
             storyToUpdate.storyText = text
 
@@ -579,7 +595,7 @@ class ScenarioManager: ObservableObject {
             }
 
             // This triggers the notification in FirebaseDataService
-            firebaseService.markStoryAsCompleted(storyToUpdate, partnershipId: partnershipId) { [weak self] success in
+            firebaseService.markStoryAsCompleted(storyToUpdate, partnershipId: partnershipId) { [weak self] success, errorMessage in
                 if success {
                     print("✅ Story marked as completed and updated in partnership stories")
 
@@ -600,16 +616,90 @@ class ScenarioManager: ObservableObject {
                         await self?.checkAndAwardBadges()
                     }
                 } else {
-                    print("❌ Failed to mark story as completed")
+                    print("❌ Failed to mark story as completed: \(errorMessage ?? "unknown error")")
 
                     // Trigger haptic feedback
                     HapticManager.instance.notification(type: .error)
+
+                    DispatchQueue.main.async {
+                        // Check if this is a conflict error
+                        if errorMessage == "conflict" {
+                            // Conflict - show special message
+                            UIFeedbackCenter.shared.present(
+                                message: "Your partner updated this story at the same time. Please refresh and try again.",
+                                style: .warning
+                            )
+
+                            // Refresh to get latest version
+                            Task {
+                                await self?.refreshPartnershipData()
+                            }
+                        } else {
+                            // Regular error handling
+                            UIFeedbackCenter.shared.present(
+                                message: "Failed to save story. Please check your connection and try again.",
+                                style: .error
+                            )
+                        }
+
+                        // Revert optimistic update
+                        if let index = self?.storyHistory.firstIndex(where: { $0.id == storyToUpdate.id }) {
+                            self?.storyHistory[index] = originalStory
+                        }
+
+                        // Also revert currentStoryPrompt if it was updated
+                        if self?.currentStoryPrompt?.id == storyToUpdate.id {
+                            self?.currentStoryPrompt = originalStory
+                        }
+                    }
                 }
             }
         }
     }
 
     // MARK: - Public Helpers
+
+    @MainActor
+    func refreshPartnershipData() async {
+        guard let partnership = selectedPartnership else { return }
+
+        print("🔄 Refreshing partnership data...")
+        isLoading = true
+
+        // Re-fetch stories for current partnership
+        fetchPartnershipStories(partnershipId: partnership.id)
+
+        // Regenerate prompt if needed
+        await generateOrUpdateDailyPrompt()
+
+        isLoading = false
+        print("✅ Partnership data refreshed")
+    }
+
+    @MainActor
+    func refreshUserPartnerships() async {
+        guard !currentUserId.isEmpty else { return }
+
+        print("🔄 Refreshing user partnerships...")
+
+        do {
+            userPartnerships = try await palsService.getUserPartnerships(userId: currentUserId)
+            print("✅ Refreshed \(userPartnerships.count) partnerships")
+
+            // Reload partner profiles
+            for partnership in userPartnerships {
+                if let partnerId = partnership.getPartnerId(for: currentUserId) {
+                    if partnerProfiles[partnerId] == nil {
+                        if let profile = try await userService.getUserProfile(userId: partnerId) {
+                            partnerProfiles[partnerId] = profile
+                        }
+                    }
+                }
+            }
+        } catch {
+            print("❌ Error refreshing partnerships: \(error)")
+        }
+    }
 
     // MARK: - Computed Stats
     var totalStoriesCount: Int {

@@ -37,9 +37,11 @@ struct DaydreamStory: Identifiable, Codable, Equatable {
     var partnershipId: String? // Links to the StoryPartnership
     var storyText: String? // The actual story written
     var isFavorite: Bool
+    var lastModified: Date? // Timestamp of last modification
+    var version: Int? // Version number for optimistic locking
 
     // Default initializer
-    init(id: UUID = UUID(), dateAssigned: Date, items: [Category: String], assignedAuthor: StoryAuthor, partnershipId: String? = nil, storyText: String? = nil, isFavorite: Bool = false) {
+    init(id: UUID = UUID(), dateAssigned: Date, items: [Category: String], assignedAuthor: StoryAuthor, partnershipId: String? = nil, storyText: String? = nil, isFavorite: Bool = false, lastModified: Date? = nil, version: Int? = nil) {
         self.id = id
         self.dateAssigned = dateAssigned
         self.items = items
@@ -47,6 +49,8 @@ struct DaydreamStory: Identifiable, Codable, Equatable {
         self.partnershipId = partnershipId
         self.storyText = storyText
         self.isFavorite = isFavorite
+        self.lastModified = lastModified
+        self.version = version
     }
 
     // Helper to get a short prompt text from items
