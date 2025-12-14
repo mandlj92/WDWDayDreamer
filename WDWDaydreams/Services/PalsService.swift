@@ -112,14 +112,6 @@ class PalsService {
                     return nil
                 }
 
-                let partnershipSnapshot: DocumentSnapshot
-                do {
-                    partnershipSnapshot = try transaction.getDocument(partnershipRef)
-                } catch let error as NSError {
-                    errorPointer?.pointee = error
-                    return nil
-                }
-
                 let partnership = StoryPartnership(
                     id: partnershipId,
                     user1Id: latestInvitation.fromUserId,
@@ -133,9 +125,8 @@ class PalsService {
                     forDocument: invitationRef
                 )
 
-                if !partnershipSnapshot.exists {
-                    transaction.setData(partnership.dictionary, forDocument: partnershipRef)
-                }
+                // Create partnership idempotently (safe if it already exists).
+                transaction.setData(partnership.dictionary, forDocument: partnershipRef, merge: true)
 
                 return partnership
             }) { object, error in
