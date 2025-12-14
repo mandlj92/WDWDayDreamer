@@ -126,18 +126,30 @@ struct PalsView: View {
                 .padding(.top)
 
                 // My Invitations Section
-                if !palsViewModel.myInvitations.isEmpty {
+                let visibleInvitations = palsViewModel.myInvitations.filter { $0.status == .pending && !$0.isExpired }
+                if !visibleInvitations.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("My Invitations")
                             .font(.headline)
                             .foregroundColor(theme.primaryBlue)
                             .padding(.horizontal)
 
-                        ForEach(palsViewModel.myInvitations.filter { $0.status == .pending && !$0.isExpired }) { invitation in
+                        ForEach(visibleInvitations) { invitation in
                             InvitationCard(invitation: invitation)
                                 .padding(.horizontal)
                         }
                     }
+                    .padding(.top)
+                } else if !palsViewModel.myInvitations.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("My Invitations")
+                            .font(.headline)
+                            .foregroundColor(theme.primaryBlue)
+                        Text("No active invitations (pending + not expired).")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
                     .padding(.top)
                 }
             }
