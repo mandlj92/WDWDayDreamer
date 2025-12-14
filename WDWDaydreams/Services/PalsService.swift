@@ -121,7 +121,10 @@ class PalsService {
 
                 // IMPORTANT: Firestore transactions require all reads before all writes.
                 transaction.updateData(
-                    ["status": InvitationStatus.accepted.rawValue, "toUserId": userId],
+                    ["status": InvitationStatus.accepted.rawValue, 
+                    "toUserId": userId,
+                    "fromUserId": latestInvitation.fromUserId,
+                    "invitationCode": latestInvitation.invitationCode,],
                     forDocument: invitationRef
                 )
 
