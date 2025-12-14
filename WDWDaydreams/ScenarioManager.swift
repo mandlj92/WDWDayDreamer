@@ -90,6 +90,7 @@ class ScenarioManager: ObservableObject {
     // MARK: - Private Properties
     private var deck: [DaydreamStory] = []
     private var deckIndex = 0
+    private let maxDeckSize = 5_000
     private var firebaseService = FirebaseDataService.shared
     private var palsService = PalsService()
     private var userService = UserService()
@@ -246,12 +247,13 @@ class ScenarioManager: ObservableObject {
 
                     return DaydreamStory(
                         id: UUID(),
+                        documentId: doc.documentID,
                         dateAssigned: dateTimestamp.dateValue(),
                         items: items,
                         assignedAuthor: author,
                         partnershipId: partnershipId,
                         storyText: data["text"] as? String,
-                        isFavorite: false,
+                        isFavorite: data["isFavorite"] as? Bool ?? false,
                         lastModified: lastModified,
                         version: version
                     )
@@ -303,7 +305,12 @@ class ScenarioManager: ObservableObject {
         print("🔄 Rebuilding deck with categories: \(enabledCategories.map { $0.rawValue })")
         let cats = enabledCategories
         let lists = cats.map { DataModel.shared.list(for: $0) }
-        let combos = cartesianProduct(lists)
+
+        // Estimate deck size and fall back to sampling if the cartesian product is too large
+        let estimatedSize = lists.reduce(1) { partial, list in
+            let next = partial * max(1, list.count)
+            return next > maxDeckSize ? maxDeckSize + 1 : next
+        }
 
         guard let partnership = selectedPartnership else {
             print("⚠️ No partnership selected")
@@ -315,18 +322,25 @@ class ScenarioManager: ObservableObject {
             displayName: firebaseService.currentUserDisplayName
         )
 
-        deck = combos.map { values in
-            var dict: [Category: String] = [:]
-            for (i, cat) in cats.enumerated() {
-                dict[cat] = values[i]
-            }
+        if estimatedSize > maxDeckSize {
+            let sampleLimit = min(maxDeckSize, 1_000)
+            print("⚠️ Deck size \(estimatedSize) too large, sampling up to \(sampleLimit) prompts")
+            deck = buildSampledDeck(categories: cats, lists: lists, maxSamples: sampleLimit, author: currentAuthor, partnershipId: partnership.id)
+        } else {
+            let combos = cartesianProduct(lists)
+            deck = combos.map { values in
+                var dict: [Category: String] = [:]
+                for (i, cat) in cats.enumerated() {
+                    dict[cat] = values[i]
+                }
 
-            return DaydreamStory(
-                dateAssigned: Date(),
-                items: dict,
-                assignedAuthor: currentAuthor,
-                partnershipId: partnership.id
-            )
+                return DaydreamStory(
+                    dateAssigned: Date(),
+                    items: dict,
+                    assignedAuthor: currentAuthor,
+                    partnershipId: partnership.id
+                )
+            }
         }
 
         deck.shuffle()
@@ -339,6 +353,49 @@ class ScenarioManager: ObservableObject {
         let rest = Array(arrays.dropFirst())
         let restProd = cartesianProduct(rest)
         return first.flatMap { x in restProd.map { [x] + $0 } }
+    }
+
+    private func buildSampledDeck(
+        categories: [Category],
+        lists: [[String]],
+        maxSamples: Int,
+        author: StoryAuthor,
+        partnershipId: String
+    ) -> [DaydreamStory] {
+        var samples: [DaydreamStory] = []
+        var seen = Set<String>()
+        let targetCount = maxSamples // already constrained by caller
+
+        while samples.count < targetCount {
+            var dict: [Category: String] = [:]
+            var keyParts: [String] = []
+            var isValid = true
+
+            for (i, cat) in categories.enumerated() {
+                guard let value = lists[i].randomElement() else {
+                    isValid = false
+                    break
+                }
+                dict[cat] = value
+                keyParts.append("\(cat.rawValue):\(value)")
+            }
+
+            guard isValid else { break }
+
+            let comboKey = keyParts.joined(separator: "|")
+            if seen.insert(comboKey).inserted {
+                samples.append(
+                    DaydreamStory(
+                        dateAssigned: Date(),
+                        items: dict,
+                        assignedAuthor: author,
+                        partnershipId: partnershipId
+                    )
+                )
+            }
+        }
+
+        return samples
     }
 
     func next() async {
@@ -389,6 +446,7 @@ class ScenarioManager: ObservableObject {
 
         story.dateAssigned = Date()
         story.partnershipId = partnership.id
+        story.documentId = DateFormatter.shared.string(from: story.dateAssigned)
 
         print("🎯 Generated story with items: \(story.items)")
 
@@ -470,12 +528,15 @@ class ScenarioManager: ObservableObject {
         guard var story = currentStoryPrompt else { return }
 
         story.isFavorite.toggle()
+        let favoriteDocumentId = story.documentId ?? DateFormatter.shared.string(from: story.dateAssigned)
 
         if story.isFavorite {
             firebaseService.saveStory(story, toCollection: "favorites") { [weak self] success in
                 if success {
                     Task { @MainActor in
-                        if !(self?.favorites.contains(where: { $0.id == story.id }) ?? true) {
+                        if !(self?.favorites.contains(where: {
+                            $0.documentId == story.documentId || $0.id == story.id
+                        }) ?? true) {
                             self?.favorites.insert(story, at: 0)
                         }
                     }
@@ -485,10 +546,12 @@ class ScenarioManager: ObservableObject {
                 }
             }
         } else {
-            firebaseService.removeFavorite(storyId: story.id) { [weak self] success in
+            firebaseService.removeFavorite(storyId: story.id, documentId: favoriteDocumentId) { [weak self] success in
                 if success {
                     Task { @MainActor in
-                        self?.favorites.removeAll { $0.id == story.id }
+                        self?.favorites.removeAll {
+                            $0.documentId == story.documentId || $0.id == story.id
+                        }
                     }
 
                     // Trigger haptic feedback
@@ -497,7 +560,9 @@ class ScenarioManager: ObservableObject {
             }
         }
 
-        if let index = storyHistory.firstIndex(where: { $0.id == story.id }) {
+        if let index = storyHistory.firstIndex(where: {
+            $0.documentId == story.documentId || $0.id == story.id
+        }) {
             storyHistory[index].isFavorite = story.isFavorite
         }
 
@@ -508,14 +573,20 @@ class ScenarioManager: ObservableObject {
         let storiesToRemove = offsets.map { favorites[$0] }
 
         for story in storiesToRemove {
-            firebaseService.removeFavorite(storyId: story.id) { [weak self] success in
+            firebaseService.removeFavorite(
+                storyId: story.id,
+                documentId: story.documentId ?? DateFormatter.shared.string(from: story.dateAssigned)
+            ) { [weak self] success in
                 if success {
                     Task { @MainActor in
-                        if let index = self?.storyHistory.firstIndex(where: { $0.id == story.id }) {
+                        if let index = self?.storyHistory.firstIndex(where: {
+                            $0.documentId == story.documentId || $0.id == story.id
+                        }) {
                             self?.storyHistory[index].isFavorite = false
                         }
 
-                        if self?.currentStoryPrompt?.id == story.id {
+                        if self?.currentStoryPrompt?.documentId == story.documentId ||
+                            self?.currentStoryPrompt?.id == story.id {
                             self?.currentStoryPrompt?.isFavorite = false
                         }
                     }
@@ -559,8 +630,29 @@ class ScenarioManager: ObservableObject {
         print("🔍 Checking for today's prompt...")
 
         if storyHistory.first(where: { $0.isToday }) != nil {
-             print("✅ Prompt already exists for today.")
-             return
+            print("✅ Prompt already exists for today.")
+            return
+        }
+
+        guard let partnershipId = selectedPartnership?.id else {
+            print("❌ No partnership selected")
+            return
+        }
+
+        // Check Firestore for an existing prompt to avoid overwriting a partner's story
+        if let remoteStory = await firebaseService.fetchPartnershipStory(partnershipId: partnershipId, date: Date()) {
+            print("✅ Found existing prompt for today in Firestore, updating local state.")
+            Task { @MainActor in
+                self.currentStoryPrompt = remoteStory
+
+                // Replace or insert into history for consistency
+                if let existingIndex = self.storyHistory.firstIndex(where: { $0.documentId == remoteStory.documentId }) {
+                    self.storyHistory[existingIndex] = remoteStory
+                } else {
+                    self.storyHistory.insert(remoteStory, at: 0)
+                }
+            }
+            return
         }
 
         print("🆕 No prompt for today, creating new one...")
@@ -650,12 +742,15 @@ class ScenarioManager: ObservableObject {
                         }
 
                         // Revert optimistic update
-                        if let index = self?.storyHistory.firstIndex(where: { $0.id == storyToUpdate.id }) {
+                        if let index = self?.storyHistory.firstIndex(where: {
+                            $0.documentId == storyToUpdate.documentId || $0.id == storyToUpdate.id
+                        }) {
                             self?.storyHistory[index] = originalStory
                         }
 
                         // Also revert currentStoryPrompt if it was updated
-                        if self?.currentStoryPrompt?.id == storyToUpdate.id {
+                        if self?.currentStoryPrompt?.documentId == storyToUpdate.documentId ||
+                            self?.currentStoryPrompt?.id == storyToUpdate.id {
                             self?.currentStoryPrompt = originalStory
                         }
                     }

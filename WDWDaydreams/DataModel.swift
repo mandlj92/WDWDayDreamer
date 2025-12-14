@@ -31,6 +31,7 @@ struct StoryAuthor: Codable, Equatable, Hashable {
 // Represents a single day's prompt and response
 struct DaydreamStory: Identifiable, Codable, Equatable {
     let id: UUID
+    var documentId: String? // Firestore document identifier (e.g., date key) for stable references
     var dateAssigned: Date
     var items: [Category: String] // The generated scenario items
     var assignedAuthor: StoryAuthor
@@ -41,8 +42,20 @@ struct DaydreamStory: Identifiable, Codable, Equatable {
     var version: Int? // Version number for optimistic locking
 
     // Default initializer
-    init(id: UUID = UUID(), dateAssigned: Date, items: [Category: String], assignedAuthor: StoryAuthor, partnershipId: String? = nil, storyText: String? = nil, isFavorite: Bool = false, lastModified: Date? = nil, version: Int? = nil) {
+    init(
+        id: UUID = UUID(),
+        documentId: String? = nil,
+        dateAssigned: Date,
+        items: [Category: String],
+        assignedAuthor: StoryAuthor,
+        partnershipId: String? = nil,
+        storyText: String? = nil,
+        isFavorite: Bool = false,
+        lastModified: Date? = nil,
+        version: Int? = nil
+    ) {
         self.id = id
+        self.documentId = documentId
         self.dateAssigned = dateAssigned
         self.items = items
         self.assignedAuthor = assignedAuthor

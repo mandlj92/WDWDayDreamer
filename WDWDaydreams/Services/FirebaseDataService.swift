@@ -244,11 +244,15 @@ class FirebaseDataService {
                 // Create DaydreamStory
                 let story = DaydreamStory(
                     id: storyID,
+                    documentId: doc.documentID,
                     dateAssigned: dateTimestamp.dateValue(),
                     items: items,
                     assignedAuthor: author,
+                    partnershipId: data["partnershipId"] as? String,
                     storyText: data["text"] as? String,
-                    isFavorite: true // It's in favorites, so must be true
+                    isFavorite: true, // It's in favorites, so must be true
+                    lastModified: (data["lastModified"] as? Timestamp)?.dateValue(),
+                    version: data["version"] as? Int
                 )
                 
                 favStories.append(story)
@@ -292,11 +296,12 @@ class FirebaseDataService {
         let collectionRef = db.collection("userStories")
                              .document(userId)
                              .collection(collection)
-        
-        // Use story ID as document ID for favorites, or auto-generated for history
-        let docRef = collection == "favorites" ?
-                    collectionRef.document(story.id.uuidString) :
-                    collectionRef.document()
+
+        // Use a stable Firestore document ID when we have one (prevents duplicates on reload)
+        let favoriteDocId = story.documentId ?? DateFormatter.shared.string(from: story.dateAssigned)
+        let docRef = collection == "favorites"
+            ? collectionRef.document(favoriteDocId)
+            : collectionRef.document()
         
         docRef.setData(firebaseData) { error in
             if let error = error {
@@ -308,7 +313,7 @@ class FirebaseDataService {
         }
     }
     
-    func removeFavorite(storyId: UUID, completion: @escaping (Bool) -> Void) {
+    func removeFavorite(storyId: UUID, documentId: String?, completion: @escaping (Bool) -> Void) {
         guard ensureAuthenticated() else {
             completion(false)
             return
@@ -317,7 +322,7 @@ class FirebaseDataService {
         let ref = db.collection("userStories")
                     .document(userId)
                     .collection("favorites")
-                    .document(storyId.uuidString)
+                    .document(documentId ?? storyId.uuidString)
         
         ref.delete { error in
             if let error = error {
@@ -455,17 +460,88 @@ class FirebaseDataService {
 
                     return DaydreamStory(
                         id: UUID(),
+                        documentId: doc.documentID,
                         dateAssigned: dateTimestamp.dateValue(),
                         items: items,
                         assignedAuthor: author,
                         partnershipId: partnershipId,
                         storyText: data["text"] as? String,
-                        isFavorite: data["isFavorite"] as? Bool ?? false
+                        isFavorite: data["isFavorite"] as? Bool ?? false,
+                        lastModified: (data["lastModified"] as? Timestamp)?.dateValue(),
+                        version: data["version"] as? Int
                     )
                 }
 
                 completion(stories)
             }
+    }
+    
+    /// Fetch a single partnership story for a given date (used to avoid overwriting an existing prompt).
+    func fetchPartnershipStory(partnershipId: String, date: Date, completion: @escaping (DaydreamStory?) -> Void) {
+        guard ensureAuthenticated() else {
+            completion(nil)
+            return
+        }
+
+        let dateKey = DateFormatter.shared.string(from: date)
+        let docRef = db.collection("partnerships")
+            .document(partnershipId)
+            .collection("stories")
+            .document(dateKey)
+
+        docRef.getDocument { [weak self] snapshot, error in
+            guard let self = self, let snapshot = snapshot, snapshot.exists, error == nil else {
+                completion(nil)
+                return
+            }
+
+            guard let data = snapshot.data(),
+                  let dateTimestamp = data["date"] as? Timestamp,
+                  let itemsDict = data["items"] as? [String: String] else {
+                completion(nil)
+                return
+            }
+
+            var items: [Category: String] = [:]
+            for (key, value) in itemsDict {
+                if let category = Category(rawValue: key) {
+                    items[category] = value
+                }
+            }
+
+            let author: StoryAuthor
+            if let authorId = data["authorId"] as? String,
+               let authorName = data["authorName"] as? String {
+                author = StoryAuthor(userId: authorId, displayName: authorName)
+            } else if let legacyAuthor = data["author"] as? String {
+                author = StoryAuthor(legacyValue: legacyAuthor) ?? StoryAuthor(userId: "unknown", displayName: "Unknown")
+            } else {
+                author = StoryAuthor(userId: self.userId, displayName: self.currentUserDisplayName)
+            }
+
+            let story = DaydreamStory(
+                id: UUID(),
+                documentId: snapshot.documentID,
+                dateAssigned: dateTimestamp.dateValue(),
+                items: items,
+                assignedAuthor: author,
+                partnershipId: partnershipId,
+                storyText: data["text"] as? String,
+                isFavorite: data["isFavorite"] as? Bool ?? false,
+                lastModified: (data["lastModified"] as? Timestamp)?.dateValue(),
+                version: data["version"] as? Int
+            )
+
+            completion(story)
+        }
+    }
+    
+    func fetchPartnershipStory(partnershipId: String, date: Date) async -> DaydreamStory? {
+        await withCheckedContinuation { continuation in
+            fetchPartnershipStory(partnershipId: partnershipId, date: date) { story in
+                continuation.resume(returning: story)
+            }
+        }
     }
     
     // MARK: - Daily Prompt Management (Partnership-based)
@@ -497,8 +573,8 @@ class FirebaseDataService {
             firebaseData["text"] = text
         }
 
-        // Save to partnership's stories collection
-        let dateKey = DateFormatter.shared.string(from: prompt.dateAssigned)
+        // Save to partnership's stories collection (prefer a stable document ID if provided)
+        let dateKey = prompt.documentId ?? DateFormatter.shared.string(from: prompt.dateAssigned)
         let partnershipRef = db.collection("partnerships")
             .document(partnershipId)
             .collection("stories")

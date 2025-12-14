@@ -14,6 +14,8 @@ class WDWWeatherManager: ObservableObject {
     private var remoteConfig: RemoteConfig
     private var apiKey: String = ""
     private var pendingWeatherFetch: Bool = false
+    private var lastRemoteConfigFetch: Date?
+    private let remoteConfigCooldown: TimeInterval = 60
     
     init() {
         // Initialize Firebase Remote Config
@@ -40,6 +42,7 @@ class WDWWeatherManager: ObservableObject {
     
     private func fetchRemoteConfig() {
         print("🔧 Fetching Remote Config...")
+        lastRemoteConfigFetch = Date()
         
         remoteConfig.fetch { [weak self] status, error in
             guard let self = self else { return }
@@ -100,6 +103,11 @@ class WDWWeatherManager: ObservableObject {
             pendingWeatherFetch = true
             DispatchQueue.main.async {
                 self.errorMessage = "Weather service not configured"
+            }
+            // Avoid hammering Remote Config if we've already tried recently
+            if let lastFetch = lastRemoteConfigFetch,
+               Date().timeIntervalSince(lastFetch) < remoteConfigCooldown {
+                return
             }
             fetchRemoteConfig()
             return
