@@ -142,11 +142,14 @@ service cloud.firestore {
 
       // SECURITY: Keep list access restricted (prevents enumeration), but allow
       // direct reads by invitation code so a recipient can accept a code.
-      allow get: if isAuthenticated() &&
-        (resource.data.fromUserId == request.auth.uid ||
+      // NOTE: For a non-existent document, `resource` is null. We allow `get` on a
+      // valid code even when the doc doesn't exist so the client receives `notFound`
+      // (instead of a permissions error) for invalid codes.
+      allow get: if isAuthenticated() && isValidInvitationCode() &&
+        (resource == null ||
+         resource.data.fromUserId == request.auth.uid ||
          resource.data.toUserId == request.auth.uid ||
-         (isValidInvitationCode() &&
-          resource.data.invitationCode == invitationId &&
+         (resource.data.invitationCode == invitationId &&
           resource.data.status == 'pending' &&
           resource.data.expiresAt > request.time));
 
@@ -170,25 +173,22 @@ service cloud.firestore {
 
       // Only the creator or the acceptor can update invitations, with strict field constraints.
       allow update: if isAuthenticated() &&
+        isValidInvitationCode() &&
+        resource.data.invitationCode == invitationId &&
         (
-          // Creator can decline/expire their own invitation (status only).
+          // Creator can decline/expire a pending invitation (status only).
           (resource.data.fromUserId == request.auth.uid &&
-           request.resource.data.diff(resource.data).changedKeys().hasOnly(['status']) &&
-           request.resource.data.status in ['declined', 'expired'] &&
-           request.resource.data.toUserId == resource.data.toUserId &&
-           request.resource.data.fromUserId == resource.data.fromUserId &&
-           request.resource.data.invitationCode == resource.data.invitationCode) ||
+           resource.data.status == 'pending' &&
+           request.writeFields.hasOnly(['status']) &&
+           request.resource.data.status in ['declined', 'expired']) ||
 
           // Acceptor can accept a pending invite (status + toUserId only).
           (resource.data.fromUserId != request.auth.uid &&
            resource.data.status == 'pending' &&
-           isValidInvitationCode() &&
-           resource.data.invitationCode == invitationId &&
+           (resource.data.toUserId == null || resource.data.toUserId == request.auth.uid) &&
+           request.writeFields.hasOnly(['status', 'toUserId']) &&
            request.resource.data.toUserId == request.auth.uid &&
-           request.resource.data.status == 'accepted' &&
-           request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'toUserId']) &&
-           request.resource.data.fromUserId == resource.data.fromUserId &&
-           request.resource.data.invitationCode == resource.data.invitationCode)
+           request.resource.data.status == 'accepted')
         );
 
       // Only the creator can delete invitations
