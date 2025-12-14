@@ -6,6 +6,11 @@ class PalsService {
     private let invitationsCollection = "palInvitations"
     private let partnershipsCollection = "partnerships"
 
+    // FIX FOR AMBIGUITY: Explicitly define the initializer
+    init() {
+        // No setup required
+    }
+
     // MARK: - Invitation Management
 
     func createInvitation(fromUser: UserProfile) async throws -> PalInvitation {
@@ -111,20 +116,18 @@ class PalsService {
                     )
                     return nil
                 }
-                
-                // --- MODIFIED SECTION START ---
-                // Included all required fields to satisfy the security rule integrity checks
+
+                // Passed all checks - perform the update
                 transaction.updateData(
                     [
                         "status": InvitationStatus.accepted.rawValue,
                         "toUserId": userId,
-                        // Ensure these critical fields are re-sent to pass strict security rules
+                        // Ensured these fields are re-sent to pass strict security rules (from previous fix)
                         "fromUserId": latestInvitation.fromUserId, 
                         "invitationCode": latestInvitation.invitationCode 
                     ],
                     forDocument: invitationRef
                 )
-                // --- MODIFIED SECTION END ---
 
                 let partnershipSnapshot: DocumentSnapshot
                 do {
