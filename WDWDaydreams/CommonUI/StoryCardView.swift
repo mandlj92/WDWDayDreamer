@@ -14,25 +14,25 @@ struct StoryCardView: View {
             // Date and author header
             HStack {
                 Image(systemName: "calendar")
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 Text("\(story.dateAssigned, style: .date)")
                     .font(.caption)
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 
                 Spacer()
                 
                 Image(systemName: "person.fill")
-                    .foregroundColor(theme.fantasyPurple)
+                    .foregroundColor(theme.accentPurple)
                 Text("\(story.assignedAuthor.displayName)'s Turn")
                     .font(.caption)
-                    .foregroundColor(theme.fantasyPurple)
+                    .foregroundColor(theme.accentPurple)
             }
             .padding(.bottom, 4)
 
             // Prompt with themed styling
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(theme.mainStreetGold)
+                    .foregroundColor(theme.accentGold)
                 
                 Text("Prompt: \(story.promptText)")
                     .font(.footnote)
@@ -45,7 +45,7 @@ struct StoryCardView: View {
             if story.isWritten {
                 VStack(alignment: .leading, spacing: 4) {
                     Divider()
-                        .background(theme.mainStreetGold.opacity(0.5))
+                        .background(theme.accentGold.opacity(0.5))
                         .padding(.vertical, 4)
                     
                     Text(story.storyText!)
@@ -70,11 +70,11 @@ struct StoryCardView: View {
                 HStack {
                     Spacer()
                     Image(systemName: "heart.fill")
-                        .foregroundColor(theme.mickeyRed)
+                        .foregroundColor(theme.accentRed)
                     if previewMode {
                         Text("Favorite")
                             .font(.caption)
-                            .foregroundColor(theme.mickeyRed)
+                            .foregroundColor(theme.accentRed)
                     }
                 }
                 .padding(.top, 4)
@@ -116,11 +116,11 @@ struct CategoryBadgeView: View {
     }
 }
 
-// CommonUI/Views/DisneyPromptView.swift
+// CommonUI/Views/ParkPromptView.swift
 import SwiftUI
 
 /// A view for displaying the current day's prompt
-struct DisneyPromptView: View {
+struct ParkPromptView: View {
     let prompt: DaydreamStory
     let isUsersTurn: Bool
     let onToggleFavorite: () -> Void
@@ -134,10 +134,10 @@ struct DisneyPromptView: View {
         VStack(alignment: .leading, spacing: 15) {
             // Header section
             HStack {
-                Text("Today's Disney Daydream")
+                Text("Today's Daydream")
                     .font(.system(.title2, design: .rounded))
                     .bold()
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 
                 Spacer()
                 
@@ -145,7 +145,7 @@ struct DisneyPromptView: View {
                 HStack(spacing: 12) {
                     Button(action: onToggleFavorite) {
                         Image(systemName: prompt.isFavorite ? "heart.fill" : "heart")
-                            .foregroundColor(prompt.isFavorite ? theme.mickeyRed : theme.secondaryText)
+                            .foregroundColor(prompt.isFavorite ? theme.accentRed : theme.secondaryText)
                             .scaleEffect(prompt.isFavorite ? 1.1 : 1.0)
                             .animation(.spring(), value: prompt.isFavorite)
                     }
@@ -153,14 +153,14 @@ struct DisneyPromptView: View {
                     // Share button
                     Button(action: { presentShare() }) {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
                     }
                 }
             }
             
             Text("It's \(prompt.assignedAuthor.displayName)'s turn today!")
                 .font(.subheadline)
-                .foregroundColor(theme.fantasyPurple)
+                .foregroundColor(theme.accentPurple)
             
             // Prompt items
             ForEach(prompt.items.sorted(by: { $0.key.rawValue < $1.key.rawValue }), id: \.key) { item in
@@ -168,14 +168,14 @@ struct DisneyPromptView: View {
             }
             
             Divider()
-                .background(theme.mainStreetGold.opacity(0.5))
+                .background(theme.accentGold.opacity(0.5))
             
             // Story writing/viewing area
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Your Story")
                         .font(.headline)
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                     
                     Spacer()
                     
@@ -191,7 +191,7 @@ struct DisneyPromptView: View {
                             }
                             isEditing.toggle()
                         }
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                     }
                 }
                 
@@ -209,7 +209,7 @@ struct DisneyPromptView: View {
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
+                                .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
                         )
                     
                     if !isEditing {
@@ -217,7 +217,7 @@ struct DisneyPromptView: View {
                             onSaveStory(storyText)
                             isEditing = false
                         }
-                        .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                        .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .disabled(storyText.isEmpty)
                     }
@@ -236,7 +236,7 @@ struct DisneyPromptView: View {
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
         )
         .padding(.horizontal)
         .onAppear {
@@ -279,14 +279,14 @@ enum CategoryHelper {
     
     static func color(for category: Category) -> Color {
         switch category {
-        case .hotel: return DisneyColors.castlePink
-        case .park: return DisneyColors.magicBlue
-        case .ride: return DisneyColors.mickeyRed
-        case .food: return DisneyColors.adventureGreen
-        case .beverage: return DisneyColors.adventureGreen
-        case .souvenir: return DisneyColors.mainStreetGold
-        case .character: return DisneyColors.fantasyPurple
-        case .event: return DisneyColors.tomorrowlandSilver
+        case .hotel: return ThemeColors.accentPink
+        case .park: return ThemeColors.primaryBlue
+        case .ride: return ThemeColors.accentRed
+        case .food: return ThemeColors.accentGreen
+        case .beverage: return ThemeColors.accentGreen
+        case .souvenir: return ThemeColors.accentGold
+        case .character: return ThemeColors.accentPurple
+        case .event: return ThemeColors.accentSilver
         }
     }
 }

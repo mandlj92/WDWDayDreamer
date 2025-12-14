@@ -36,11 +36,11 @@ struct ContentView: View {
                     Spacer()
                     Image(systemName: "sparkles")
                         .font(.system(size: 80))
-                        .foregroundColor(currentTheme.mainStreetGold.opacity(0.1))
+                        .foregroundColor(currentTheme.accentGold.opacity(0.1))
                     Spacer()
                     Image(systemName: "wand.and.stars")
                         .font(.system(size: 60))
-                        .foregroundColor(currentTheme.magicBlue.opacity(0.1))
+                        .foregroundColor(currentTheme.primaryBlue.opacity(0.1))
                     Spacer()
                 }
                 .offset(y: 20)
@@ -108,12 +108,12 @@ struct ContentView: View {
                                 .environment(\.theme, currentTheme)
                         }
                     }
-                    .navigationTitle("Disney Daydreams")
+                    .navigationTitle("Park DayDreams")
                     .toolbar {
                         ToolbarItem(placement: .principal) {
-                            Text("Disney Daydreams")
-                                .font(.disneyTitle(24))
-                                .foregroundColor(currentTheme.magicBlue)
+                            Text("Park DayDreams")
+                                .font(.parkTitle(24))
+                                .foregroundColor(currentTheme.primaryBlue)
                         }
                         ToolbarItem(placement: .navigationBarTrailing) {
                             HStack {
@@ -124,7 +124,7 @@ struct ContentView: View {
                                     Image(systemName: "rectangle.portrait.and.arrow.right")
                                 }
                             }
-                            .foregroundColor(currentTheme.magicBlue)
+                            .foregroundColor(currentTheme.primaryBlue)
                         }
                     }
                     .sheet(isPresented: $showSettings) {
@@ -258,7 +258,7 @@ struct LoadingOverlayView: View {
         VStack {
             Image(systemName: "sparkles")
                 .font(.system(size: 40))
-                .foregroundColor(theme.mainStreetGold)
+                .foregroundColor(theme.accentGold)
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(1.2)
@@ -270,7 +270,7 @@ struct LoadingOverlayView: View {
         .padding(30)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(theme.magicBlue)
+                .fill(theme.primaryBlue)
                 .shadow(radius: 10)
         )
     }
@@ -285,7 +285,7 @@ struct ErrorToastView: View {
             Spacer()
             Text(message)
                 .padding()
-                .background(theme.mickeyRed.opacity(0.9))
+                .background(theme.accentRed.opacity(0.9))
                 .foregroundColor(.white)
                 .cornerRadius(10)
                 .padding()

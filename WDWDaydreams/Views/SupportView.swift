@@ -14,8 +14,8 @@ struct SupportView: View {
                 }
 
                 Section(header: Text("Contact")) {
-                    Link("Email support", destination: URL(string: "mailto:support@wdwdaydreams.com")!)
-                    Link("View privacy policy", destination: URL(string: "https://wdwdaydreams.com/privacy")!)
+                    Link("Email support", destination: URL(string: "mailto:support@parkdaydreams.com")!)
+                    Link("View privacy policy", destination: URL(string: "https://parkdaydreams.com/privacy")!)
                 }
             }
             .listStyle(InsetGroupedListStyle())
@@ -23,7 +23,7 @@ struct SupportView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                 }
             }
         }

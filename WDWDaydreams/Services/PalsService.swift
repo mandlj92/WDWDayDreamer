@@ -4,7 +4,7 @@ import Foundation
 class PalsService {
     private let db = Firestore.firestore()
     private let invitationsCollection = "palInvitations"
-    private let partnershipsCollection = "storyPartnerships"
+    private let partnershipsCollection = "partnerships"
 
     // MARK: - Invitation Management
 

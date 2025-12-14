@@ -30,7 +30,7 @@ struct AccountSettingsView: View {
 
                 Form {
                     // Account Information
-                    Section(header: Text("Account Information").foregroundColor(theme.magicBlue)) {
+                    Section(header: Text("Account Information").foregroundColor(theme.primaryBlue)) {
                         if let user = Auth.auth().currentUser {
                             HStack {
                                 Text("Email")
@@ -53,13 +53,13 @@ struct AccountSettingsView: View {
                     .listRowBackground(theme.cardBackground)
 
                     // Privacy & Legal
-                    Section(header: Text("Privacy & Legal").foregroundColor(theme.magicBlue)) {
+                    Section(header: Text("Privacy & Legal").foregroundColor(theme.primaryBlue)) {
                         Button(action: {
                             showingPrivacyPolicy = true
                         }) {
                             HStack {
                                 Image(systemName: "hand.raised.fill")
-                                    .foregroundColor(theme.magicBlue)
+                                    .foregroundColor(theme.primaryBlue)
                                 Text("Privacy Policy")
                                     .foregroundColor(theme.primaryText)
                                 Spacer()
@@ -74,7 +74,7 @@ struct AccountSettingsView: View {
                         }) {
                             HStack {
                                 Image(systemName: "doc.text.fill")
-                                    .foregroundColor(theme.magicBlue)
+                                    .foregroundColor(theme.primaryBlue)
                                 Text("Terms of Service")
                                     .foregroundColor(theme.primaryText)
                                 Spacer()
@@ -87,7 +87,7 @@ struct AccountSettingsView: View {
                     .listRowBackground(theme.cardBackground)
 
                     // Your Data
-                    Section(header: Text("Your Data").foregroundColor(theme.magicBlue),
+                    Section(header: Text("Your Data").foregroundColor(theme.primaryBlue),
                             footer: Text("Download a copy of all your data including stories, partnerships, and settings.")
                         .font(.caption)
                         .foregroundColor(.gray)) {
@@ -100,7 +100,7 @@ struct AccountSettingsView: View {
                                         .scaleEffect(0.8)
                                 } else {
                                     Image(systemName: "arrow.down.doc.fill")
-                                        .foregroundColor(theme.magicBlue)
+                                        .foregroundColor(theme.primaryBlue)
                                 }
                                 Text("Download My Data")
                                     .foregroundColor(theme.primaryText)
@@ -117,7 +117,7 @@ struct AccountSettingsView: View {
                     .listRowBackground(theme.cardBackground)
 
                     // Danger Zone
-                    Section(header: Text("Danger Zone").foregroundColor(theme.mickeyRed),
+                    Section(header: Text("Danger Zone").foregroundColor(theme.accentRed),
                             footer: Text("Account deletion is permanent and cannot be undone. All your stories, partnerships, and data will be permanently deleted.")
                         .font(.caption)
                         .foregroundColor(.gray)) {
@@ -126,9 +126,9 @@ struct AccountSettingsView: View {
                         }) {
                             HStack {
                                 Image(systemName: "trash.fill")
-                                    .foregroundColor(theme.mickeyRed)
+                                    .foregroundColor(theme.accentRed)
                                 Text("Delete Account")
-                                    .foregroundColor(theme.mickeyRed)
+                                    .foregroundColor(theme.accentRed)
                                     .fontWeight(.semibold)
                             }
                         }
@@ -144,7 +144,7 @@ struct AccountSettingsView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 }
             }
         }

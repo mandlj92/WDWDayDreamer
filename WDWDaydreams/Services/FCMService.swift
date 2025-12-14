@@ -178,7 +178,7 @@ class FCMService: NSObject, ObservableObject {
             self?.sendPushNotification(
                 to: partnerToken,
                 title: "Story Complete! ✨",
-                body: "\(authorName) just finished their Disney Daydream! Read it now!",
+                body: "\(authorName) just finished their Daydream! Read it now!",
                 data: [
                     "type": "story_completed",
                     "author": authorName,
@@ -197,7 +197,7 @@ class FCMService: NSObject, ObservableObject {
                 return
             }
 
-            let title = "New Disney Daydream! ✨"
+            let title = "New Daydream! ✨"
             let body = "It's \(assignedAuthor)'s turn to write today's story!"
 
             self?.sendPushNotification(

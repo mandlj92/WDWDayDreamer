@@ -26,7 +26,7 @@ struct HistoryView: View {
                     refreshHistory()
                 }) {
                     Image(systemName: isRefreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                         .rotationEffect(isRefreshing ? .degrees(360) : .degrees(0))
                         .animation(isRefreshing ? Animation.linear(duration: 1.0).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                 }
@@ -36,7 +36,7 @@ struct HistoryView: View {
                 Button("Clear All") {
                     manager.clearHistory()
                 }
-                .foregroundColor(theme.mickeyRed)
+                .foregroundColor(theme.accentRed)
             }
         }
         .onAppear {
@@ -62,16 +62,16 @@ private struct EmptyHistoryView: View {
         VStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 40))
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             Text("Your history is clear")
                 .font(.headline)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             Text("Come back after generating a few daydreams to revisit them here.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundColor(theme.magicBlue.opacity(0.7))
+                .foregroundColor(theme.primaryBlue.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 40)

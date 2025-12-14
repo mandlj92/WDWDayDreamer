@@ -66,9 +66,9 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("You're all set!")
                             .font(.headline)
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
 
-                        Text("Next step: Invite a Story Pal to start creating magical Disney stories together.")
+                        Text("Next step: Invite a Story Pal to start creating magical theme park stories together.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
 
@@ -84,7 +84,7 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .foregroundColor(.white)
-                            .background(theme.magicBlue)
+                            .background(theme.primaryBlue)
                             .cornerRadius(12)
                         }
                         .disabled(isSaving)

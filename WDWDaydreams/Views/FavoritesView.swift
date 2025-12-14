@@ -28,7 +28,7 @@ struct FavoritesView: View {
              // EditButton works with onDelete
             if !manager.favorites.isEmpty {
                  EditButton()
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
             }
         }
     }
@@ -41,16 +41,16 @@ private struct EmptyFavoritesView: View {
         VStack(spacing: 12) {
             Image(systemName: "star.fill")
                 .font(.system(size: 40))
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             Text("No favorites yet")
                 .font(.headline)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             Text("Tap the heart on a daydream to save it here for easy access later.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundColor(theme.magicBlue.opacity(0.7))
+                .foregroundColor(theme.primaryBlue.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 40)

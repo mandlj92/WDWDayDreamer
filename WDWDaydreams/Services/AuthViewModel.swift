@@ -97,12 +97,16 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
                 print("🔐 Login successful for user: \(result.user.email ?? "no email")")
                 self.checkUserAuthorization()
                 self.clearErrors()
+
+                // Success haptic feedback
+                HapticManager.instance.notification(type: .success)
             }
         } catch let validationError as ValidationError {
             // Handle validation errors
             await MainActor.run {
                 self.isLoading = false
                 self.errorMessage = validationError.localizedDescription
+                HapticManager.instance.notification(type: .error)
             }
         } catch {
             let nsError = error as NSError
@@ -114,17 +118,22 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
 
                 // Handle specific error cases
                 switch nsError.code {
-                case 17008: // FIRAuthErrorCodeInvalidCredential
-                    self.errorMessage = "Invalid email or password. Please check your credentials."
+                case 17004: // FIRAuthErrorCodeInvalidCredential (malformed/expired)
+                    self.errorMessage = "Incorrect email or password. Please try again."
+                case 17008: // FIRAuthErrorCodeInvalidEmail
+                    self.errorMessage = "Incorrect email or password. Please try again."
                 case 17011: // FIRAuthErrorCodeUserNotFound
-                    self.errorMessage = "No account found with this email address."
+                    self.errorMessage = "Incorrect email or password. Please try again."
                 case 17009: // FIRAuthErrorCodeWrongPassword
-                    self.errorMessage = "Incorrect password. Please try again."
+                    self.errorMessage = "Incorrect email or password. Please try again."
                 case 17020: // FIRAuthErrorCodeNetworkError
                     self.errorMessage = "Network error. Please check your connection and try again."
                 default:
-                    self.errorMessage = "Login failed: \(error.localizedDescription)"
+                    self.errorMessage = "Login failed. Please check your credentials and try again."
                 }
+
+                // Error haptic feedback
+                HapticManager.instance.notification(type: .error)
             }
         }
     }
@@ -170,15 +179,20 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
                     self.isLoading = false
                     print("🔐 User profile created in Firestore successfully")
                     self.currentUser = user
+                    self.userProfile = userProfile  // Set profile so UI can use it immediately
                     self.isAuthenticated = true
                     self.requiresOnboarding = true
                     self.clearErrors()
+
+                    // Success haptic feedback
+                    HapticManager.instance.notification(type: .success)
                 }
             } catch {
                 await MainActor.run {
                     self.isLoading = false
                     print("🔐 Failed to create user profile in Firestore: \(error.localizedDescription)")
                     self.errorMessage = "Account created but profile setup failed. Please try signing in."
+                    HapticManager.instance.notification(type: .error)
                 }
             }
         } catch let validationError as ValidationError {
@@ -186,6 +200,7 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
             await MainActor.run {
                 self.isLoading = false
                 self.errorMessage = validationError.localizedDescription
+                HapticManager.instance.notification(type: .error)
             }
         } catch {
             let nsError = error as NSError
@@ -206,6 +221,9 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
                 default:
                     self.errorMessage = "Sign up failed: \(error.localizedDescription)"
                 }
+
+                // Error haptic feedback
+                HapticManager.instance.notification(type: .error)
             }
         }
     }
@@ -297,6 +315,7 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
             // Reset authorization state
             isAuthorized = false
             userRole = ""
+            userProfile = nil  // Clear profile to prevent stale data
             clearErrors()
 
             print("🔐 Sign out successful")
@@ -371,18 +390,31 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
     }
     
     private func checkUserAuthorization() {
-        // Placeholder implementation for user authorization check
-        // This should verify user profile and determine if onboarding is needed
+        // Verify user profile and determine if onboarding is needed
         Task { @MainActor in
-            if let user = Auth.auth().currentUser {
-                do {
-                    let profile = try await userService.getUserProfile(userId: user.uid)
-                    if profile == nil {
-                        self.requiresOnboarding = true
-                    }
-                } catch {
-                    print("⚠️ Error checking user authorization: \(error.localizedDescription)")
+            guard let user = Auth.auth().currentUser else {
+                self.userProfile = nil
+                self.requiresOnboarding = false
+                return
+            }
+
+            do {
+                if let profile = try await userService.getUserProfile(userId: user.uid) {
+                    // Assign the profile so other views (e.g., PalsView) can use it
+                    self.userProfile = profile
+                    self.requiresOnboarding = false
+                    print("✅ Loaded user profile: \(profile.displayName) (ID: \(profile.id))")
+                } else {
+                    // No profile yet — onboarding needed
+                    self.userProfile = nil
+                    self.requiresOnboarding = true
+                    print("⚠️ No user profile found - onboarding required")
                 }
+            } catch {
+                print("⚠️ Error checking user authorization: \(error.localizedDescription)")
+                // Safe fallback on error
+                self.userProfile = nil
+                self.requiresOnboarding = false
             }
         }
     }

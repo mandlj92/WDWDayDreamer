@@ -69,9 +69,9 @@ struct TodayView: View {
                     // Stats dashboard (quick glance)
                     if !manager.userPartnerships.isEmpty {
                         HStack(spacing: 12) {
-                            StatCard(icon: "pencil.circle.fill", value: "\(manager.totalStoriesCount)", label: "Stories", color: theme.magicBlue)
+                            StatCard(icon: "pencil.circle.fill", value: "\(manager.totalStoriesCount)", label: "Stories", color: theme.primaryBlue)
                             StatCard(icon: "flame.fill", value: "\(manager.currentStreak)", label: "Streak", color: .orange)
-                            StatCard(icon: "star.fill", value: manager.favoriteCategory.capitalized, label: "Top", color: theme.mainStreetGold)
+                            StatCard(icon: "star.fill", value: manager.favoriteCategory.capitalized, label: "Top", color: theme.accentGold)
                         }
                         .padding(.horizontal)
                     }
@@ -96,10 +96,10 @@ struct TodayView: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                             }
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(theme.magicBlue.opacity(0.1))
+                            .background(theme.primaryBlue.opacity(0.1))
                             .cornerRadius(8)
                         }
                         .padding(.horizontal)
@@ -117,7 +117,7 @@ struct TodayView: View {
 
                     // Today's prompt
                     if let prompt = currentPrompt, !manager.isLoading {
-                    DisneyPromptView(
+                    ParkPromptView(
                         prompt: prompt,
                         isUsersTurn: isCurrentUsersTurn,
                         onToggleFavorite: {
@@ -132,11 +132,11 @@ struct TodayView: View {
                     VStack(spacing: 20) {
                         Image(systemName: "wand.and.stars")
                             .font(.system(size: 50))
-                            .foregroundColor(theme.mainStreetGold)
+                            .foregroundColor(theme.accentGold)
 
                         Text("No prompt available for today")
                             .font(.headline)
-                            .foregroundColor(theme.mickeyRed)
+                            .foregroundColor(theme.accentRed)
 
                         if let partnerName = currentPartnerName {
                             Text("Create a magical story with \(partnerName)")
@@ -150,7 +150,7 @@ struct TodayView: View {
                                 await generatePrompt()
                             }
                         }
-                        .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                        .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                         .padding(.top)
                     }
                     .padding(30)
@@ -171,7 +171,7 @@ struct TodayView: View {
                                 await generatePrompt()
                             }
                         }
-                        .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                        .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                         .padding(.horizontal)
                     }
                 }
@@ -190,11 +190,11 @@ struct TodayView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.5)
-                        .tint(theme.magicBlue)
+                        .tint(theme.primaryBlue)
 
                     Text("Switching partnerships...")
                         .font(.headline)
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(UIColor.systemBackground).opacity(0.95))
@@ -338,7 +338,7 @@ struct PartnershipSelectorView: View {
         Button(action: onTap) {
             HStack {
                 Image(systemName: "person.2.fill")
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Story Partner")
@@ -346,13 +346,13 @@ struct PartnershipSelectorView: View {
                         .foregroundColor(.secondary)
                     Text(currentPartnerName)
                         .font(.headline)
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.down")
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
             }
             .padding()
             .background(Color.white)
@@ -375,9 +375,9 @@ struct NoPartnershipsView: View {
             Text("No Story Pals Yet")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
-            Text("Visit the Pals tab to invite friends or accept an invitation to start sharing Disney Daydreams!")
+            Text("Visit the Pals tab to invite friends or accept an invitation to start sharing Daydreams!")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -395,11 +395,11 @@ struct LoadingPromptView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(theme.magicBlue)
+                .tint(theme.primaryBlue)
 
             Text("Creating magical prompt...")
                 .font(.headline)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
@@ -413,19 +413,19 @@ struct ErrorBannerView: View {
     var body: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(theme.mickeyRed)
+                .foregroundColor(theme.accentRed)
 
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(theme.mickeyRed)
+                .foregroundColor(theme.accentRed)
 
             Spacer()
 
             Image(systemName: "xmark.circle.fill")
-                .foregroundColor(theme.mickeyRed.opacity(0.6))
+                .foregroundColor(theme.accentRed.opacity(0.6))
         }
         .padding()
-        .background(theme.mickeyRed.opacity(0.1))
+        .background(theme.accentRed.opacity(0.1))
         .cornerRadius(12)
         .padding(.horizontal)
     }
@@ -453,7 +453,7 @@ struct PartnershipPickerSheet: View {
                                let profile = manager.partnerProfiles[partnerId] {
                                 Image(systemName: "person.circle.fill")
                                     .font(.title2)
-                                    .foregroundColor(theme.magicBlue)
+                                    .foregroundColor(theme.primaryBlue)
 
                                 VStack(alignment: .leading) {
                                     Text(profile.displayName)
@@ -476,7 +476,7 @@ struct PartnershipPickerSheet: View {
                                     .scaleEffect(0.8)
                             } else if partnership.id == manager.selectedPartnership?.id {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(theme.mainStreetGold)
+                                    .foregroundColor(theme.accentGold)
                             }
                         }
                     }
@@ -506,11 +506,11 @@ struct TripCountdownView: View {
             HStack {
                 Image(systemName: "calendar.badge.clock")
                     .font(.title2)
-                    .foregroundColor(theme.mickeyRed)
+                    .foregroundColor(theme.accentRed)
                 
                 Text("Trip Countdown")
                     .font(.headline)
-                    .foregroundColor(theme.mickeyRed)
+                    .foregroundColor(theme.accentRed)
                 
                 Spacer()
             }
@@ -518,22 +518,22 @@ struct TripCountdownView: View {
             HStack {
                 Text("\(days)")
                     .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 
                 VStack(alignment: .leading) {
                     Text(days == 1 ? "day" : "days")
                         .font(.headline)
-                        .foregroundColor(theme.magicBlue)
-                    Text("until Disney!")
+                        .foregroundColor(theme.primaryBlue)
+                    Text("until your trip!")
                         .font(.subheadline)
-                        .foregroundColor(theme.magicBlue.opacity(0.8))
+                        .foregroundColor(theme.primaryBlue.opacity(0.8))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "sparkles")
                     .font(.title)
-                    .foregroundColor(theme.mainStreetGold)
+                    .foregroundColor(theme.accentGold)
             }
         }
         .padding()
@@ -544,7 +544,7 @@ struct TripCountdownView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 15)
-                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
         )
         .padding(.horizontal)
     }

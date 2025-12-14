@@ -18,7 +18,7 @@ struct WeatherWidget: View {
             Text(weatherManager.temperature)
                 .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.medium)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
             
             // Optional refresh button
             if showRefreshButton {
@@ -27,7 +27,7 @@ struct WeatherWidget: View {
                 }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.caption)
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                         .opacity(weatherManager.isLoading ? 0.5 : 1.0)
                         .rotationEffect(weatherManager.isLoading ? .degrees(360) : .degrees(0))
                         .animation(weatherManager.isLoading ? Animation.linear(duration: 1.0).repeatForever(autoreverses: false) : .default, value: weatherManager.isLoading)
@@ -43,7 +43,7 @@ struct WeatherWidget: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(theme.mainStreetGold.opacity(0.5), lineWidth: 1)
+                .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
         )
     }
 }
@@ -53,7 +53,7 @@ struct WeatherWidget_Previews: PreviewProvider {
     static var previews: some View {
         WeatherWidget(weatherManager: WDWWeatherManager())
             .padding()
-            .background(DisneyColors.backgroundCream)
+            .background(ThemeColors.backgroundCream)
             .environment(\.theme, LightTheme())
     }
 }

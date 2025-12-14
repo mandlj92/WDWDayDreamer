@@ -7,9 +7,9 @@ final class ShareService {
     /// Returns a shareable string containing a deep link plus App Store fallback.
     func shareText(for promptText: String, storyText: String?) -> String {
         // Deep link scheme (configure your Universal Link / URL scheme in app)
-        let deepLink = "wdwdaydreams://"
+        let deepLink = "parkdaydreams://"
 
-        var body = "I just wrote a Disney Daydream!\n\nPrompt: \(promptText)"
+        var body = "I just wrote a Daydream!\n\nPrompt: \(promptText)"
         if let s = storyText {
             body += "\n\nStory:\n\(s)"
         }

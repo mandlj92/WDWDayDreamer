@@ -10,26 +10,26 @@ struct WelcomeTourView: View {
     private let pages: [WelcomePage] = [
         WelcomePage(
             icon: "sparkles",
-            title: "Welcome to Disney Daydreams!",
-            description: "Create magical Disney stories with friends and family. Each day brings a new creative prompt to inspire your imagination.",
+            title: "Welcome to Daydreams!",
+            description: "Create magical theme park stories with friends and family. Each day brings a new creative prompt to inspire your imagination.",
             primaryColor: .blue
         ),
         WelcomePage(
             icon: "person.2.fill",
             title: "Connect with Story Pals",
-            description: "Invite friends or family to be your Story Pal. Take turns writing stories inspired by Disney parks, characters, and memories.",
+            description: "Invite friends or family to be your Story Pal. Take turns writing stories inspired by theme parks, characters, and memories.",
             primaryColor: .purple
         ),
         WelcomePage(
             icon: "wand.and.stars",
             title: "Daily Magical Prompts",
-            description: "Every day, you'll receive a unique story prompt combining rides, foods, characters, and more from across Disney parks.",
+            description: "Every day, you'll receive a unique story prompt combining rides, foods, characters, and more from across theme parks.",
             primaryColor: .orange
         ),
         WelcomePage(
             icon: "heart.text.square.fill",
             title: "Save Your Favorites",
-            description: "Build a collection of your favorite Disney stories. Export, share, and relive your magical moments anytime.",
+            description: "Build a collection of your favorite theme park stories. Export, share, and relive your magical moments anytime.",
             primaryColor: .pink
         )
     ]
@@ -49,7 +49,7 @@ struct WelcomeTourView: View {
             HStack(spacing: 8) {
                 ForEach(0..<pages.count, id: \.self) { index in
                     Circle()
-                        .fill(currentPage == index ? theme.magicBlue : Color.gray.opacity(0.3))
+                        .fill(currentPage == index ? theme.primaryBlue : Color.gray.opacity(0.3))
                         .frame(width: 8, height: 8)
                         .animation(.easeInOut, value: currentPage)
                 }
@@ -61,7 +61,7 @@ struct WelcomeTourView: View {
                 if currentPage > 0 {
                     Button(action: previousPage) {
                         Text("Back")
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.gray.opacity(0.1))
@@ -75,7 +75,7 @@ struct WelcomeTourView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(theme.magicBlue)
+                        .background(theme.primaryBlue)
                         .cornerRadius(12)
                 }
             }
@@ -130,8 +130,8 @@ struct WelcomePageView: View {
 
             // Title
             Text(page.title)
-                .font(.disneyTitle(28))
-                .foregroundColor(theme.magicBlue)
+                .font(.parkTitle(28))
+                .foregroundColor(theme.primaryBlue)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 

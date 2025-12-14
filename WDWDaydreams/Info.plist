@@ -2,12 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Custom Fonts -->
-    <key>UIAppFonts</key>
-    <array>
-        <string>waltographUI.ttf</string>
-    </array>
-    
     <!-- Firebase URL Schemes -->
     <key>CFBundleURLTypes</key>
     <array>
@@ -42,6 +36,6 @@
     
     <!-- Privacy descriptions -->
     <key>NSUserNotificationsUsageDescription</key>
-    <string>WDW Daydreams sends notifications when your partner writes a story or when it's your turn to write.</string>
+    <string>Park DayDreams sends notifications when your partner writes a story or when it's your turn to write.</string>
 </dict>
 </plist>

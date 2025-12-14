@@ -16,13 +16,13 @@ struct PalsView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 40))
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
 
                     Text("Story Pals")
-                        .font(.disneyTitle(28))
-                        .foregroundColor(theme.magicBlue)
+                        .font(.parkTitle(28))
+                        .foregroundColor(theme.primaryBlue)
 
-                    Text("Connect with others to share Disney Daydreams")
+                    Text("Connect with others to share Daydreams")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -40,7 +40,7 @@ struct PalsView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(theme.magicBlue)
+                        .background(theme.primaryBlue)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
@@ -54,7 +54,7 @@ struct PalsView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(theme.mainStreetGold)
+                        .background(theme.accentGold)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
@@ -65,9 +65,9 @@ struct PalsView: View {
                 if let errorMessage = palsViewModel.errorMessage {
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundColor(theme.mickeyRed)
+                        .foregroundColor(theme.accentRed)
                         .padding()
-                        .background(theme.mickeyRed.opacity(0.1))
+                        .background(theme.accentRed.opacity(0.1))
                         .cornerRadius(8)
                         .padding(.horizontal)
                 }
@@ -86,7 +86,7 @@ struct PalsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("My Story Pals")
                         .font(.headline)
-                        .foregroundColor(theme.magicBlue)
+                        .foregroundColor(theme.primaryBlue)
                         .padding(.horizontal)
 
                     if palsViewModel.isLoading {
@@ -130,7 +130,7 @@ struct PalsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("My Invitations")
                             .font(.headline)
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
                             .padding(.horizontal)
 
                         ForEach(palsViewModel.myInvitations.filter { $0.status == .pending && !$0.isExpired }) { invitation in
@@ -183,12 +183,12 @@ struct PalCard: View {
         HStack {
             Image(systemName: "person.circle.fill")
                 .font(.largeTitle)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(partnerName)
                     .font(.headline)
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
 
                 Text("Connected \(partnership.createdAt, style: .date)")
                     .font(.caption)
@@ -201,7 +201,7 @@ struct PalCard: View {
                         Text("Trip: \(tripDate, style: .date)")
                             .font(.caption)
                     }
-                    .foregroundColor(theme.mainStreetGold)
+                    .foregroundColor(theme.accentGold)
                 }
             }
 
@@ -209,7 +209,7 @@ struct PalCard: View {
 
             Button(action: { showingRemoveAlert = true }) {
                 Image(systemName: "trash")
-                    .foregroundColor(theme.mickeyRed)
+                    .foregroundColor(theme.accentRed)
             }
         }
         .padding()
@@ -238,7 +238,7 @@ struct InvitationCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "envelope.fill")
-                    .foregroundColor(theme.mainStreetGold)
+                    .foregroundColor(theme.accentGold)
 
                 Text("Invitation Code")
                     .font(.caption)
@@ -254,7 +254,7 @@ struct InvitationCard: View {
             Text(invitation.invitationCode)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
                 .tracking(2)
 
             Text("Expires \(invitation.expiresAt, style: .date)")
@@ -300,12 +300,15 @@ struct CreateInviteSheet: View {
             VStack(spacing: 24) {
                 Image(systemName: "person.badge.plus.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                     .padding(.top, 40)
+                    .onAppear {
+                        print("📋 CreateInviteSheet opened - userProfile: \(userProfile?.displayName ?? "nil")")
+                    }
 
                 Text("Invite a Story Pal")
-                    .font(.disneyTitle(24))
-                    .foregroundColor(theme.magicBlue)
+                    .font(.parkTitle(24))
+                    .foregroundColor(theme.primaryBlue)
 
                 Text("Generate an invitation code to share with a friend")
                     .font(.caption)
@@ -321,7 +324,7 @@ struct CreateInviteSheet: View {
 
                         Text(code)
                             .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(theme.magicBlue)
+                            .foregroundColor(theme.primaryBlue)
                             .tracking(4)
                             .padding()
                             .background(theme.backgroundCream)
@@ -332,7 +335,7 @@ struct CreateInviteSheet: View {
                             HapticManager.instance.notification(type: .success)
                         }) {
                             Label("Copy Code", systemImage: "doc.on.doc")
-                                .foregroundColor(theme.magicBlue)
+                                .foregroundColor(theme.primaryBlue)
                         }
 
                         Text("Share this code with your friend. It expires in 7 days.")
@@ -359,7 +362,7 @@ struct CreateInviteSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(theme.magicBlue)
+                    .background(theme.primaryBlue)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                     .padding(.horizontal)
@@ -397,12 +400,12 @@ struct JoinWithCodeSheet: View {
             VStack(spacing: 24) {
                 Image(systemName: "key.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(theme.mainStreetGold)
+                    .foregroundColor(theme.accentGold)
                     .padding(.top, 40)
 
                 Text("Join with Code")
-                    .font(.disneyTitle(24))
-                    .foregroundColor(theme.magicBlue)
+                    .font(.parkTitle(24))
+                    .foregroundColor(theme.primaryBlue)
 
                 Text("Enter the invitation code from your friend")
                     .font(.caption)
@@ -435,7 +438,7 @@ struct JoinWithCodeSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(inviteCode.isEmpty ? Color.gray : theme.mainStreetGold)
+                .background(inviteCode.isEmpty ? Color.gray : theme.accentGold)
                 .foregroundColor(.white)
                 .cornerRadius(12)
                 .padding(.horizontal)
@@ -444,9 +447,9 @@ struct JoinWithCodeSheet: View {
                 if let errorMessage = palsViewModel.errorMessage {
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundColor(theme.mickeyRed)
+                        .foregroundColor(theme.accentRed)
                         .padding()
-                        .background(theme.mickeyRed.opacity(0.1))
+                        .background(theme.accentRed.opacity(0.1))
                         .cornerRadius(8)
                         .padding(.horizontal)
                 }

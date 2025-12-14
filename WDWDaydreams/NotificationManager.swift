@@ -40,7 +40,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func sendLocalCompletionNotification(from author: String) {
         let content = UNMutableNotificationContent()
         content.title = "New Disney Story! ✨"
-        content.body = "\(author) just wrote a magical Disney Daydream! Check it out!"
+        content.body = "\(author) just wrote a magical theme park Daydream! Check it out!"
         content.sound = .default
         content.badge = 1
         

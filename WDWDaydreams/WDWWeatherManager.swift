@@ -162,21 +162,21 @@ class WDWWeatherManager: ObservableObject {
     func weatherColor() -> Color {
         switch weatherIcon {
         case "sun.max.fill":
-            return DisneyColors.mainStreetGold
+            return ThemeColors.accentGold
         case "cloud.sun.fill", "cloud.moon.fill":
-            return DisneyColors.tomorrowlandSilver.opacity(0.8)
+            return ThemeColors.accentSilver.opacity(0.8)
         case "cloud.fill", "smoke.fill":
-            return DisneyColors.tomorrowlandSilver
+            return ThemeColors.accentSilver
         case "cloud.drizzle.fill", "cloud.rain.fill":
-            return DisneyColors.magicBlue
+            return ThemeColors.primaryBlue
         case "cloud.bolt.rain.fill":
-            return DisneyColors.fantasyPurple
+            return ThemeColors.accentPurple
         case "cloud.snow.fill":
             return Color.white
         case "cloud.fog.fill":
-            return DisneyColors.tomorrowlandSilver.opacity(0.5)
+            return ThemeColors.accentSilver.opacity(0.5)
         default:
-            return DisneyColors.mainStreetGold
+            return ThemeColors.accentGold
         }
     }
 

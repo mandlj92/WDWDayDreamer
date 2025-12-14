@@ -22,15 +22,15 @@ struct LoginView: View {
                         VStack(spacing: 15) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 80))
-                                .foregroundColor(theme.magicBlue)
+                                .foregroundColor(theme.primaryBlue)
                             
-                            Text("WDW Daydreams")
-                                .font(.disneyTitle(32))
-                                .foregroundColor(theme.magicBlue)
+                            Text("Park DayDreams")
+                                .font(.parkTitle(32))
+                                .foregroundColor(theme.primaryBlue)
                             
-                            Text("Share magical Disney moments with your partner")
+                            Text("Share magical theme park moments with your partner")
                                 .font(.subheadline)
-                                .foregroundColor(theme.magicBlue.opacity(0.8))
+                                .foregroundColor(theme.primaryBlue.opacity(0.8))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         }
@@ -83,7 +83,7 @@ struct LoginView: View {
                         HStack {
                             VStack { Divider() }
                             Text("or")
-                                .foregroundColor(theme.magicBlue.opacity(0.6))
+                                .foregroundColor(theme.primaryBlue.opacity(0.6))
                                 .padding(.horizontal, 8)
                             VStack { Divider() }
                         }
@@ -93,19 +93,48 @@ struct LoginView: View {
                         VStack(spacing: 15) {
                             if isSignUpMode {
                                 TextField("Display Name", text: $displayName)
-                                    .textFieldStyle(DisneyTextFieldStyle(theme: theme))
+                                    .textFieldStyle(ParkTextFieldStyle(theme: theme))
                             }
                             
                             TextField("Email", text: $email)
-                                .textFieldStyle(DisneyTextFieldStyle(theme: theme))
+                                .textFieldStyle(ParkTextFieldStyle(theme: theme))
                                 .autocapitalization(.none)
                                 .keyboardType(.emailAddress)
-                            
+                                .onChange(of: email) { _, _ in
+                                    // Clear error when user starts typing
+                                    if !authViewModel.errorMessage.isEmpty {
+                                        authViewModel.errorMessage = ""
+                                    }
+                                }
+
                             SecureField("Password", text: $password)
-                                .textFieldStyle(DisneyTextFieldStyle(theme: theme))
+                                .textFieldStyle(ParkTextFieldStyle(theme: theme))
+                                .onChange(of: password) { _, _ in
+                                    // Clear error when user starts typing
+                                    if !authViewModel.errorMessage.isEmpty {
+                                        authViewModel.errorMessage = ""
+                                    }
+                                }
                         }
                         .padding(.horizontal)
                         
+                        // Error Message Display
+                        if !authViewModel.errorMessage.isEmpty {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(theme.accentRed)
+                                Text(authViewModel.errorMessage)
+                                    .font(.caption)
+                                    .foregroundColor(theme.accentRed)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(theme.accentRed.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal)
+                        }
+
                         // Email/Password Action buttons
                         VStack(spacing: 15) {
                             Button(action: {
@@ -126,7 +155,7 @@ struct LoginView: View {
                                     Text(isSignUpMode ? "Create Account" : "Sign In")
                                 }
                             }
-                            .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+                            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                             .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || (isSignUpMode && displayName.isEmpty))
                             
                             Button(action: {
@@ -137,7 +166,7 @@ struct LoginView: View {
                             }) {
                                 Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
                                     .font(.footnote)
-                                    .foregroundColor(theme.magicBlue)
+                                    .foregroundColor(theme.primaryBlue)
                             }
                             
                             if !isSignUpMode {
@@ -145,7 +174,7 @@ struct LoginView: View {
                                     showingForgotPassword = true
                                 }
                                 .font(.footnote)
-                                .foregroundColor(theme.magicBlue.opacity(0.7))
+                                .foregroundColor(theme.primaryBlue.opacity(0.7))
                             }
                         }
                         .padding(.horizontal)
@@ -165,7 +194,7 @@ struct LoginView: View {
 
 // MARK: - Custom Text Field Style
 
-struct DisneyTextFieldStyle: TextFieldStyle {
+struct ParkTextFieldStyle: TextFieldStyle {
     let theme: Theme
     
     func _body(configuration: TextField<Self._Label>) -> some View {
@@ -174,7 +203,7 @@ struct DisneyTextFieldStyle: TextFieldStyle {
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.white)
-                    .shadow(color: theme.magicBlue.opacity(0.2), radius: 3, x: 0, y: 2)
+                    .shadow(color: theme.primaryBlue.opacity(0.2), radius: 3, x: 0, y: 2)
             )
     }
 }
@@ -197,16 +226,16 @@ struct ForgotPasswordView: View {
                 
                 VStack(spacing: 20) {
                     Text("Reset Password")
-                        .font(.disneyTitle(24))
-                        .foregroundColor(theme.magicBlue)
+                        .font(.parkTitle(24))
+                        .foregroundColor(theme.primaryBlue)
                     
                     Text("Enter your email address and we'll send you a password reset link.")
                         .font(.subheadline)
-                        .foregroundColor(theme.magicBlue.opacity(0.8))
+                        .foregroundColor(theme.primaryBlue.opacity(0.8))
                         .multilineTextAlignment(.center)
                     
                     TextField("Email", text: $email)
-                        .textFieldStyle(DisneyTextFieldStyle(theme: theme))
+                        .textFieldStyle(ParkTextFieldStyle(theme: theme))
                         .autocapitalization(.none)
                         .keyboardType(.emailAddress)
                     
@@ -215,12 +244,12 @@ struct ForgotPasswordView: View {
                             await resetPassword()
                         }
                     }
-                    .buttonStyle(DisneyButtonStyle(color: email.isEmpty ? .gray : theme.magicBlue))
+                    .buttonStyle(ParkButtonStyle(color: email.isEmpty ? .gray : theme.primaryBlue))
                     .disabled(email.isEmpty || isLoading)
                     
                     if isLoading {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: theme.magicBlue))
+                            .progressViewStyle(CircularProgressViewStyle(tint: theme.primaryBlue))
                     }
                     
                     Spacer()
@@ -234,7 +263,7 @@ struct ForgotPasswordView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
                 }
             }
         }

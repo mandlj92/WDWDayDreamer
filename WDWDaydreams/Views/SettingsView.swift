@@ -192,7 +192,7 @@ struct SettingsView: View {
                 Button("Done") {
                     dismiss()
                 }
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
                 .fontWeight(.semibold)
             }
         }
@@ -203,11 +203,11 @@ struct SettingsView: View {
             VStack(alignment: .center, spacing: 12) {
                 Image(systemName: "wand.and.stars")
                     .font(.system(size: 40))
-                    .foregroundColor(theme.magicBlue)
+                    .foregroundColor(theme.primaryBlue)
 
-                Text("Disney Daydreams Settings")
-                    .font(.disneyTitle(18))
-                    .foregroundColor(theme.magicBlue)
+                Text("Daydreams Settings")
+                    .font(.parkTitle(18))
+                    .foregroundColor(theme.primaryBlue)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -239,7 +239,7 @@ struct SettingsView: View {
                 NotificationManager.shared.requestPermission()
                 feedbackCenter.present(message: "Notification permission requested", style: .info)
             }
-            .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
         }
         .listRowBackground(theme.cardBackground)
     }
@@ -309,7 +309,7 @@ struct SettingsView: View {
             Button("Test Firebase Connection") {
                 testFirebaseConnection()
             }
-            .buttonStyle(DisneyButtonStyle(color: theme.magicBlue))
+            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
 
             if !testResults.isEmpty {
                 Text(testResults)
@@ -344,7 +344,7 @@ struct SettingsView: View {
 
     private var dangerZoneSection: some View {
         let headerText = Text("Danger Zone")
-            .foregroundColor(theme.mickeyRed)
+            .foregroundColor(theme.accentRed)
             .font(.headline)
 
         return Section(header: headerText) {
@@ -359,7 +359,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
             }
-            .buttonStyle(DisneyButtonStyle(color: theme.mickeyRed))
+            .buttonStyle(ParkButtonStyle(color: theme.accentRed))
             .listRowBackground(theme.backgroundCream)
         }
     }
@@ -399,7 +399,7 @@ struct SectionHeader: View {
     
     var body: some View {
         Text(title)
-            .foregroundColor(theme.magicBlue)
+            .foregroundColor(theme.primaryBlue)
             .font(.headline)
     }
 }
@@ -465,7 +465,7 @@ struct TripCountdownRow: View {
             Text("\(days) day\(days == 1 ? "" : "s") until your trip!")
                 .font(.headline)
         }
-        .foregroundColor(theme.mickeyRed)
+        .foregroundColor(theme.accentRed)
         .padding(.vertical, 4)
     }
 }

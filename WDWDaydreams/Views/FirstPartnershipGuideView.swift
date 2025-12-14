@@ -11,12 +11,12 @@ struct FirstPartnershipGuideView: View {
         VStack(spacing: 24) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 60))
-                .foregroundColor(theme.magicBlue)
+                .foregroundColor(theme.primaryBlue)
 
             Text("Connect with a Story Pal")
                 .font(.title2.weight(.bold))
 
-            Text("To start creating Disney stories, you'll need to connect with a friend or family member.")
+            Text("To start creating theme park stories, you'll need to connect with a friend or family member.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
@@ -37,7 +37,7 @@ struct FirstPartnershipGuideView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(theme.magicBlue.opacity(0.1))
+                    .background(theme.primaryBlue.opacity(0.1))
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -57,7 +57,7 @@ struct FirstPartnershipGuideView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(theme.mickeyRed.opacity(0.1))
+                    .background(theme.accentRed.opacity(0.1))
                     .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
