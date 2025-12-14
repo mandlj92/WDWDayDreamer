@@ -176,19 +176,32 @@ service cloud.firestore {
         isValidInvitationCode() &&
         resource.data.invitationCode == invitationId &&
         (
-          // Creator can decline/expire a pending invitation (status only).
+          // Creator can decline/expire a pending invitation.
           (resource.data.fromUserId == request.auth.uid &&
            resource.data.status == 'pending' &&
-           request.writeFields.hasOnly(['status']) &&
-           request.resource.data.status in ['declined', 'expired']) ||
+           request.resource.data.status in ['declined', 'expired'] &&
+           // Immutable fields must not change
+           request.resource.data.fromUserId == resource.data.fromUserId &&
+           request.resource.data.fromUserName == resource.data.fromUserName &&
+           request.resource.data.fromUserEmail == resource.data.fromUserEmail &&
+           request.resource.data.invitationCode == resource.data.invitationCode &&
+           request.resource.data.createdAt == resource.data.createdAt &&
+           request.resource.data.expiresAt == resource.data.expiresAt &&
+           request.resource.data.toUserId == resource.data.toUserId) ||
 
-          // Acceptor can accept a pending invite (status + toUserId only).
+          // Acceptor can accept a pending invitation.
           (resource.data.fromUserId != request.auth.uid &&
            resource.data.status == 'pending' &&
            (resource.data.toUserId == null || resource.data.toUserId == request.auth.uid) &&
-           request.writeFields.hasOnly(['status', 'toUserId']) &&
+           request.resource.data.status == 'accepted' &&
            request.resource.data.toUserId == request.auth.uid &&
-           request.resource.data.status == 'accepted')
+           // Immutable fields must not change
+           request.resource.data.fromUserId == resource.data.fromUserId &&
+           request.resource.data.fromUserName == resource.data.fromUserName &&
+           request.resource.data.fromUserEmail == resource.data.fromUserEmail &&
+           request.resource.data.invitationCode == resource.data.invitationCode &&
+           request.resource.data.createdAt == resource.data.createdAt &&
+           request.resource.data.expiresAt == resource.data.expiresAt)
         );
 
       // Only the creator can delete invitations
