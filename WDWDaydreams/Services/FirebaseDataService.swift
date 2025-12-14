@@ -475,7 +475,16 @@ class FirebaseDataService {
                 completion(stories)
             }
     }
-    
+
+    /// Async wrapper for fetchPartnershipStories - prevents race conditions
+    func fetchPartnershipStoriesAsync(partnershipId: String) async throws -> [DaydreamStory] {
+        try await withCheckedThrowingContinuation { continuation in
+            fetchPartnershipStories(partnershipId: partnershipId) { stories in
+                continuation.resume(returning: stories)
+            }
+        }
+    }
+
     /// Fetch a single partnership story for a given date (used to avoid overwriting an existing prompt).
     func fetchPartnershipStory(partnershipId: String, date: Date, completion: @escaping (DaydreamStory?) -> Void) {
         guard ensureAuthenticated() else {

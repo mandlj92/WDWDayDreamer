@@ -172,8 +172,17 @@ class ScenarioManager: ObservableObject {
         tripDate = partnership.sharedTripDate
 
         rebuildDeck()
+
+        // CRITICAL FIX: Fetch stories BEFORE checking for daily prompt
+        // This ensures storyHistory is populated when generateOrUpdateDailyPrompt() runs
+        let stories = await fetchPartnershipStoriesAsync(partnershipId: partnership.id)
+        storyHistory = stories
+        print("✅ Loaded \(stories.count) partnership stories before prompt check")
+
+        // Set up real-time listener AFTER initial load
         setupOptimizedListeners(for: partnership.id)
-        fetchPartnershipStories(partnershipId: partnership.id)
+
+        // Check/generate daily prompt with populated storyHistory
         await generateOrUpdateDailyPrompt()
 
         isLoadingPartnership = false
@@ -485,6 +494,18 @@ class ScenarioManager: ObservableObject {
         }
     }
 
+    // MARK: - Async Helpers
+
+    /// Async wrapper for fetching partnership stories - prevents race conditions
+    private func fetchPartnershipStoriesAsync(partnershipId: String) async -> [DaydreamStory] {
+        do {
+            return try await firebaseService.fetchPartnershipStoriesAsync(partnershipId: partnershipId)
+        } catch {
+            print("❌ Error fetching partnership stories: \(error)")
+            return []
+        }
+    }
+
     // MARK: - Partnership Settings
 
     private func savePartnershipSettings() {
@@ -768,8 +789,10 @@ class ScenarioManager: ObservableObject {
         print("🔄 Refreshing partnership data...")
         isLoading = true
 
-        // Re-fetch stories for current partnership
-        fetchPartnershipStories(partnershipId: partnership.id)
+        // CRITICAL FIX: Await the fetch to ensure storyHistory is populated
+        let stories = await fetchPartnershipStoriesAsync(partnershipId: partnership.id)
+        storyHistory = stories
+        print("✅ Refreshed \(stories.count) partnership stories")
 
         // Regenerate prompt if needed
         await generateOrUpdateDailyPrompt()
