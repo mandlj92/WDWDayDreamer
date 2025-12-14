@@ -88,9 +88,104 @@ class ScenarioManager: ObservableObject {
     @Published var isLoadingPartnership: Bool = false
 
     // MARK: - Private Properties
-    private var deck: [DaydreamStory] = []
-    private var deckIndex = 0
-    private let maxDeckSize = 5_000
+    private struct PromptDeck {
+        let categories: [Category]
+        let lists: [[String]]
+        let totalCombinations: UInt64
+
+        private(set) var drawnCount: UInt64 = 0
+        private var a: UInt64
+        private var b: UInt64
+
+        init(categories: [Category], lists: [[String]]) {
+            self.categories = categories
+            self.lists = lists
+
+            var product: UInt64 = 1
+            for list in lists {
+                let count = UInt64(list.count)
+                guard count > 0 else {
+                    product = 0
+                    break
+                }
+
+                if product > UInt64.max / count {
+                    product = UInt64.max
+                    break
+                }
+                product *= count
+            }
+            self.totalCombinations = product
+
+            let (a, b) = Self.makePermutationParameters(modulus: max(1, product))
+            self.a = a
+            self.b = b
+        }
+
+        mutating func reshuffle() {
+            drawnCount = 0
+            let (a, b) = Self.makePermutationParameters(modulus: max(1, totalCombinations))
+            self.a = a
+            self.b = b
+        }
+
+        mutating func drawNextItems() -> [Category: String]? {
+            guard totalCombinations > 0 else { return nil }
+
+            if drawnCount >= totalCombinations {
+                reshuffle()
+            }
+
+            let modulus = totalCombinations
+            let permuted = (a &* drawnCount &+ b) % modulus
+            drawnCount &+= 1
+
+            var remainder = permuted
+            var items: [Category: String] = [:]
+
+            for (i, category) in categories.enumerated() {
+                let list = lists[i]
+                let count = UInt64(list.count)
+                guard count > 0 else { return nil }
+
+                let idx = Int(remainder % count)
+                remainder /= count
+                items[category] = list[idx]
+            }
+
+            return items
+        }
+
+        private static func makePermutationParameters(modulus: UInt64) -> (UInt64, UInt64) {
+            guard modulus > 1 else { return (1, 0) }
+
+            // Generate an affine permutation: (a*x + b) mod N, where gcd(a, N) == 1.
+            var a: UInt64 = 1
+            for _ in 0..<32 {
+                let candidate = UInt64.random(in: 1..<modulus)
+                if gcd(candidate, modulus) == 1 {
+                    a = candidate
+                    break
+                }
+            }
+
+            let b = UInt64.random(in: 0..<modulus)
+            return (a, b)
+        }
+
+        private static func gcd(_ x: UInt64, _ y: UInt64) -> UInt64 {
+            var a = x
+            var b = y
+            while b != 0 {
+                let t = a % b
+                a = b
+                b = t
+            }
+            return a
+        }
+    }
+
+    private var deck: PromptDeck?
     private var firebaseService = FirebaseDataService.shared
     private var palsService = PalsService()
     private var userService = UserService()
@@ -315,96 +410,20 @@ class ScenarioManager: ObservableObject {
         let cats = enabledCategories
         let lists = cats.map { DataModel.shared.list(for: $0) }
 
-        // Estimate deck size and fall back to sampling if the cartesian product is too large
-        let estimatedSize = lists.reduce(1) { partial, list in
-            let next = partial * max(1, list.count)
-            return next > maxDeckSize ? maxDeckSize + 1 : next
-        }
-
-        guard let partnership = selectedPartnership else {
+        guard selectedPartnership != nil else {
             print("⚠️ No partnership selected")
             return
         }
 
-        let currentAuthor = StoryAuthor(
-            userId: currentUserId,
-            displayName: firebaseService.currentUserDisplayName
-        )
-
-        if estimatedSize > maxDeckSize {
-            let sampleLimit = min(maxDeckSize, 1_000)
-            print("⚠️ Deck size \(estimatedSize) too large, sampling up to \(sampleLimit) prompts")
-            deck = buildSampledDeck(categories: cats, lists: lists, maxSamples: sampleLimit, author: currentAuthor, partnershipId: partnership.id)
-        } else {
-            let combos = cartesianProduct(lists)
-            deck = combos.map { values in
-                var dict: [Category: String] = [:]
-                for (i, cat) in cats.enumerated() {
-                    dict[cat] = values[i]
-                }
-
-                return DaydreamStory(
-                    dateAssigned: Date(),
-                    items: dict,
-                    assignedAuthor: currentAuthor,
-                    partnershipId: partnership.id
-                )
+        deck = PromptDeck(categories: cats, lists: lists)
+        if let deck {
+            let total = deck.totalCombinations
+            if total == UInt64.max {
+                print("🎯 Deck rebuilt (very large combination space)")
+            } else {
+                print("🎯 Deck rebuilt with \(total) combinations")
             }
         }
-
-        deck.shuffle()
-        deckIndex = 0
-        print("🎯 Deck rebuilt with \(deck.count) combinations")
-    }
-
-    private func cartesianProduct<T>(_ arrays: [[T]]) -> [[T]] {
-        guard let first = arrays.first else { return [[]] }
-        let rest = Array(arrays.dropFirst())
-        let restProd = cartesianProduct(rest)
-        return first.flatMap { x in restProd.map { [x] + $0 } }
-    }
-
-    private func buildSampledDeck(
-        categories: [Category],
-        lists: [[String]],
-        maxSamples: Int,
-        author: StoryAuthor,
-        partnershipId: String
-    ) -> [DaydreamStory] {
-        var samples: [DaydreamStory] = []
-        var seen = Set<String>()
-        let targetCount = maxSamples // already constrained by caller
-
-        while samples.count < targetCount {
-            var dict: [Category: String] = [:]
-            var keyParts: [String] = []
-            var isValid = true
-
-            for (i, cat) in categories.enumerated() {
-                guard let value = lists[i].randomElement() else {
-                    isValid = false
-                    break
-                }
-                dict[cat] = value
-                keyParts.append("\(cat.rawValue):\(value)")
-            }
-
-            guard isValid else { break }
-
-            let comboKey = keyParts.joined(separator: "|")
-            if seen.insert(comboKey).inserted {
-                samples.append(
-                    DaydreamStory(
-                        dateAssigned: Date(),
-                        items: dict,
-                        assignedAuthor: author,
-                        partnershipId: partnershipId
-                    )
-                )
-            }
-        }
-
-        return samples
     }
 
     func next() async {
@@ -430,12 +449,12 @@ class ScenarioManager: ObservableObject {
         print("🎲 Generating new prompt...")
 
         // Ensure we have a deck
-        if deck.isEmpty {
-            print("❌ Deck is empty, rebuilding...")
+        if deck == nil {
+            print("❌ Deck is missing, rebuilding...")
             rebuildDeck()
 
             // Check if rebuild was successful
-            if deck.isEmpty {
+            if deck == nil {
                 print("❌ Still no deck after rebuild")
                 isGeneratingPrompt = false
                 isLoading = false
@@ -443,19 +462,22 @@ class ScenarioManager: ObservableObject {
             }
         }
 
-        // Reset deck if we've used all cards
-        if deckIndex >= deck.count {
-            print("🔄 Reached end of deck, shuffling...")
-            deck.shuffle()
-            deckIndex = 0
+        guard var deck = deck, let items = deck.drawNextItems() else {
+            print("❌ Could not draw from deck")
+            isGeneratingPrompt = false
+            isLoading = false
+            return
         }
+        self.deck = deck
 
-        var story = deck[deckIndex]
-        deckIndex += 1
-
-        story.dateAssigned = Date()
-        story.partnershipId = partnership.id
-        story.documentId = DateFormatter.shared.string(from: story.dateAssigned)
+        let now = Date()
+        var story = DaydreamStory(
+            documentId: DateFormatter.shared.string(from: now),
+            dateAssigned: now,
+            items: items,
+            assignedAuthor: StoryAuthor(userId: currentUserId, displayName: firebaseService.currentUserDisplayName),
+            partnershipId: partnership.id
+        )
 
         print("🎯 Generated story with items: \(story.items)")
 
