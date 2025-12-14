@@ -37,17 +37,29 @@ service cloud.firestore {
              partnership.user2Id == request.auth.uid;
     }
 
+    // Helper function to compute a deterministic partnership doc ID from two UIDs.
+    // This enables rules to check partnership existence without needing a query.
+    function partnershipDocId(userA, userB) {
+      return userA < userB ? userA + "_" + userB : userB + "_" + userA;
+    }
+
+    // Helper function to check if two users are partners (connected via a partnership doc).
+    function arePartners(userA, userB) {
+      return exists(/databases/$(database)/documents/partnerships/$(partnershipDocId(userA, userB)));
+    }
+
     // User profiles
     match /users/{userId} {
       // Users can read profiles based on privacy settings:
       // 1. Their own profile (always allowed)
       // 2. Profiles set to "everyone" visibility
-      // 3. Profiles of users they're connected to (via connectionIds)
+      // 3. Profiles of users they're connected to (via connectionIds or partnerships)
       allow read: if isOwner(userId) ||
                      resource.data.preferences.privacy.profileVisibility == 'everyone' ||
                      (isAuthenticated() &&
                       resource.data.preferences.privacy.profileVisibility == 'connectionsOnly' &&
-                      request.auth.uid in resource.data.connectionIds);
+                      (request.auth.uid in resource.data.connectionIds ||
+                       arePartners(userId, request.auth.uid)));
 
       // Users can only create and update their own profile
       allow create, update: if isOwner(userId);
@@ -124,14 +136,28 @@ service cloud.firestore {
 
     // Pal Invitations
     match /palInvitations/{invitationId} {
-      // Users can only read invitations they created or were sent to them
-      // (Prevents enumeration of all invitations)
-      allow read: if isAuthenticated() &&
+      function isValidInvitationCode() {
+        return invitationId.matches('^[A-Z0-9]{6}$');
+      }
+
+      // SECURITY: Keep list access restricted (prevents enumeration), but allow
+      // direct reads by invitation code so a recipient can accept a code.
+      allow get: if isAuthenticated() &&
+        (resource.data.fromUserId == request.auth.uid ||
+         resource.data.toUserId == request.auth.uid ||
+         (isValidInvitationCode() &&
+          resource.data.invitationCode == invitationId &&
+          resource.data.status == 'pending' &&
+          resource.data.expiresAt > request.time));
+
+      allow list: if isAuthenticated() &&
         (resource.data.fromUserId == request.auth.uid ||
          resource.data.toUserId == request.auth.uid);
 
       // Rate-limited invitation creation with validation
       allow create: if isAuthenticated() &&
+        invitationId == request.resource.data.invitationCode &&
+        request.resource.data.invitationCode.matches('^[A-Z0-9]{6}$') &&
         request.resource.data.fromUserId == request.auth.uid &&
         canCreateInvitation() &&
         // Ensure required fields are present
@@ -142,15 +168,28 @@ service cloud.firestore {
         request.resource.data.expiresAt > request.time &&
         request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
 
-      // Only the creator or acceptor can update invitations
-      // Allow updates that change only allowed fields (e.g. status, toUserId)
+      // Only the creator or the acceptor can update invitations, with strict field constraints.
       allow update: if isAuthenticated() &&
-        (resource.data.fromUserId == request.auth.uid ||
-         request.resource.data.toUserId == request.auth.uid) &&
-        // Prevent changing fromUserId if present in the update
-        (!request.resource.data.keys().hasAny(['fromUserId']) || request.resource.data.fromUserId == resource.data.fromUserId) &&
-        // Prevent changing invitationCode if present in the update
-        (!request.resource.data.keys().hasAny(['invitationCode']) || request.resource.data.invitationCode == resource.data.invitationCode);
+        (
+          // Creator can decline/expire their own invitation (status only).
+          (resource.data.fromUserId == request.auth.uid &&
+           request.resource.data.diff(resource.data).changedKeys().hasOnly(['status']) &&
+           request.resource.data.status in ['declined', 'expired'] &&
+           request.resource.data.toUserId == resource.data.toUserId &&
+           request.resource.data.fromUserId == resource.data.fromUserId &&
+           request.resource.data.invitationCode == resource.data.invitationCode) ||
+
+          // Acceptor can accept a pending invite (status + toUserId only).
+          (resource.data.fromUserId != request.auth.uid &&
+           resource.data.status == 'pending' &&
+           isValidInvitationCode() &&
+           resource.data.invitationCode == invitationId &&
+           request.resource.data.toUserId == request.auth.uid &&
+           request.resource.data.status == 'accepted' &&
+           request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'toUserId']) &&
+           request.resource.data.fromUserId == resource.data.fromUserId &&
+           request.resource.data.invitationCode == resource.data.invitationCode)
+        );
 
       // Only the creator can delete invitations
       allow delete: if isAuthenticated() &&
