@@ -1,551 +1,336 @@
-// Views/TodayView.swift
-import SwiftUI
-import FirebaseAuth
+import FirebaseFirestore
+import Foundation
 
-struct TodayView: View {
-    @EnvironmentObject var manager: ScenarioManager
-    @Environment(\.theme) var theme: Theme
-    @StateObject private var editorState = EditorStateManager.shared
+class PalsService {
+    private let db = Firestore.firestore()
+    private let invitationsCollection = "palInvitations"
+    private let partnershipsCollection = "partnerships"
 
-    @State private var storyText: String = ""
-    @State private var isEditing: Bool = false
-    @State private var showPartnershipPicker = false
-    @State private var errorMessage: String?
-    @State private var lastFailedStoryText: String?
-    @State private var lastFailedStoryId: UUID?
-    @State private var draftLoaded = false
+    // MARK: - Invitation Management
 
-    // Computed properties to replace ViewModel
-    private var currentPrompt: DaydreamStory? {
-        manager.currentStoryPrompt
-    }
-
-    private var isCurrentUsersTurn: Bool {
-        manager.isCurrentUsersTurn()
-    }
-
-    private var hasMultiplePartnerships: Bool {
-        manager.userPartnerships.count > 1
-    }
-
-    private var currentPartnerName: String? {
-        guard let partnership = manager.selectedPartnership,
-              let currentUserId = Auth.auth().currentUser?.uid,
-              let partnerId = partnership.getPartnerId(for: currentUserId),
-              let profile = manager.partnerProfiles[partnerId] else {
-            return nil
+    func createInvitation(fromUser: UserProfile) async throws -> PalInvitation {
+        // Rate limiting: Check pending invitations count
+        let pendingCount = try await getPendingInvitationCount(userId: fromUser.id)
+        guard pendingCount < 10 else {
+            throw NSError(
+                domain: "PalsService",
+                code: 429,
+                userInfo: [NSLocalizedDescriptionKey: "You have reached the maximum of 10 pending invitations. Please wait for some to be accepted or expire before creating more."]
+            )
         }
-        return profile.displayName
+
+        // Rate limiting: Check recent invitation creation (last hour)
+        let recentCount = try await getRecentInvitationCount(userId: fromUser.id, withinHours: 1)
+        guard recentCount < 5 else {
+            throw NSError(
+                domain: "PalsService",
+                code: 429,
+                userInfo: [NSLocalizedDescriptionKey: "You can only create 5 invitations per hour. Please try again later."]
+            )
+        }
+
+        // Generate a 6-character invitation code and use it as the document ID.
+        // This enables secure direct lookups by code (no query needed).
+        let invitationCode = generateInvitationCode()
+        let docRef = db.collection(invitationsCollection).document(invitationCode)
+
+        let invitation = PalInvitation(
+            id: invitationCode,
+            fromUserId: fromUser.id,
+            fromUserName: fromUser.displayName,
+            fromUserEmail: fromUser.email,
+            invitationCode: invitationCode
+        )
+
+        try await docRef.setData(invitation.dictionary)
+        return invitation
     }
-    
-    private var showTripCountdown: Bool {
-        guard let tripDate = manager.tripDate else { return false }
-        let days = daysUntilTrip
-        return tripDate > Date() && days >= 0
+
+    func getInvitationByCode(_ code: String) async throws -> PalInvitation? {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let isValid = normalized.range(of: "^[A-Z0-9]{6}$", options: .regularExpression) != nil
+        guard isValid else { return nil }
+
+        let doc = try await db.collection(invitationsCollection).document(normalized).getDocument()
+        guard doc.exists, let invitation = PalInvitation(document: doc) else { return nil }
+        guard invitation.invitationCode.uppercased() == normalized else { return nil }
+
+        guard invitation.status == .pending, !invitation.isExpired else { return nil }
+        return invitation
     }
-    
-    private var daysUntilTrip: Int {
-        guard let tripDate = manager.tripDate else { return 0 }
-        return Calendar.current.dateComponents([.day],
-                from: Calendar.current.startOfDay(for: Date()),
-                to: Calendar.current.startOfDay(for: tripDate)).day ?? 0
-    }
-    
-    var body: some View {
-        ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Partnership selector (if multiple partnerships)
-                    if hasMultiplePartnerships {
-                        PartnershipSelectorView(
-                            currentPartnerName: currentPartnerName ?? "Select Partner",
-                            onTap: { showPartnershipPicker = true },
-                            theme: theme
+
+    func acceptInvitation(_ invitation: PalInvitation, byUser userId: String) async throws -> StoryPartnership {
+        let invitationCode = invitation.invitationCode.uppercased()
+        let invitationRef = db.collection(invitationsCollection).document(invitationCode)
+
+        let partnershipId = makePartnershipId(userA: invitation.fromUserId, userB: userId)
+        let partnershipRef = db.collection(partnershipsCollection).document(partnershipId)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            db.runTransaction({ transaction, errorPointer -> Any? in
+                let inviteSnapshot: DocumentSnapshot
+                do {
+                    inviteSnapshot = try transaction.getDocument(invitationRef)
+                } catch let error as NSError {
+                    errorPointer?.pointee = error
+                    return nil
+                }
+
+                guard let latestInvitation = PalInvitation(document: inviteSnapshot) else {
+                    errorPointer?.pointee = NSError(
+                        domain: "PalsService",
+                        code: 404,
+                        userInfo: [NSLocalizedDescriptionKey: "Invitation not found."]
+                    )
+                    return nil
+                }
+
+                if latestInvitation.fromUserId == userId {
+                    errorPointer?.pointee = NSError(
+                        domain: "PalsService",
+                        code: 400,
+                        userInfo: [NSLocalizedDescriptionKey: "You cannot accept your own invitation."]
+                    )
+                    return nil
+                }
+
+                if latestInvitation.status != .pending || latestInvitation.isExpired {
+                    errorPointer?.pointee = NSError(
+                        domain: "PalsService",
+                        code: 400,
+                        userInfo: [NSLocalizedDescriptionKey: "This invitation is no longer available."]
+                    )
+                    return nil
+                }
+
+                if let toUserId = latestInvitation.toUserId, toUserId != userId {
+                    errorPointer?.pointee = NSError(
+                        domain: "PalsService",
+                        code: 409,
+                        userInfo: [NSLocalizedDescriptionKey: "This invitation has already been used."]
+                    )
+                    return nil
+                }
+                
+                // --- MODIFIED SECTION START ---
+                // Included all required fields to satisfy the security rule integrity checks
+                transaction.updateData(
+                    [
+                        "status": InvitationStatus.accepted.rawValue,
+                        "toUserId": userId,
+                        // Ensure these critical fields are re-sent to pass strict security rules
+                        "fromUserId": latestInvitation.fromUserId, 
+                        "invitationCode": latestInvitation.invitationCode 
+                    ],
+                    forDocument: invitationRef
+                )
+                // --- MODIFIED SECTION END ---
+
+                let partnershipSnapshot: DocumentSnapshot
+                do {
+                    partnershipSnapshot = try transaction.getDocument(partnershipRef)
+                } catch let error as NSError {
+                    errorPointer?.pointee = error
+                    return nil
+                }
+
+                let partnership = StoryPartnership(
+                    id: partnershipId,
+                    user1Id: latestInvitation.fromUserId,
+                    user2Id: userId,
+                    nextAuthorId: latestInvitation.fromUserId // First author is the inviter
+                )
+
+                if !partnershipSnapshot.exists {
+                    transaction.setData(partnership.dictionary, forDocument: partnershipRef)
+                }
+
+                return partnership
+            }) { object, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                guard let partnership = object as? StoryPartnership else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "PalsService",
+                            code: 500,
+                            userInfo: [NSLocalizedDescriptionKey: "Failed to create partnership."]
                         )
-                    } else if manager.userPartnerships.isEmpty {
-                        NoPartnershipsView(theme: theme)
-                    }
-
-                    // Stats dashboard (quick glance)
-                    if !manager.userPartnerships.isEmpty {
-                        HStack(spacing: 12) {
-                            StatCard(icon: "pencil.circle.fill", value: "\(manager.totalStoriesCount)", label: "Stories", color: theme.primaryBlue)
-                            StatCard(icon: "flame.fill", value: "\(manager.currentStreak)", label: "Streak", color: .orange)
-                            StatCard(icon: "star.fill", value: manager.favoriteCategory.capitalized, label: "Top", color: theme.accentGold)
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    // Error message
-                    if let error = errorMessage {
-                        ErrorBannerView(message: error, theme: theme)
-                            .onTapGesture {
-                                errorMessage = nil
-                            }
-                    }
-
-                    // Retry button for failed save
-                    if lastFailedStoryText != nil {
-                        Button(action: {
-                            retrySave()
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                    .font(.subheadline)
-                                Text("Retry Save")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(theme.primaryBlue)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(theme.primaryBlue.opacity(0.1))
-                            .cornerRadius(8)
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    // Loading state
-                    if manager.isLoading {
-                        LoadingPromptView(theme: theme)
-                    }
-
-                    // Trip countdown if available
-                    if showTripCountdown {
-                        TripCountdownView(days: daysUntilTrip, theme: theme)
-                    }
-
-                    // Today's prompt
-                    if let prompt = currentPrompt, !manager.isLoading {
-                    ParkPromptView(
-                        prompt: prompt,
-                        isUsersTurn: isCurrentUsersTurn,
-                        onToggleFavorite: {
-                            manager.toggleFavorite()
-                        },
-                        onSaveStory: { text in
-                            saveStory(text: text)
-                        }
                     )
-                } else if !manager.userPartnerships.isEmpty && !manager.isLoading {
-                    // No prompt available - show generation option
-                    VStack(spacing: 20) {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 50))
-                            .foregroundColor(theme.accentGold)
-
-                        Text("No prompt available for today")
-                            .font(.headline)
-                            .foregroundColor(theme.accentRed)
-
-                        if let partnerName = currentPartnerName {
-                            Text("Create a magical story with \(partnerName)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Button("Generate Today's Prompt") {
-                            print("🎯 User tapped Generate Prompt")
-                            Task {
-                                await generatePrompt()
-                            }
-                        }
-                        .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
-                        .padding(.top)
-                    }
-                    .padding(30)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                    )
-                    .padding(.horizontal)
+                    return
                 }
-                
-                    // Show the Generate New Prompt button if it's the user's turn and there's already a prompt
-                    if currentPrompt != nil && isCurrentUsersTurn && !manager.isLoading {
-                        Button("Generate New Prompt") {
-                            print("🎯 User tapped Generate New Prompt")
-                            Task {
-                                await generatePrompt()
-                            }
-                        }
-                        .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
-                        .padding(.horizontal)
-                    }
-                }
-            }
-            .refreshable {
-                // Pull to refresh functionality with haptic feedback
-                HapticManager.instance.impact(style: .light)
-                print("🔄 User pulled to refresh")
-                Task {
-                    await manager.generateOrUpdateDailyPrompt()
-                }
-            }
 
-            // Partnership loading overlay
-            if manager.isLoadingPartnership {
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .tint(theme.primaryBlue)
-
-                    Text("Switching partnerships...")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryBlue)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(UIColor.systemBackground).opacity(0.95))
-            }
-        }
-        .sheet(isPresented: $showPartnershipPicker) {
-            PartnershipPickerSheet(manager: manager)
-        }
-        .onAppear {
-            print("📱 TodayView appeared")
-
-            // Load draft if available and not already loaded
-            if !draftLoaded, let prompt = currentPrompt {
-                // First check if there's a saved story
-                if prompt.isWritten {
-                    storyText = prompt.storyText ?? ""
-                } else if let draft = StoryDraftManager.shared.loadDraft(forStoryId: prompt.id) {
-                    // Load draft if no saved story exists
-                    storyText = draft
-
-                    // Show notification that draft was restored
-                    UIFeedbackCenter.shared.present(
-                        message: "Draft restored",
-                        style: .info
-                    )
-                }
-                draftLoaded = true
-            }
-
-            // Try to generate today's prompt if none exists
-            if manager.currentStoryPrompt == nil && !manager.userPartnerships.isEmpty {
-                print("🔍 No current prompt, trying to generate...")
-                Task {
-                    await manager.generateOrUpdateDailyPrompt()
-                }
-            }
-
-            // Cleanup old drafts on app launch
-            StoryDraftManager.shared.cleanupOldDrafts()
-        }
-        .onChange(of: currentPrompt?.storyText) { _, newValue in
-            // Update local text when story changes
-            if let newText = newValue, !isEditing {
-                storyText = newText
-            }
-        }
-        .onChange(of: storyText) { _, newValue in
-            // Track unsaved changes
-            if let prompt = currentPrompt {
-                let savedText = prompt.storyText ?? ""
-                let hasChanges = (newValue != savedText && !newValue.isEmpty)
-                editorState.hasUnsavedStoryChanges = hasChanges
-            }
-
-            // Auto-save draft with debouncing
-            guard let prompt = currentPrompt, !prompt.isWritten, !newValue.isEmpty else { return }
-
-            // Debounce: save after 2 seconds of no typing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [newValue] in
-                if storyText == newValue {  // Check if text hasn't changed
-                    StoryDraftManager.shared.saveDraft(text: newValue, forStoryId: prompt.id)
-                }
+                continuation.resume(returning: partnership)
             }
         }
     }
-    
-    // Local functions to replace ViewModel methods
-    private func saveStory(text: String) {
-        guard let prompt = currentPrompt else {
-            errorMessage = "Unable to save story. Please try again."
-            return
+
+    func declineInvitation(_ invitationId: String) async throws {
+        try await db.collection(invitationsCollection)
+            .document(invitationId)
+            .updateData([
+                "status": InvitationStatus.declined.rawValue
+            ])
+    }
+
+    func getUserInvitations(userId: String) async throws -> [PalInvitation] {
+        let query = try await db.collection(invitationsCollection)
+            .whereField("fromUserId", isEqualTo: userId)
+            .getDocuments()
+
+        return query.documents
+            .compactMap { PalInvitation(document: $0) }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    // MARK: - Partnership Management
+
+    func getUserPartnerships(userId: String) async throws -> [StoryPartnership] {
+        // Query where user is either user1 or user2
+        let query1 = try await db.collection(partnershipsCollection)
+            .whereField("user1Id", isEqualTo: userId)
+            .getDocuments()
+
+        let query2 = try await db.collection(partnershipsCollection)
+            .whereField("user2Id", isEqualTo: userId)
+            .getDocuments()
+
+        let partnerships1 = query1.documents.compactMap { StoryPartnership(document: $0) }
+        let partnerships2 = query2.documents.compactMap { StoryPartnership(document: $0) }
+
+        // Combine and remove duplicates
+        let allPartnerships = partnerships1 + partnerships2
+        return Array(Set(allPartnerships.map { $0.id }))
+            .compactMap { id in allPartnerships.first { $0.id == id } }
+    }
+
+    func getPartnership(user1Id: String, user2Id: String) async throws -> StoryPartnership? {
+        // Try both user orderings
+        let query1 = try await db.collection(partnershipsCollection)
+            .whereField("user1Id", isEqualTo: user1Id)
+            .whereField("user2Id", isEqualTo: user2Id)
+            .getDocuments()
+
+        if let doc = query1.documents.first {
+            return StoryPartnership(document: doc)
         }
 
-        // Track this save attempt in case it fails
-        lastFailedStoryText = text
-        lastFailedStoryId = prompt.id
+        let query2 = try await db.collection(partnershipsCollection)
+            .whereField("user1Id", isEqualTo: user2Id)
+            .whereField("user2Id", isEqualTo: user1Id)
+            .getDocuments()
 
-        storyText = text
-        manager.saveStoryText(text, for: prompt.id)
-        isEditing = false
-
-        // Clear unsaved changes flag
-        editorState.hasUnsavedStoryChanges = false
-
-        // Delete draft after successful save
-        StoryDraftManager.shared.deleteDraft(forStoryId: prompt.id)
-    }
-
-    private func retrySave() {
-        guard let text = lastFailedStoryText,
-              let storyId = lastFailedStoryId else {
-            return
+        if let doc = query2.documents.first {
+            return StoryPartnership(document: doc)
         }
 
-        print("🔄 Retrying story save")
-        manager.saveStoryText(text, for: storyId)
+        return nil
     }
 
-    private func generatePrompt() async {
-        errorMessage = nil
-        await manager.next()
+    func updatePartnership(_ partnership: StoryPartnership) async throws {
+        try await db.collection(partnershipsCollection)
+            .document(partnership.id)
+            .updateData(partnership.dictionary)
     }
-}
 
-// MARK: - Small UI Components
+    func removePartnership(_ partnershipId: String, user1Id: String, user2Id: String) async throws {
+        // Delete partnership
+        try await db.collection(partnershipsCollection)
+            .document(partnershipId)
+            .delete()
 
-struct StatCard: View {
-    let icon: String
-    let value: String
-    let label: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 22))
-                .foregroundColor(color)
-            Text(value)
-                .font(.headline)
-                .foregroundColor(color)
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
+        // Remove connections from both users
+        let userService = UserService()
+        try await userService.removeConnection(userId: user1Id, connectionId: user2Id)
+        try await userService.removeConnection(userId: user2Id, connectionId: user1Id)
     }
-}
 
-// MARK: - Supporting Views
+    // MARK: - Helper Methods
 
-struct PartnershipSelectorView: View {
-    let currentPartnerName: String
-    let onTap: () -> Void
-    let theme: Theme
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                Image(systemName: "person.2.fill")
-                    .foregroundColor(theme.primaryBlue)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Story Partner")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(currentPartnerName)
-                        .font(.headline)
-                        .foregroundColor(theme.primaryBlue)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.down")
-                    .foregroundColor(theme.primaryBlue)
-            }
-            .padding()
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        }
-        .padding(.horizontal)
+    private func generateInvitationCode() -> String {
+        let characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Removed ambiguous characters
+        return String((0..<6).compactMap { _ in characters.randomElement() })
     }
-}
 
-struct NoPartnershipsView: View {
-    let theme: Theme
+    /// Get the count of pending invitations for a user (for rate limiting)
+    private func getPendingInvitationCount(userId: String) async throws -> Int {
+        let query = try await db.collection(invitationsCollection)
+            .whereField("fromUserId", isEqualTo: userId)
+            .getDocuments()
 
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.2.slash")
-                .font(.system(size: 60))
-                .foregroundColor(.gray)
-
-            Text("No Story Pals Yet")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primaryBlue)
-
-            Text("Visit the Pals tab to invite friends or accept an invitation to start sharing Daydreams!")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 32)
-        }
-        .padding(.vertical, 40)
-        .frame(maxWidth: .infinity)
+        return query.documents
+            .compactMap { PalInvitation(document: $0) }
+            .filter { $0.status == .pending && !$0.isExpired }
+            .count
     }
-}
 
-struct LoadingPromptView: View {
-    let theme: Theme
+    /// Get the count of invitations created within the last N hours (for rate limiting)
+    private func getRecentInvitationCount(userId: String, withinHours hours: Int) async throws -> Int {
+        let cutoffDate = Calendar.current.date(byAdding: .hour, value: -hours, to: Date()) ?? Date()
 
-    var body: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(theme.primaryBlue)
+        let query = try await db.collection(invitationsCollection)
+            .whereField("fromUserId", isEqualTo: userId)
+            .getDocuments()
 
-            Text("Creating magical prompt...")
-                .font(.headline)
-                .foregroundColor(theme.primaryBlue)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+        return query.documents
+            .compactMap { PalInvitation(document: $0) }
+            .filter { $0.createdAt >= cutoffDate }
+            .count
     }
-}
 
-struct ErrorBannerView: View {
-    let message: String
-    let theme: Theme
-
-    var body: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(theme.accentRed)
-
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(theme.accentRed)
-
-            Spacer()
-
-            Image(systemName: "xmark.circle.fill")
-                .foregroundColor(theme.accentRed.opacity(0.6))
-        }
-        .padding()
-        .background(theme.accentRed.opacity(0.1))
-        .cornerRadius(12)
-        .padding(.horizontal)
+    private func makePartnershipId(userA: String, userB: String) -> String {
+        userA < userB ? "\(userA)_\(userB)" : "\(userB)_\(userA)"
     }
-}
 
-struct PartnershipPickerSheet: View {
-    @ObservedObject var manager: ScenarioManager
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.theme) var theme: Theme
+    /// Cleanup expired invitations - should be called periodically (e.g., daily via Cloud Function)
+    func cleanupExpiredInvitations() async throws {
+        let query = try await db.collection(invitationsCollection)
+            .whereField("status", isEqualTo: InvitationStatus.pending.rawValue)
+            .getDocuments()
 
-    var body: some View {
-        NavigationView {
-            List {
-                ForEach(manager.userPartnerships) { partnership in
-                    Button(action: {
-                        Task {
-                            await manager.selectPartnership(partnership)
-                            HapticManager.instance.impact(style: .light)
-                            dismiss()
-                        }
-                    }) {
-                        HStack {
-                            if let currentUserId = Auth.auth().currentUser?.uid,
-                               let partnerId = partnership.getPartnerId(for: currentUserId),
-                               let profile = manager.partnerProfiles[partnerId] {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(theme.primaryBlue)
+        let batch = db.batch()
+        var updateCount = 0
 
-                                VStack(alignment: .leading) {
-                                    Text(profile.displayName)
-                                        .font(.headline)
-
-                                    if let tripDate = partnership.sharedTripDate {
-                                        Text("Trip: \(tripDate, style: .date)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                            }
-
-                            Spacer()
-
-                            // Show loading indicator for selected partnership
-                            if manager.isLoadingPartnership && partnership.id == manager.selectedPartnership?.id {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                                    .scaleEffect(0.8)
-                            } else if partnership.id == manager.selectedPartnership?.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(theme.accentGold)
-                            }
-                        }
-                    }
-                    .disabled(manager.isLoadingPartnership)
-                }
-            }
-            .navigationTitle("Select Story Partner")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
+        for document in query.documents {
+            if let invitation = PalInvitation(document: document), invitation.isExpired {
+                let ref = db.collection(invitationsCollection).document(document.documentID)
+                batch.updateData(["status": InvitationStatus.expired.rawValue], forDocument: ref)
+                updateCount += 1
             }
         }
-    }
-}
 
-// Updated TripCountdownView to use theme
-struct TripCountdownView: View {
-    let days: Int
-    let theme: Theme
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.title2)
-                    .foregroundColor(theme.accentRed)
-                
-                Text("Trip Countdown")
-                    .font(.headline)
-                    .foregroundColor(theme.accentRed)
-                
-                Spacer()
-            }
-            
-            HStack {
-                Text("\(days)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundColor(theme.primaryBlue)
-                
-                VStack(alignment: .leading) {
-                    Text(days == 1 ? "day" : "days")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryBlue)
-                    Text("until your trip!")
-                        .font(.subheadline)
-                        .foregroundColor(theme.primaryBlue.opacity(0.8))
-                }
-                
-                Spacer()
-                
-                Image(systemName: "sparkles")
-                    .font(.title)
-                    .foregroundColor(theme.accentGold)
+        if updateCount > 0 {
+            try await batch.commit()
+            print("✅ Cleaned up \(updateCount) expired invitations")
+        }
+    }
+
+    /// Delete old expired and declined invitations (cleanup for database size management)
+    func deleteOldInvitations(olderThanDays days: Int = 30) async throws {
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+
+        let query = try await db.collection(invitationsCollection)
+            .whereField("createdAt", isLessThan: Timestamp(date: cutoffDate))
+            .getDocuments()
+
+        let batch = db.batch()
+        var deleteCount = 0
+
+        for document in query.documents {
+            if let invitation = PalInvitation(document: document),
+               invitation.status == .expired || invitation.status == .declined {
+                let ref = db.collection(invitationsCollection).document(document.documentID)
+                batch.deleteDocument(ref)
+                deleteCount += 1
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(theme.backgroundCream)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
-        )
-        .padding(.horizontal)
+
+        if deleteCount > 0 {
+            try await batch.commit()
+            print("✅ Deleted \(deleteCount) old invitations")
+        }
     }
 }
