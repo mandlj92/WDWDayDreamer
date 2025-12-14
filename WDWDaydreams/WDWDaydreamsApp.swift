@@ -62,7 +62,8 @@ struct WDWDaydreamsApp: App {
         Self.configureRemoteConfig()
         Self.configureGoogleSignIn()
 
-        _authViewModel = StateObject(wrappedValue: AuthViewModel())
+        let authVM = AuthViewModel()
+        _authViewModel = StateObject(wrappedValue: authVM)
         _feedbackCenter = StateObject(wrappedValue: UIFeedbackCenter.shared)
 
         NotificationManager.shared.requestPermission()
@@ -177,6 +178,22 @@ struct MainAppView: View {
 
                 // Refresh FCM token when app becomes active
                 fcmService.retrieveFCMToken()
+
+                // Refresh auth token when app becomes active
+                authViewModel.refreshUserToken()
+            }
+        }
+        .onAppear {
+            // Start token refresh timer when user is authenticated
+            if authViewModel.isAuthenticated {
+                authViewModel.startTokenRefreshTimer()
+            }
+        }
+        .onChange(of: authViewModel.isAuthenticated) { _, isAuth in
+            if isAuth {
+                authViewModel.startTokenRefreshTimer()
+            } else {
+                authViewModel.stopTokenRefreshTimer()
             }
         }
     }

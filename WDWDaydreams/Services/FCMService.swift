@@ -168,7 +168,7 @@ class FCMService: NSObject, ObservableObject {
     
     // MARK: - Send Notifications
     
-    func notifyPartnerOfStoryCompletion(authorName: String, storyPrompt: String, partnerUserId: String) {
+    func notifyPartnerOfStoryCompletion(authorName: String, storyPrompt: String, partnerUserId: String, partnershipId: String, storyDate: String) {
         getUserFCMToken(userId: partnerUserId) { [weak self] partnerToken in
             guard let partnerToken = partnerToken else {
                 print("❌ FCM: No partner token available for notification")
@@ -182,7 +182,9 @@ class FCMService: NSObject, ObservableObject {
                 data: [
                     "type": "story_completed",
                     "author": authorName,
-                    "prompt": storyPrompt
+                    "prompt": storyPrompt,
+                    "partnershipId": partnershipId,
+                    "storyDate": storyDate
                 ]
             )
         }

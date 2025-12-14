@@ -602,11 +602,18 @@ class ScenarioManager: ObservableObject {
                     // Get partner ID for notification
                     if let partnership = self?.selectedPartnership,
                        let partnerId = partnership.getPartnerId(for: self?.currentUserId ?? "") {
+                        // Format story date for deep linking
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateFormat = "yyyy-MM-dd"
+                        let storyDateString = dateFormatter.string(from: storyToUpdate.dateAssigned)
+
                         // Send FCM notification to partner about story completion
                         self?.fcmService.notifyPartnerOfStoryCompletion(
                             authorName: storyToUpdate.assignedAuthor.displayName,
                             storyPrompt: storyToUpdate.promptText,
-                            partnerUserId: partnerId
+                            partnerUserId: partnerId,
+                            partnershipId: partnership.id,
+                            storyDate: storyDateString
                         )
                     }
 

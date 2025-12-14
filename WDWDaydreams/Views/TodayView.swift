@@ -5,6 +5,7 @@ import FirebaseAuth
 struct TodayView: View {
     @EnvironmentObject var manager: ScenarioManager
     @Environment(\.theme) var theme: Theme
+    @StateObject private var editorState = EditorStateManager.shared
 
     @State private var storyText: String = ""
     @State private var isEditing: Bool = false
@@ -241,6 +242,13 @@ struct TodayView: View {
             }
         }
         .onChange(of: storyText) { _, newValue in
+            // Track unsaved changes
+            if let prompt = currentPrompt {
+                let savedText = prompt.storyText ?? ""
+                let hasChanges = (newValue != savedText && !newValue.isEmpty)
+                editorState.hasUnsavedStoryChanges = hasChanges
+            }
+
             // Auto-save draft with debouncing
             guard let prompt = currentPrompt, !prompt.isWritten, !newValue.isEmpty else { return }
 
@@ -267,6 +275,9 @@ struct TodayView: View {
         storyText = text
         manager.saveStoryText(text, for: prompt.id)
         isEditing = false
+
+        // Clear unsaved changes flag
+        editorState.hasUnsavedStoryChanges = false
 
         // Delete draft after successful save
         StoryDraftManager.shared.deleteDraft(forStoryId: prompt.id)

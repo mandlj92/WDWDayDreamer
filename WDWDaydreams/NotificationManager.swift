@@ -74,14 +74,27 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         // Clear badge when user taps notification
         clearBadge()
-        
+
         // Handle what happens when user taps notification
         let userInfo = response.notification.request.content.userInfo
-        
+
+        // Extract navigation data for deep linking
+        if let partnershipId = userInfo["partnershipId"] as? String,
+           let storyDate = userInfo["storyDate"] as? String {
+
+            // Navigate to specific story using deep linking
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NavigationCoordinator.shared.navigateToStory(
+                    partnershipId: partnershipId,
+                    storyDate: storyDate
+                )
+            }
+        }
+
+        // Legacy notification handling
         if let type = userInfo["type"] as? String {
             switch type {
             case "story_completed":
-                // Maybe navigate to the completed story or refresh data
                 NotificationCenter.default.post(
                     name: NSNotification.Name("StoryCompletedTapped"),
                     object: nil,
@@ -91,7 +104,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 break
             }
         }
-        
+
         completionHandler()
     }
 }

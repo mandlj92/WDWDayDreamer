@@ -140,6 +140,14 @@ struct OnboardingView: View {
                         if success {
                             authViewModel.requiresOnboarding = false
                             feedbackCenter.present(message: "Preferences saved", style: .success)
+
+                            // Show partnership creation guide after a short delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("ShowFirstPartnershipGuide"),
+                                    object: nil
+                                )
+                            }
                         } else {
                             feedbackCenter.present(message: "Error saving preferences", style: .error)
                         }

@@ -67,7 +67,16 @@ class SessionManager: ObservableObject {
 
     /// Update session activity
     func updateActivity(userId: String) async {
-        guard let user = Auth.auth().currentUser else { return }
+        // Verify userId matches authenticated user (security check)
+        guard let currentUser = Auth.auth().currentUser else {
+            print("⚠️ No authenticated user to update activity for")
+            return
+        }
+
+        guard currentUser.uid == userId else {
+            print("⚠️ Security violation: userId parameter (\(userId)) doesn't match authenticated user (\(currentUser.uid))")
+            return
+        }
 
         lastActivityDate = Date()
 

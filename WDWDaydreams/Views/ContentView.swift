@@ -6,12 +6,19 @@ struct ContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var feedbackCenter: UIFeedbackCenter
-    
+
+    @StateObject private var navigationCoordinator = NavigationCoordinator.shared
+    @StateObject private var editorState = EditorStateManager.shared
+    @StateObject private var networkMonitor = NetworkMonitor.shared
+
     @State private var showSettings = false
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
     @State private var errorMessage: String?
+    @State private var showingNavigationWarning = false
+    @State private var targetView: String?
+    @State private var showFirstPartnershipGuide = false
 
     // Optimized theme computation - only changes when theme selection changes
     @State private var currentTheme: Theme = LightTheme()
@@ -47,8 +54,32 @@ struct ContentView: View {
                     .environment(\.theme, currentTheme)
             } else {
                 NavigationView {
-                    VStack {
-                        Picker("View", selection: $currentView) {
+                    VStack(spacing: 0) {
+                        // Offline banner
+                        if !networkMonitor.isConnected {
+                            HStack {
+                                Image(systemName: "wifi.slash")
+                                Text("You're offline. Changes will sync when reconnected.")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.orange)
+                        }
+
+                        Picker("View", selection: Binding(
+                            get: { currentView },
+                            set: { newValue in
+                                // Check if leaving Today tab with unsaved changes
+                                if currentView == "Today" && editorState.hasUnsavedStoryChanges {
+                                    targetView = newValue
+                                    showingNavigationWarning = true
+                                } else {
+                                    currentView = newValue
+                                }
+                            }
+                        )) {
                             Text("Today").tag("Today")
                             Text("Pals").tag("Pals")
                             Text("History").tag("History")
@@ -108,6 +139,32 @@ struct ContentView: View {
                             secondaryButton: .cancel()
                         )
                     }
+                    .alert("Unsaved Changes", isPresented: $showingNavigationWarning) {
+                        Button("Discard", role: .destructive) {
+                            if let target = targetView {
+                                editorState.hasUnsavedStoryChanges = false
+                                currentView = target
+                            }
+                        }
+                        Button("Keep Editing", role: .cancel) {}
+                    } message: {
+                        Text("You have unsaved changes in your story. Are you sure you want to leave?")
+                    }
+                    .sheet(isPresented: $showFirstPartnershipGuide) {
+                        FirstPartnershipGuideView(
+                            onCreateInvite: {
+                                // Switch to Pals tab to create invite
+                                currentView = "Pals"
+                                // The PalsView will show its invitation creation UI
+                            },
+                            onJoinCode: {
+                                // Switch to Pals tab to join with code
+                                currentView = "Pals"
+                                // The PalsView will show its code entry UI
+                            }
+                        )
+                        .environment(\.theme, currentTheme)
+                    }
                 }
                 .navigationViewStyle(StackNavigationViewStyle())
             }
@@ -125,6 +182,16 @@ struct ContentView: View {
             updateTheme()
             setupApp()
         }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: NSNotification.Name("ShowFirstPartnershipGuide")
+            )
+        ) { _ in
+            // Only show if user has no partnerships
+            if manager.userPartnerships.isEmpty {
+                showFirstPartnershipGuide = true
+            }
+        }
         .onChange(of: themeManager.selectedTheme) { _, _ in
             updateTheme()
         }
@@ -132,6 +199,22 @@ struct ContentView: View {
             if !msg.isEmpty {
                 feedbackCenter.present(message: msg, style: .error)
                 authViewModel.errorMessage = ""
+            }
+        }
+        .onChange(of: navigationCoordinator.shouldNavigate) { _, shouldNav in
+            if shouldNav, let partnershipId = navigationCoordinator.targetPartnershipId {
+                // Switch to Today tab
+                currentView = "Today"
+
+                // Select the partnership
+                Task {
+                    if let partnership = manager.userPartnerships.first(where: { $0.id == partnershipId }) {
+                        await manager.selectPartnership(partnership)
+                    }
+
+                    // Clear navigation state
+                    navigationCoordinator.clearNavigation()
+                }
             }
         }
     }

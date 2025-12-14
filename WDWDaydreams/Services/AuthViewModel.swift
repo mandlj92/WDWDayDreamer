@@ -39,6 +39,7 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
     private var currentNonce: String?
     private var userRole: String = ""
     @Published var isAuthorized = false
+    private var tokenRefreshTimer: Timer?
     
     override init() {
         super.init()
@@ -287,6 +288,9 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
             try Auth.auth().signOut()
             GIDSignIn.sharedInstance.signOut()
 
+            // Stop token refresh timer
+            stopTokenRefreshTimer()
+
             // Clear Firestore cache for security (prevents data exposure on stolen/lost devices)
             clearFirestoreCache()
 
@@ -308,11 +312,7 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
         Task {
             do {
                 // First, disable the network to prevent active queries
-                Firestore.firestore().disableNetwork { error in
-                    if let error = error {
-                        print("⚠️ Failed to disable network: \(error.localizedDescription)")
-                    }
-                }
+                try await disableFirestoreNetwork()
 
                 // Wait a moment for queries to complete
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
@@ -322,23 +322,44 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
                 print("🔐 Firestore cache cleared successfully")
 
                 // Re-enable network for next user
-                Firestore.firestore().enableNetwork { error in
-                    if let error = error {
-                        print("⚠️ Failed to re-enable network: \(error.localizedDescription)")
-                    }
-                }
+                try await enableFirestoreNetwork()
             } catch {
                 // Note: clearPersistence() can only be called when Firestore is not actively used
                 // If it fails, we log it but don't block sign-out
                 print("⚠️ Failed to clear Firestore cache (may be in use): \(error.localizedDescription)")
 
                 // Re-enable network if disabled
-                Firestore.firestore().enableNetwork { error in
-                    if let error = error {
-                        print("⚠️ Failed to re-enable network: \(error.localizedDescription)")
-                    } else {
-                        print("🔐 Firestore network re-enabled - cache will persist until next app restart")
-                    }
+                do {
+                    try await enableFirestoreNetwork()
+                    print("🔐 Firestore network re-enabled - cache will persist until next app restart")
+                } catch {
+                    print("⚠️ Failed to re-enable network: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Disable Firestore network connection (async wrapper)
+    private func disableFirestoreNetwork() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Firestore.firestore().disableNetwork { error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
+    }
+
+    /// Enable Firestore network connection (async wrapper)
+    private func enableFirestoreNetwork() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Firestore.firestore().enableNetwork { error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
                 }
             }
         }
@@ -375,20 +396,53 @@ class AuthViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelega
     }
     
     // MARK: - Token Refresh
-    private func refreshUserToken() {
-        guard let user = Auth.auth().currentUser else { return }
-        
-        user.getIDTokenForcingRefresh(true) { [weak self] token, error in
-            if let error = error {
-                print("🔐 Token refresh failed: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self?.errorMessage = "Session expired. Please sign in again."
-                    self?.signOut()
+    func refreshUserToken() {
+        guard let user = Auth.auth().currentUser else {
+            print("⚠️ No user to refresh token for")
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                let token = try await user.getIDToken(forcingRefresh: true)
+                print("✅ Token refreshed successfully (token: \(token.prefix(20))...)")
+            } catch {
+                print("❌ Token refresh failed: \(error.localizedDescription)")
+
+                // Only show error if user is actively using app
+                if UIApplication.shared.applicationState == .active {
+                    UIFeedbackCenter.shared.present(
+                        message: "Your session has expired. Please sign in again.",
+                        style: .error
+                    )
+                    // Don't immediately sign out - give user chance to complete current action
                 }
-            } else {
-                print("🔐 Token refreshed successfully")
             }
         }
+    }
+
+    // MARK: - Token Refresh Timer Management
+
+    func startTokenRefreshTimer() {
+        stopTokenRefreshTimer()
+
+        // Schedule timer on main run loop with main actor isolation
+        tokenRefreshTimer = Timer.scheduledTimer(
+            withTimeInterval: 3600,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshUserToken()
+            }
+        }
+
+        print("✅ Token refresh timer started (1 hour interval)")
+    }
+
+    func stopTokenRefreshTimer() {
+        tokenRefreshTimer?.invalidate()
+        tokenRefreshTimer = nil
+        print("🛑 Token refresh timer stopped")
     }
 
     // MARK: - Sign in with Apple Helpers

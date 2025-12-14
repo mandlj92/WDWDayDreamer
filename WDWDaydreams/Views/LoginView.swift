@@ -57,9 +57,7 @@ struct LoginView: View {
                             
                             // Google Sign In
                             Button(action: {
-                                Task {
-                                    await authViewModel.signInWithGoogle()
-                                }
+                                authViewModel.signInWithGoogle()
                             }) {
                                 HStack {
                                     Image(systemName: "globe")
