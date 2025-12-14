@@ -112,11 +112,6 @@ class PalsService {
                     return nil
                 }
 
-                transaction.updateData(
-                    ["status": InvitationStatus.accepted.rawValue, "toUserId": userId],
-                    forDocument: invitationRef
-                )
-
                 let partnershipSnapshot: DocumentSnapshot
                 do {
                     partnershipSnapshot = try transaction.getDocument(partnershipRef)
@@ -130,6 +125,12 @@ class PalsService {
                     user1Id: latestInvitation.fromUserId,
                     user2Id: userId,
                     nextAuthorId: latestInvitation.fromUserId // First author is the inviter
+                )
+
+                // IMPORTANT: Firestore transactions require all reads before all writes.
+                transaction.updateData(
+                    ["status": InvitationStatus.accepted.rawValue, "toUserId": userId],
+                    forDocument: invitationRef
                 )
 
                 if !partnershipSnapshot.exists {
