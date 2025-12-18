@@ -1,339 +1,160 @@
-import FirebaseFirestore
-import Foundation
+import SwiftUI
 
-class PalsService {
-    private let db = Firestore.firestore()
-    private let invitationsCollection = "palInvitations"
-    private let partnershipsCollection = "partnerships"
+struct TodayView: View {
+    @EnvironmentObject var manager: ScenarioManager
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.theme) var theme: Theme
 
-    // FIX FOR AMBIGUITY: Explicitly define the initializer
-    init() {
-        // No setup required
-    }
+    @State private var showingFirstPartnershipGuide = false
 
-    // MARK: - Invitation Management
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if manager.isLoadingPartnership {
+                    ProgressView("Loading...")
+                        .padding()
+                } else if manager.selectedPartnership == nil {
+                    // No partnership selected - show guide
+                    emptyStateView
+                } else {
+                    // Show partnership info and today's story
+                    VStack(spacing: 16) {
+                        // Partnership header
+                        partnershipHeader
 
-    func createInvitation(fromUser: UserProfile) async throws -> PalInvitation {
-        // Rate limiting: Check pending invitations count
-        let pendingCount = try await getPendingInvitationCount(userId: fromUser.id)
-        guard pendingCount < 10 else {
-            throw NSError(
-                domain: "PalsService",
-                code: 429,
-                userInfo: [NSLocalizedDescriptionKey: "You have reached the maximum of 10 pending invitations. Please wait for some to be accepted or expire before creating more."]
+                        // Today's story prompt
+                        if let prompt = manager.currentStoryPrompt {
+                            ParkPromptView(
+                                prompt: prompt,
+                                isUsersTurn: isUsersTurn(for: prompt),
+                                onToggleFavorite: {
+                                    manager.toggleFavorite()
+                                },
+                                onSaveStory: { text in
+                                    Task {
+                                        await manager.saveStoryText(text, for: prompt.id)
+                                    }
+                                }
+                            )
+                        } else {
+                            Text("No story for today yet")
+                                .foregroundColor(theme.secondaryText)
+                                .padding()
+                        }
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
+        .sheet(isPresented: $showingFirstPartnershipGuide) {
+            FirstPartnershipGuideView(
+                onCreateInvite: {
+                    // This would navigate to Pals tab - for now just dismiss
+                },
+                onJoinCode: {
+                    // This would navigate to Pals tab - for now just dismiss
+                }
             )
         }
+    }
 
-        // Rate limiting: Check recent invitation creation (last hour)
-        let recentCount = try await getRecentInvitationCount(userId: fromUser.id, withinHours: 1)
-        guard recentCount < 5 else {
-            throw NSError(
-                domain: "PalsService",
-                code: 429,
-                userInfo: [NSLocalizedDescriptionKey: "You can only create 5 invitations per hour. Please try again later."]
-            )
+    // MARK: - Empty State View
+
+    private var emptyStateView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 60))
+                .foregroundColor(theme.primaryBlue)
+
+            Text("Connect with a Story Pal")
+                .font(.parkTitle(24))
+                .foregroundColor(theme.primaryBlue)
+                .multilineTextAlignment(.center)
+
+            Text("To start creating daily Disney daydreams, you need to connect with a Story Pal. Go to the Pals tab to:")
+                .font(.body)
+                .foregroundColor(theme.primaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "1.circle.fill")
+                        .foregroundColor(theme.accentGold)
+                    Text("Invite someone to be your Story Pal")
+                        .foregroundColor(theme.primaryText)
+                }
+
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "2.circle.fill")
+                        .foregroundColor(theme.accentGold)
+                    Text("Or join using a friend's invitation code")
+                        .foregroundColor(theme.primaryText)
+                }
+            }
+            .padding()
+            .background(theme.cardBackground)
+            .cornerRadius(12)
+            .padding(.horizontal)
+
+            Text("Once connected, you'll take turns creating magical Disney stories together!")
+                .font(.caption)
+                .italic()
+                .foregroundColor(theme.secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
         }
-
-        // Generate a 6-character invitation code and use it as the document ID.
-        // This enables secure direct lookups by code (no query needed).
-        let invitationCode = generateInvitationCode()
-        let docRef = db.collection(invitationsCollection).document(invitationCode)
-
-        let invitation = PalInvitation(
-            id: invitationCode,
-            fromUserId: fromUser.id,
-            fromUserName: fromUser.displayName,
-            fromUserEmail: fromUser.email,
-            invitationCode: invitationCode
-        )
-
-        try await docRef.setData(invitation.dictionary)
-        return invitation
+        .padding()
     }
 
-    func getInvitationByCode(_ code: String) async throws -> PalInvitation? {
-        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let isValid = normalized.range(of: "^[A-Z0-9]{6}$", options: .regularExpression) != nil
-        guard isValid else { return nil }
+    // MARK: - Partnership Header
 
-        let doc = try await db.collection(invitationsCollection).document(normalized).getDocument()
-        guard doc.exists, let invitation = PalInvitation(document: doc) else { return nil }
-        guard invitation.invitationCode.uppercased() == normalized else { return nil }
+    private var partnershipHeader: some View {
+        VStack(spacing: 8) {
+            if let partnership = manager.selectedPartnership,
+               let currentUserId = authViewModel.userProfile?.id {
 
-        guard invitation.status == .pending, !invitation.isExpired else { return nil }
-        return invitation
-    }
+                let partnerId = partnership.user1Id == currentUserId ? partnership.user2Id : partnership.user1Id
+                let partnerName = manager.partnerProfiles[partnerId]?.displayName ?? "Your Pal"
 
-    func acceptInvitation(_ invitation: PalInvitation, byUser userId: String) async throws -> StoryPartnership {
-        let invitationCode = invitation.invitationCode.uppercased()
-        let invitationRef = db.collection(invitationsCollection).document(invitationCode)
+                HStack {
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(theme.accentPurple)
 
-        let partnershipId = makePartnershipId(userA: invitation.fromUserId, userB: userId)
-        let partnershipRef = db.collection(partnershipsCollection).document(partnershipId)
+                    Text("Story with \(partnerName)")
+                        .font(.headline)
+                        .foregroundColor(theme.primaryText)
 
-        return try await withCheckedThrowingContinuation { continuation in
-            db.runTransaction({ transaction, errorPointer -> Any? in
-                let inviteSnapshot: DocumentSnapshot
-                do {
-                    inviteSnapshot = try transaction.getDocument(invitationRef)
-                } catch let error as NSError {
-                    errorPointer?.pointee = error
-                    return nil
+                    Spacer()
                 }
+                .padding(.horizontal)
 
-                guard let latestInvitation = PalInvitation(document: inviteSnapshot) else {
-                    errorPointer?.pointee = NSError(
-                        domain: "PalsService",
-                        code: 404,
-                        userInfo: [NSLocalizedDescriptionKey: "Invitation not found."]
-                    )
-                    return nil
+                // Show trip date if available
+                if let tripDate = partnership.sharedTripDate {
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundColor(theme.accentGold)
+
+                        Text("Trip: \(tripDate, style: .date)")
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryText)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal)
                 }
-
-                if latestInvitation.fromUserId == userId {
-                    errorPointer?.pointee = NSError(
-                        domain: "PalsService",
-                        code: 400,
-                        userInfo: [NSLocalizedDescriptionKey: "You cannot accept your own invitation."]
-                    )
-                    return nil
-                }
-
-                if latestInvitation.status != .pending || latestInvitation.isExpired {
-                    errorPointer?.pointee = NSError(
-                        domain: "PalsService",
-                        code: 400,
-                        userInfo: [NSLocalizedDescriptionKey: "This invitation is no longer available."]
-                    )
-                    return nil
-                }
-
-                if let toUserId = latestInvitation.toUserId, toUserId != userId {
-                    errorPointer?.pointee = NSError(
-                        domain: "PalsService",
-                        code: 409,
-                        userInfo: [NSLocalizedDescriptionKey: "This invitation has already been used."]
-                    )
-                    return nil
-                }
-
-                // Passed all checks - perform the update
-                transaction.updateData(
-                    [
-                        "status": InvitationStatus.accepted.rawValue,
-                        "toUserId": userId,
-                        // Ensured these fields are re-sent to pass strict security rules (from previous fix)
-                        "fromUserId": latestInvitation.fromUserId, 
-                        "invitationCode": latestInvitation.invitationCode 
-                    ],
-                    forDocument: invitationRef
-                )
-
-                let partnershipSnapshot: DocumentSnapshot
-                do {
-                    partnershipSnapshot = try transaction.getDocument(partnershipRef)
-                } catch let error as NSError {
-                    errorPointer?.pointee = error
-                    return nil
-                }
-
-                let partnership = StoryPartnership(
-                    id: partnershipId,
-                    user1Id: latestInvitation.fromUserId,
-                    user2Id: userId,
-                    nextAuthorId: latestInvitation.fromUserId // First author is the inviter
-                )
-
-                if !partnershipSnapshot.exists {
-                    transaction.setData(partnership.dictionary, forDocument: partnershipRef)
-                }
-
-                return partnership
-            }) { object, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let partnership = object as? StoryPartnership else {
-                    continuation.resume(
-                        throwing: NSError(
-                            domain: "PalsService",
-                            code: 500,
-                            userInfo: [NSLocalizedDescriptionKey: "Failed to create partnership."]
-                        )
-                    )
-                    return
-                }
-
-                continuation.resume(returning: partnership)
             }
         }
-    }
-
-    func declineInvitation(_ invitationId: String) async throws {
-        try await db.collection(invitationsCollection)
-            .document(invitationId)
-            .updateData([
-                "status": InvitationStatus.declined.rawValue
-            ])
-    }
-
-    func getUserInvitations(userId: String) async throws -> [PalInvitation] {
-        let query = try await db.collection(invitationsCollection)
-            .whereField("fromUserId", isEqualTo: userId)
-            .getDocuments()
-
-        return query.documents
-            .compactMap { PalInvitation(document: $0) }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    // MARK: - Partnership Management
-
-    func getUserPartnerships(userId: String) async throws -> [StoryPartnership] {
-        // Query where user is either user1 or user2
-        let query1 = try await db.collection(partnershipsCollection)
-            .whereField("user1Id", isEqualTo: userId)
-            .getDocuments()
-
-        let query2 = try await db.collection(partnershipsCollection)
-            .whereField("user2Id", isEqualTo: userId)
-            .getDocuments()
-
-        let partnerships1 = query1.documents.compactMap { StoryPartnership(document: $0) }
-        let partnerships2 = query2.documents.compactMap { StoryPartnership(document: $0) }
-
-        // Combine and remove duplicates
-        let allPartnerships = partnerships1 + partnerships2
-        return Array(Set(allPartnerships.map { $0.id }))
-            .compactMap { id in allPartnerships.first { $0.id == id } }
-    }
-
-    func getPartnership(user1Id: String, user2Id: String) async throws -> StoryPartnership? {
-        // Try both user orderings
-        let query1 = try await db.collection(partnershipsCollection)
-            .whereField("user1Id", isEqualTo: user1Id)
-            .whereField("user2Id", isEqualTo: user2Id)
-            .getDocuments()
-
-        if let doc = query1.documents.first {
-            return StoryPartnership(document: doc)
-        }
-
-        let query2 = try await db.collection(partnershipsCollection)
-            .whereField("user1Id", isEqualTo: user2Id)
-            .whereField("user2Id", isEqualTo: user1Id)
-            .getDocuments()
-
-        if let doc = query2.documents.first {
-            return StoryPartnership(document: doc)
-        }
-
-        return nil
-    }
-
-    func updatePartnership(_ partnership: StoryPartnership) async throws {
-        try await db.collection(partnershipsCollection)
-            .document(partnership.id)
-            .updateData(partnership.dictionary)
-    }
-
-    func removePartnership(_ partnershipId: String, user1Id: String, user2Id: String) async throws {
-        // Delete partnership
-        try await db.collection(partnershipsCollection)
-            .document(partnershipId)
-            .delete()
-
-        // Remove connections from both users
-        let userService = UserService()
-        try await userService.removeConnection(userId: user1Id, connectionId: user2Id)
-        try await userService.removeConnection(userId: user2Id, connectionId: user1Id)
+        .padding(.vertical, 8)
+        .background(theme.cardBackground)
+        .cornerRadius(12)
+        .padding(.horizontal)
     }
 
     // MARK: - Helper Methods
 
-    private func generateInvitationCode() -> String {
-        let characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Removed ambiguous characters
-        return String((0..<6).compactMap { _ in characters.randomElement() })
-    }
-
-    /// Get the count of pending invitations for a user (for rate limiting)
-    private func getPendingInvitationCount(userId: String) async throws -> Int {
-        let query = try await db.collection(invitationsCollection)
-            .whereField("fromUserId", isEqualTo: userId)
-            .getDocuments()
-
-        return query.documents
-            .compactMap { PalInvitation(document: $0) }
-            .filter { $0.status == .pending && !$0.isExpired }
-            .count
-    }
-
-    /// Get the count of invitations created within the last N hours (for rate limiting)
-    private func getRecentInvitationCount(userId: String, withinHours hours: Int) async throws -> Int {
-        let cutoffDate = Calendar.current.date(byAdding: .hour, value: -hours, to: Date()) ?? Date()
-
-        let query = try await db.collection(invitationsCollection)
-            .whereField("fromUserId", isEqualTo: userId)
-            .getDocuments()
-
-        return query.documents
-            .compactMap { PalInvitation(document: $0) }
-            .filter { $0.createdAt >= cutoffDate }
-            .count
-    }
-
-    private func makePartnershipId(userA: String, userB: String) -> String {
-        userA < userB ? "\(userA)_\(userB)" : "\(userB)_\(userA)"
-    }
-
-    /// Cleanup expired invitations - should be called periodically (e.g., daily via Cloud Function)
-    func cleanupExpiredInvitations() async throws {
-        let query = try await db.collection(invitationsCollection)
-            .whereField("status", isEqualTo: InvitationStatus.pending.rawValue)
-            .getDocuments()
-
-        let batch = db.batch()
-        var updateCount = 0
-
-        for document in query.documents {
-            if let invitation = PalInvitation(document: document), invitation.isExpired {
-                let ref = db.collection(invitationsCollection).document(document.documentID)
-                batch.updateData(["status": InvitationStatus.expired.rawValue], forDocument: ref)
-                updateCount += 1
-            }
-        }
-
-        if updateCount > 0 {
-            try await batch.commit()
-            print("✅ Cleaned up \(updateCount) expired invitations")
-        }
-    }
-
-    /// Delete old expired and declined invitations (cleanup for database size management)
-    func deleteOldInvitations(olderThanDays days: Int = 30) async throws {
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-
-        let query = try await db.collection(invitationsCollection)
-            .whereField("createdAt", isLessThan: Timestamp(date: cutoffDate))
-            .getDocuments()
-
-        let batch = db.batch()
-        var deleteCount = 0
-
-        for document in query.documents {
-            if let invitation = PalInvitation(document: document),
-               invitation.status == .expired || invitation.status == .declined {
-                let ref = db.collection(invitationsCollection).document(document.documentID)
-                batch.deleteDocument(ref)
-                deleteCount += 1
-            }
-        }
-
-        if deleteCount > 0 {
-            try await batch.commit()
-            print("✅ Deleted \(deleteCount) old invitations")
-        }
+    private func isUsersTurn(for prompt: DaydreamStory) -> Bool {
+        guard let currentUserId = authViewModel.userProfile?.id else { return false }
+        return prompt.assignedAuthor.userId == currentUserId
     }
 }

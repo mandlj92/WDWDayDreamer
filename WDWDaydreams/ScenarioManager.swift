@@ -227,7 +227,10 @@ class ScenarioManager: ObservableObject {
 
         // If user has partnerships, select the first one by default
         if let firstPartnership = userPartnerships.first {
+            print("📱 Auto-selecting first partnership: \(firstPartnership.id)")
             await selectPartnership(firstPartnership)
+        } else {
+            print("⚠️ No partnerships found to auto-select")
         }
     }
 
