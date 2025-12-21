@@ -42,6 +42,7 @@ class ModerationService: ObservableObject {
         let snapshot = try await db.collection("contentReports")
             .whereField("reporterId", isEqualTo: currentUserId)
             .order(by: "createdAt", descending: true)
+            .limit(to: 50) // Limit to 50 most recent reports
             .getDocuments()
 
         return try snapshot.documents.compactMap { document in

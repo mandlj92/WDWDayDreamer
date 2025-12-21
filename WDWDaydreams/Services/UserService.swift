@@ -88,13 +88,16 @@ class UserService {
 
     /// SECURITY: Search users with proper privacy settings enforcement
     /// Users can only be found if they've enabled connection discovery in their privacy settings
+    /// TODO: Implement server-side search (Algolia/Firebase Extensions) for better performance at scale
     func searchUsers(query: String, currentUserId: String) async throws -> [UserProfile] {
         let queryLower = query.lowercased()
 
         // SECURITY: Query using denormalized searchable field for performance
         // This field is synced with the nested preferences.privacy.allowConnectionDiscovery
+        // PERFORMANCE: Limited to 20 results to prevent downloading all users. Implement pagination for more.
         let documents = try await db.collection(usersCollection)
             .whereField("searchable", isEqualTo: true)
+            .limit(to: 20)
             .getDocuments()
 
         // Double-check privacy settings in the actual nested structure

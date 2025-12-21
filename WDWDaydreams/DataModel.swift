@@ -105,11 +105,34 @@ enum Category: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-// DataModel remains the same structure
+// MARK: - MONETIZATION OPPORTUNITY
+// TODO: CRITICAL - Move hardcoded content to remote Firebase backend
+// Current: 82 items compiled into app - cannot monetize or update without app release
+// Revenue Opportunity: $50K-$80K/year through expansion packs
+//
+// Recommended Structure:
+// Firebase: /content_packs/{packId}/categories/{categoryId}/items/{itemId}
+//
+// Expansion Pack Strategy:
+// - Base Pack (FREE): Current WDW content
+// - Disneyland Pack ($3.99): CA parks, rides, dining
+// - Tokyo Disney Pack ($3.99): TDL, TDS content
+// - Disneyland Paris Pack ($3.99): DLP content
+// - Premium Dining Pack ($2.99): 150+ signature restaurants
+// - Character Experience Pack ($2.99): 100+ character meets
+//
+// Benefits:
+// - Live content updates (new attractions without app release)
+// - Seasonal content rotation
+// - In-app purchase monetization
+// - A/B testing of prompts
+//
+// See full analysis at .claude/plans/misty-seeking-riddle.md
+
 class DataModel {
     static let shared = DataModel()
 
-    // --- Use YOUR full lists of items here ---
+    // --- HARDCODED CONTENT (82 items) - MIGRATE TO BACKEND ---
     let hotels = [
         "All‑Star Movies Resort","All‑Star Music Resort","All‑Star Sports Resort",
         "Art of Animation Resort","Pop Century Resort",

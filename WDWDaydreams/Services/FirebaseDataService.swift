@@ -13,10 +13,19 @@ extension DateFormatter {
 }
 
 /// A service class responsible for handling Firebase operations
+/// - Warning: God Class Anti-Pattern (795 lines, 9 responsibilities)
+/// - TODO: Split into focused repositories:
+///   1. StoryRepository - Story CRUD operations
+///   2. FavoritesRepository - Favorites management
+///   3. UserSettingsRepository - User settings and preferences
+///   4. PartnershipRepository - Partnership operations
+///   5. AuthRepository - Authentication operations
+///   6. FirebaseTestService - Connection testing
+/// See architectural audit at .claude/plans/misty-seeking-riddle.md
 class FirebaseDataService {
     static let shared = FirebaseDataService()
     private let db = Firestore.firestore()
-    
+
     private init() {}
     
     // MARK: - Public Access Methods
@@ -184,7 +193,10 @@ class FirebaseDataService {
     }
     
     // MARK: - Stories Management
-    
+
+    /// Fetches the 100 most recent favorite stories for the current user
+    /// - Note: Limited to 100 favorites to prevent unbounded data fetching
+    /// - TODO: Implement pagination for users with 100+ favorites
     func fetchFavorites(completion: @escaping ([DaydreamStory]) -> Void) {
         guard ensureAuthenticated() else {
             completion([])
@@ -195,7 +207,8 @@ class FirebaseDataService {
                     .document(userId)
                     .collection("favorites")
                     .order(by: "date", descending: true)
-        
+                    .limit(to: 100) // Limit to 100 most recent favorites
+
         ref.getDocuments { snap, error in
             if let error = error {
                 print("Error fetching favorites: \(error.localizedDescription)")
@@ -411,6 +424,9 @@ class FirebaseDataService {
 
     // MARK: - Partnership Story Fetching
 
+    /// Fetches the 50 most recent partnership stories
+    /// - Note: Limited to 50 stories to prevent unbounded data fetching. For full history, implement pagination.
+    /// - TODO: Implement pagination to load older stories on demand
     func fetchPartnershipStories(partnershipId: String, completion: @escaping ([DaydreamStory]) -> Void) {
         guard ensureAuthenticated() else {
             completion([])
@@ -421,6 +437,7 @@ class FirebaseDataService {
             .document(partnershipId)
             .collection("stories")
             .order(by: "date", descending: true)
+            .limit(to: 50) // Limit to 50 most recent stories to prevent unbounded data fetching
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching partnership stories: \(error.localizedDescription)")

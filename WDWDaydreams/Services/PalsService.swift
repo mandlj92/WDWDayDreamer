@@ -165,6 +165,7 @@ class PalsService {
     func getUserInvitations(userId: String) async throws -> [PalInvitation] {
         let query = try await db.collection(invitationsCollection)
             .whereField("fromUserId", isEqualTo: userId)
+            .limit(to: 100) // Limit to 100 most recent invitations
             .getDocuments()
 
         return query.documents
@@ -178,10 +179,12 @@ class PalsService {
         // Query where user is either user1 or user2
         let query1 = try await db.collection(partnershipsCollection)
             .whereField("user1Id", isEqualTo: userId)
+            .limit(to: 50) // Limit partnerships per user
             .getDocuments()
 
         let query2 = try await db.collection(partnershipsCollection)
             .whereField("user2Id", isEqualTo: userId)
+            .limit(to: 50) // Limit partnerships per user
             .getDocuments()
 
         let partnerships1 = query1.documents.compactMap { StoryPartnership(document: $0) }

@@ -3,6 +3,19 @@ import Foundation
 import Combine
 import FirebaseFirestore
 
+// MARK: - ARCHITECTURAL DEBT WARNING
+// TODO: REFACTOR - This class violates Single Responsibility Principle (917 lines, 9+ responsibilities)
+// Recommended decomposition:
+// 1. PromptGenerationService - Deck algorithm and prompt generation
+// 2. StoryRepository - Story CRUD and favorites management
+// 3. PartnershipCoordinator - Partnership selection and settings
+// 4. AchievementService - Badge logic and awards
+// 5. StoryStatisticsService - Counts, streaks, analytics
+// 6. NotificationCacheManager - Notification deduplication
+// 7. ScenarioViewModel - @Published properties and coordination (this class)
+// 8. StoryEditorViewModel - Save logic and conflict resolution
+// See audit report at .claude/plans/misty-seeking-riddle.md for detailed refactoring plan
+
 @MainActor
 class ScenarioManager: ObservableObject {
     // MARK: - Published Properties
@@ -303,6 +316,7 @@ class ScenarioManager: ObservableObject {
             .document(partnershipId)
             .collection("stories")
             .order(by: "date", descending: true)
+            .limit(to: 50) // Limit real-time listener to 50 most recent stories
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
 

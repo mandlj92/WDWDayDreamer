@@ -219,6 +219,7 @@ class SessionManager: ObservableObject {
             .collection("sessions")
             .whereField("isActive", isEqualTo: true)
             .order(by: "lastActiveAt", descending: true)
+            .limit(to: 10) // Limit to 10 most recent active sessions
             .getDocuments()
 
         return try snapshot.documents.compactMap { doc in
