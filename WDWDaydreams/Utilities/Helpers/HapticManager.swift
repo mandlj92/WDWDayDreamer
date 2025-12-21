@@ -15,4 +15,23 @@ class HapticManager {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.impactOccurred()
     }
+
+    // MARK: - Convenience Methods
+
+    func selection() {
+        let generator = UISelectionFeedbackGenerator()
+        generator.selectionChanged()
+    }
+
+    func success() {
+        notification(type: .success)
+    }
+
+    func warning() {
+        notification(type: .warning)
+    }
+
+    func error() {
+        notification(type: .error)
+    }
 }

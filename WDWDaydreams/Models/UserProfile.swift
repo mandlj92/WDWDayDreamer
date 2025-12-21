@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseFirestore
 
-struct UserProfile: Codable, Identifiable {
+struct UserProfile: Codable, Identifiable, Equatable {
     let id: String
     let email: String
     let displayName: String
@@ -78,7 +78,7 @@ struct UserProfile: Codable, Identifiable {
     var hasPendingInvitations: Bool { !pendingInvitations.isEmpty }
 }
 
-struct UserPreferences: Codable {
+struct UserPreferences: Codable, Equatable {
     var notifications: NotificationPreferences
     var privacy: PrivacySettings
     var storyCategories: [String]
@@ -123,7 +123,7 @@ struct UserPreferences: Codable {
     }
 }
 
-struct NotificationPreferences: Codable {
+struct NotificationPreferences: Codable, Equatable {
     var storyReminders: Bool
     var connectionRequests: Bool
     var newStoryNotifications: Bool
@@ -159,7 +159,7 @@ struct NotificationPreferences: Codable {
     }
 }
 
-struct PrivacySettings: Codable {
+struct PrivacySettings: Codable, Equatable {
     var profileVisibility: ProfileVisibility
     var allowStorySharing: Bool
     var allowConnectionDiscovery: Bool

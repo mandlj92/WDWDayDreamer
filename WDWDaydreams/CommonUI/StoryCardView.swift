@@ -80,10 +80,9 @@ struct StoryCardView: View {
                 .padding(.top, 4)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
+        .padding(DesignSystem.Spacing.xs)
         .background(theme.cardBackground)
-        .cornerRadius(10)
+        .cornerRadius(DesignSystem.CornerRadius.small)
     }
 }
 
@@ -112,7 +111,7 @@ struct CategoryBadgeView: View {
         .padding(.vertical, 6)
         .padding(.horizontal, 8)
         .background(CategoryHelper.color(for: category).opacity(0.1))
-        .cornerRadius(8)
+        .cornerRadius(DesignSystem.CornerRadius.small)
     }
 }
 
@@ -123,12 +122,15 @@ import SwiftUI
 struct ParkPromptView: View {
     let prompt: DaydreamStory
     let isUsersTurn: Bool
+    let partnerName: String
     let onToggleFavorite: () -> Void
     let onSaveStory: (String) -> Void
     @Environment(\.theme) var theme: Theme
-    
+
     @State private var storyText: String = ""
     @State private var isEditing: Bool = false
+    @State private var showingSubmitConfirmation = false
+    @State private var pendingStoryText: String = ""
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -143,7 +145,10 @@ struct ParkPromptView: View {
                 
                 // Favorite button
                 HStack(spacing: 12) {
-                    Button(action: onToggleFavorite) {
+                    Button(action: {
+                        HapticManager.instance.impact(style: .medium)
+                        onToggleFavorite()
+                    }) {
                         Image(systemName: prompt.isFavorite ? "heart.fill" : "heart")
                             .foregroundColor(prompt.isFavorite ? theme.accentRed : theme.secondaryText)
                             .scaleEffect(prompt.isFavorite ? 1.1 : 1.0)
@@ -183,8 +188,9 @@ struct ParkPromptView: View {
                     if prompt.isWritten && isUsersTurn {
                         Button(isEditing ? "Done" : "Edit") {
                             if isEditing {
-                                // Save the story
-                                onSaveStory(storyText)
+                                // Show confirmation before saving
+                                pendingStoryText = storyText
+                                showingSubmitConfirmation = true
                             } else {
                                 // Load existing text for editing
                                 storyText = prompt.storyText ?? ""
@@ -199,23 +205,24 @@ struct ParkPromptView: View {
                     Text(prompt.storyText ?? "")
                         .padding()
                         .background(Color.white.opacity(0.7))
-                        .cornerRadius(8)
+                        .cornerRadius(DesignSystem.CornerRadius.small)
                 } else if isUsersTurn {
                     // Only show text editor if it's the user's turn
                     TextEditor(text: $storyText)
                         .frame(minHeight: 200)
                         .padding(4)
                         .background(Color.white.opacity(0.7))
-                        .cornerRadius(8)
+                        .cornerRadius(DesignSystem.CornerRadius.small)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
                                 .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
                         )
                     
                     if !isEditing {
                         Button("Save Story") {
-                            onSaveStory(storyText)
-                            isEditing = false
+                            HapticManager.instance.impact(style: .medium)
+                            pendingStoryText = storyText
+                            showingSubmitConfirmation = true
                         }
                         .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -232,10 +239,10 @@ struct ParkPromptView: View {
         }
         .padding()
         .background(theme.cardBackground)
-        .cornerRadius(20)
+        .cornerRadius(DesignSystem.CornerRadius.large)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large)
                 .stroke(theme.accentGold.opacity(0.5), lineWidth: 1)
         )
         .padding(.horizontal)
@@ -244,6 +251,20 @@ struct ParkPromptView: View {
             if prompt.isWritten {
                 storyText = prompt.storyText ?? ""
             }
+        }
+        .alert("Submit Your Story?", isPresented: $showingSubmitConfirmation) {
+            Button("Send to \(partnerName)", role: .destructive) {
+                HapticManager.instance.success()
+                onSaveStory(pendingStoryText)
+                if isEditing {
+                    isEditing = false
+                }
+            }
+            Button("Keep Editing", role: .cancel) {
+                // Just dismiss the alert
+            }
+        } message: {
+            Text("Ready to share your magical story with \(partnerName)? Once submitted, your story will be locked and sent to your pal!")
         }
     }
 

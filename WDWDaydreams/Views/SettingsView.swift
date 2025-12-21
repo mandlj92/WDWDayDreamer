@@ -7,7 +7,6 @@ struct SettingsView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var feedbackCenter: UIFeedbackCenter
     @Environment(\.theme) var theme: Theme
-    @Environment(\.dismiss) private var dismiss
 
     @State private var showClearConfirmation = false
     @State private var testResults: String = ""
@@ -187,15 +186,6 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") {
-                    dismiss()
-                }
-                .foregroundColor(theme.primaryBlue)
-                .fontWeight(.semibold)
-            }
-        }
     }
 
     private var titleSection: some View {

@@ -11,7 +11,6 @@ struct ContentView: View {
     @StateObject private var editorState = EditorStateManager.shared
     @StateObject private var networkMonitor = NetworkMonitor.shared
 
-    @State private var showSettings = false
     @State private var currentView = "Today"
     @State private var isInitializing = true
     @State private var showLogoutAlert = false
@@ -53,120 +52,170 @@ struct ContentView: View {
                     .environmentObject(authViewModel)
                     .environment(\.theme, currentTheme)
             } else {
-                NavigationView {
-                    VStack(spacing: 0) {
-                        // Offline banner
-                        if !networkMonitor.isConnected {
-                            HStack {
-                                Image(systemName: "wifi.slash")
-                                Text("You're offline. Changes will sync when reconnected.")
-                                    .font(.caption)
-                            }
-                            .foregroundColor(.white)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.orange)
-                        }
-
-                        Picker("View", selection: Binding(
-                            get: { currentView },
-                            set: { newValue in
-                                // Check if leaving Today tab with unsaved changes
-                                if currentView == "Today" && editorState.hasUnsavedStoryChanges {
-                                    targetView = newValue
-                                    showingNavigationWarning = true
-                                } else {
-                                    currentView = newValue
-                                }
-                            }
-                        )) {
-                            Text("Today").tag("Today")
-                            Text("Pals").tag("Pals")
-                            Text("History").tag("History")
-                            Text("Favorites").tag("Favorites")
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .padding()
-                        .background(currentTheme.backgroundCream)
-
-                        // Content based on selected tab
-                        switch currentView {
-                        case "Today":
-                            TodayView()
-                                .environment(\.theme, currentTheme)
-                        case "Pals":
-                            PalsView()
-                                .environment(\.theme, currentTheme)
-                        case "History":
-                            HistoryView()
-                                .environment(\.theme, currentTheme)
-                        case "Favorites":
-                            FavoritesView()
-                                .environment(\.theme, currentTheme)
-                        default:
-                            TodayView()
-                                .environment(\.theme, currentTheme)
+                TabView(selection: Binding(
+                    get: { currentView },
+                    set: { newValue in
+                        // Check if leaving Today tab with unsaved changes
+                        if currentView == "Today" && editorState.hasUnsavedStoryChanges {
+                            targetView = newValue
+                            showingNavigationWarning = true
+                        } else {
+                            currentView = newValue
+                            HapticManager.instance.impact(style: .light)
                         }
                     }
-                    .navigationTitle("Park DayDreams")
-                    .toolbar {
-                        ToolbarItem(placement: .principal) {
-                            Text("Park DayDreams")
-                                .font(.parkTitle(24))
-                                .foregroundColor(currentTheme.primaryBlue)
-                        }
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            HStack {
-                                Button(action: { showSettings = true }) {
-                                    Image(systemName: "gear")
+                )) {
+                    // Tab 1: Today
+                    NavigationView {
+                        VStack(spacing: 0) {
+                            // Offline banner
+                            if !networkMonitor.isConnected {
+                                HStack {
+                                    Image(systemName: "wifi.slash")
+                                    Text("You're offline. Changes will sync when reconnected.")
+                                        .font(.caption)
                                 }
+                                .foregroundColor(.white)
+                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.orange)
+                            }
+
+                            TodayView()
+                        }
+                        .navigationTitle("Park DayDreams")
+                        .toolbar {
+                            ToolbarItem(placement: .principal) {
+                                Text("Park DayDreams")
+                                    .font(.parkTitle(24))
+                                    .foregroundColor(currentTheme.primaryBlue)
+                            }
+                            ToolbarItem(placement: .navigationBarTrailing) {
                                 Button(action: { showLogoutAlert = true }) {
                                     Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .foregroundColor(currentTheme.primaryBlue)
                                 }
                             }
-                            .foregroundColor(currentTheme.primaryBlue)
+                        }
+                        .alert(isPresented: $showLogoutAlert) {
+                            Alert(
+                                title: Text("Sign Out"),
+                                message: Text("Are you sure?"),
+                                primaryButton: .destructive(Text("Sign Out"), action: authViewModel.signOut),
+                                secondaryButton: .cancel()
+                            )
                         }
                     }
-                    .sheet(isPresented: $showSettings) {
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .tabItem {
+                        Label("Today", systemImage: "sun.max.fill")
+                    }
+                    .tag("Today")
+                    .environment(\.theme, currentTheme)
+
+                    // Tab 2: Pals
+                    NavigationView {
+                        PalsView()
+                            .navigationTitle("Story Pals")
+                            .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    Text("Story Pals")
+                                        .font(.parkTitle(24))
+                                        .foregroundColor(currentTheme.primaryBlue)
+                                }
+                            }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .tabItem {
+                        Label("Pals", systemImage: "person.2.fill")
+                    }
+                    .tag("Pals")
+                    .environment(\.theme, currentTheme)
+
+                    // Tab 3: History
+                    NavigationView {
+                        HistoryView()
+                            .navigationTitle("History")
+                            .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    Text("History")
+                                        .font(.parkTitle(24))
+                                        .foregroundColor(currentTheme.primaryBlue)
+                                }
+                            }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .tabItem {
+                        Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                    .tag("History")
+                    .environment(\.theme, currentTheme)
+
+                    // Tab 4: Favorites
+                    NavigationView {
+                        FavoritesView()
+                            .navigationTitle("Favorites")
+                            .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    Text("Favorites")
+                                        .font(.parkTitle(24))
+                                        .foregroundColor(currentTheme.primaryBlue)
+                                }
+                            }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .tabItem {
+                        Label("Favorites", systemImage: "star.fill")
+                    }
+                    .tag("Favorites")
+                    .environment(\.theme, currentTheme)
+
+                    // Tab 5: Settings
+                    NavigationView {
                         SettingsView()
-                            .environment(\.theme, currentTheme)
-                    }
-                    .alert(isPresented: $showLogoutAlert) {
-                        Alert(
-                            title: Text("Sign Out"),
-                            message: Text("Are you sure?"),
-                            primaryButton: .destructive(Text("Sign Out"), action: authViewModel.signOut),
-                            secondaryButton: .cancel()
-                        )
-                    }
-                    .alert("Unsaved Changes", isPresented: $showingNavigationWarning) {
-                        Button("Discard", role: .destructive) {
-                            if let target = targetView {
-                                editorState.hasUnsavedStoryChanges = false
-                                currentView = target
+                            .navigationTitle("Settings")
+                            .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    Text("Settings")
+                                        .font(.parkTitle(24))
+                                        .foregroundColor(currentTheme.primaryBlue)
+                                }
                             }
-                        }
-                        Button("Keep Editing", role: .cancel) {}
-                    } message: {
-                        Text("You have unsaved changes in your story. Are you sure you want to leave?")
                     }
-                    .sheet(isPresented: $showFirstPartnershipGuide) {
-                        FirstPartnershipGuideView(
-                            onCreateInvite: {
-                                // Switch to Pals tab to create invite
-                                currentView = "Pals"
-                                // The PalsView will show its invitation creation UI
-                            },
-                            onJoinCode: {
-                                // Switch to Pals tab to join with code
-                                currentView = "Pals"
-                                // The PalsView will show its code entry UI
-                            }
-                        )
-                        .environment(\.theme, currentTheme)
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .tabItem {
+                        Label("Settings", systemImage: "gear")
                     }
+                    .tag("Settings")
+                    .environment(\.theme, currentTheme)
                 }
-                .navigationViewStyle(StackNavigationViewStyle())
+                .accentColor(currentTheme.primaryBlue)
+                .alert("Unsaved Changes", isPresented: $showingNavigationWarning) {
+                    Button("Discard", role: .destructive) {
+                        if let target = targetView {
+                            editorState.hasUnsavedStoryChanges = false
+                            currentView = target
+                        }
+                    }
+                    Button("Keep Editing", role: .cancel) {}
+                } message: {
+                    Text("You have unsaved changes in your story. Are you sure you want to leave?")
+                }
+                .sheet(isPresented: $showFirstPartnershipGuide) {
+                    FirstPartnershipGuideView(
+                        onCreateInvite: {
+                            // Switch to Pals tab to create invite
+                            currentView = "Pals"
+                            // The PalsView will show its invitation creation UI
+                        },
+                        onJoinCode: {
+                            // Switch to Pals tab to join with code
+                            currentView = "Pals"
+                            // The PalsView will show its code entry UI
+                        }
+                    )
+                    .environment(\.theme, currentTheme)
+                }
             }
 
             if isInitializing {
@@ -217,6 +266,15 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: authViewModel.userProfile) { oldProfile, newProfile in
+            // Initialize manager when user profile is loaded
+            if oldProfile == nil && newProfile != nil {
+                print("👤 User profile loaded, initializing ScenarioManager...")
+                Task {
+                    await manager.initialize(userId: newProfile!.id)
+                }
+            }
+        }
     }
 
     private func updateTheme() {
@@ -231,12 +289,19 @@ struct ContentView: View {
     }
 
     private func setupApp() {
+        print("🔧 ContentView.setupApp() called")
         isInitializing = true
         FirebaseDataService.shared.ensureDatabaseSetup { [weak authViewModel, weak manager] success in
+            print("🔧 Database setup callback - success: \(success)")
             if success {
                 Task { @MainActor in
+                    print("🔧 Inside Task - authViewModel?.userProfile?.id: \(authViewModel?.userProfile?.id ?? "nil")")
+                    print("🔧 Inside Task - manager exists: \(manager != nil)")
                     if let userId = authViewModel?.userProfile?.id, let manager = manager {
+                        print("🔧 Calling manager.initialize with userId: \(userId)")
                         await manager.initialize(userId: userId)
+                    } else {
+                        print("⚠️ Cannot initialize - userId: \(authViewModel?.userProfile?.id ?? "nil"), manager: \(manager != nil)")
                     }
                     self.isInitializing = false
                 }
@@ -287,7 +352,7 @@ struct ErrorToastView: View {
                 .padding()
                 .background(theme.accentRed.opacity(0.9))
                 .foregroundColor(.white)
-                .cornerRadius(10)
+                .cornerRadius(DesignSystem.CornerRadius.small)
                 .padding()
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {

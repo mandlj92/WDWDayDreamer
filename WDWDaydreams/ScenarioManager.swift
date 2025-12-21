@@ -221,8 +221,10 @@ class ScenarioManager: ObservableObject {
     }
 
     func initialize(userId: String) async {
+        print("🚀 ScenarioManager.initialize() called for userId: \(userId)")
         self.currentUserId = userId
         await loadPartnerships()
+        print("📊 After loadPartnerships: userPartnerships.count = \(userPartnerships.count)")
         fetchFavorites()
 
         // If user has partnerships, select the first one by default
@@ -230,8 +232,9 @@ class ScenarioManager: ObservableObject {
             print("📱 Auto-selecting first partnership: \(firstPartnership.id)")
             await selectPartnership(firstPartnership)
         } else {
-            print("⚠️ No partnerships found to auto-select")
+            print("⚠️ No partnerships found to auto-select (userPartnerships.count = \(userPartnerships.count))")
         }
+        print("✅ ScenarioManager.initialize() complete")
     }
 
     func loadPartnerships() async {

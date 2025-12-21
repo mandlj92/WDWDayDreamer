@@ -11,8 +11,10 @@ struct TodayView: View {
         ScrollView {
             VStack(spacing: 20) {
                 if manager.isLoadingPartnership {
-                    ProgressView("Loading...")
-                        .padding()
+                    SkeletonList(count: 1) {
+                        SkeletonStoryCard()
+                    }
+                    .padding(.horizontal)
                 } else if manager.selectedPartnership == nil {
                     // No partnership selected - show guide
                     emptyStateView
@@ -24,15 +26,17 @@ struct TodayView: View {
 
                         // Today's story prompt
                         if let prompt = manager.currentStoryPrompt {
+                            let partnerName = getPartnerName()
                             ParkPromptView(
                                 prompt: prompt,
                                 isUsersTurn: isUsersTurn(for: prompt),
+                                partnerName: partnerName,
                                 onToggleFavorite: {
                                     manager.toggleFavorite()
                                 },
                                 onSaveStory: { text in
                                     Task {
-                                        await manager.saveStoryText(text, for: prompt.id)
+                                        manager.saveStoryText(text, for: prompt.id)
                                     }
                                 }
                             )
@@ -156,5 +160,15 @@ struct TodayView: View {
     private func isUsersTurn(for prompt: DaydreamStory) -> Bool {
         guard let currentUserId = authViewModel.userProfile?.id else { return false }
         return prompt.assignedAuthor.userId == currentUserId
+    }
+
+    private func getPartnerName() -> String {
+        guard let partnership = manager.selectedPartnership,
+              let currentUserId = authViewModel.userProfile?.id else {
+            return "your pal"
+        }
+
+        let partnerId = partnership.user1Id == currentUserId ? partnership.user2Id : partnership.user1Id
+        return manager.partnerProfiles[partnerId]?.displayName ?? "your pal"
     }
 }

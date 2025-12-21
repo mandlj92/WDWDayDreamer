@@ -42,7 +42,7 @@ struct PalsView: View {
                         .padding()
                         .background(theme.primaryBlue)
                         .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
                     }
 
                     Button(action: { showingJoinSheet = true }) {
@@ -56,7 +56,7 @@ struct PalsView: View {
                         .padding()
                         .background(theme.accentGold)
                         .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .cornerRadius(DesignSystem.CornerRadius.medium)
                     }
                 }
                 .padding(.horizontal)
@@ -68,7 +68,7 @@ struct PalsView: View {
                         .foregroundColor(theme.accentRed)
                         .padding()
                         .background(theme.accentRed.opacity(0.1))
-                        .cornerRadius(8)
+                        .cornerRadius(DesignSystem.CornerRadius.small)
                         .padding(.horizontal)
                 }
 
@@ -78,7 +78,7 @@ struct PalsView: View {
                         .foregroundColor(.green)
                         .padding()
                         .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
+                        .cornerRadius(DesignSystem.CornerRadius.small)
                         .padding(.horizontal)
                 }
 
@@ -90,8 +90,10 @@ struct PalsView: View {
                         .padding(.horizontal)
 
                     if palsViewModel.isLoading {
-                        ProgressView()
-                            .padding()
+                        SkeletonList(count: 3) {
+                            SkeletonPalCard()
+                        }
+                        .padding(.horizontal)
                     } else if palsViewModel.partnerships.isEmpty {
                         VStack(spacing: 8) {
                             Image(systemName: "person.2.slash")
@@ -226,7 +228,7 @@ struct PalCard: View {
         }
         .padding()
         .background(Color.white)
-        .cornerRadius(12)
+        .cornerRadius(DesignSystem.CornerRadius.medium)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         .alert("Remove Story Pal", isPresented: $showingRemoveAlert) {
             Button("Cancel", role: .cancel) { }
@@ -275,7 +277,7 @@ struct InvitationCard: View {
         }
         .padding()
         .background(Color.white)
-        .cornerRadius(12)
+        .cornerRadius(DesignSystem.CornerRadius.medium)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 
@@ -340,7 +342,7 @@ struct CreateInviteSheet: View {
                             .tracking(4)
                             .padding()
                             .background(theme.backgroundCream)
-                            .cornerRadius(12)
+                            .cornerRadius(DesignSystem.CornerRadius.medium)
 
                         Button(action: {
                             UIPasteboard.general.string = code
@@ -376,7 +378,7 @@ struct CreateInviteSheet: View {
                     .padding()
                     .background(theme.primaryBlue)
                     .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .cornerRadius(DesignSystem.CornerRadius.medium)
                     .padding(.horizontal)
                     .disabled(palsViewModel.isLoading)
                 }
@@ -452,7 +454,7 @@ struct JoinWithCodeSheet: View {
                 .padding()
                 .background(inviteCode.isEmpty ? Color.gray : theme.accentGold)
                 .foregroundColor(.white)
-                .cornerRadius(12)
+                .cornerRadius(DesignSystem.CornerRadius.medium)
                 .padding(.horizontal)
                 .disabled(inviteCode.isEmpty || palsViewModel.isLoading)
 
@@ -462,7 +464,7 @@ struct JoinWithCodeSheet: View {
                         .foregroundColor(theme.accentRed)
                         .padding()
                         .background(theme.accentRed.opacity(0.1))
-                        .cornerRadius(8)
+                        .cornerRadius(DesignSystem.CornerRadius.small)
                         .padding(.horizontal)
                 }
 

@@ -22,12 +22,12 @@ struct LightTheme: Theme {
     let accentPink = Color(red: 247/255, green: 168/255, blue: 184/255)
     let accentRed = Color(red: 204/255, green: 0/255, blue: 0/255)
     let accentGreen = Color(red: 39/255, green: 111/255, blue: 78/255)
-    let accentPurple = Color(red: 143/255, green: 88/255, blue: 178/255)
-    let accentSilver = Color(red: 164/255, green: 174/255, blue: 184/255)
-    let accentGold = Color(red: 227/255, green: 197/255, blue: 102/255)
+    let accentPurple = Color(red: 108/255, green: 55/255, blue: 143/255)
+    let accentSilver = Color(red: 92/255, green: 102/255, blue: 112/255)
+    let accentGold = Color(red: 184/255, green: 143/255, blue: 30/255)
     let backgroundCream = Color(red: 252/255, green: 250/255, blue: 245/255)
     let primaryText = Color.primary
-    let secondaryText = Color.secondary
+    let secondaryText = Color(red: 100/255, green: 100/255, blue: 100/255)
     let cardBackground = Color.white
 }
 
@@ -37,12 +37,12 @@ struct DarkTheme: Theme {
     let accentPink = Color(red: 200/255, green: 120/255, blue: 135/255)
     let accentRed = Color(red: 255/255, green: 59/255, blue: 48/255)
     let accentGreen = Color(red: 85/255, green: 170/255, blue: 125/255)
-    let accentPurple = Color(red: 173/255, green: 138/255, blue: 208/255)
-    let accentSilver = Color(red: 180/255, green: 190/255, blue: 200/255)
-    let accentGold = Color(red: 237/255, green: 207/255, blue: 112/255)
+    let accentPurple = Color(red: 198/255, green: 168/255, blue: 228/255)
+    let accentSilver = Color(red: 210/255, green: 220/255, blue: 230/255)
+    let accentGold = Color(red: 255/255, green: 215/255, blue: 120/255)
     let backgroundCream = Color(red: 28/255, green: 28/255, blue: 30/255) // Dark Gray
     let primaryText = Color.white
-    let secondaryText = Color(red: 170/255, green: 170/255, blue: 170/255) // Light Gray
+    let secondaryText = Color(red: 190/255, green: 190/255, blue: 190/255) // Light Gray
     let cardBackground = Color(red: 44/255, green: 44/255, blue: 46/255)
 }
 
@@ -54,9 +54,9 @@ struct ThemeColors {
     static let accentPink = Color(red: 247/255, green: 168/255, blue: 184/255)
     static let accentRed = Color(red: 204/255, green: 0/255, blue: 0/255)
     static let accentGreen = Color(red: 39/255, green: 111/255, blue: 78/255)
-    static let accentPurple = Color(red: 143/255, green: 88/255, blue: 178/255)
-    static let accentSilver = Color(red: 164/255, green: 174/255, blue: 184/255)
-    static let accentGold = Color(red: 227/255, green: 197/255, blue: 102/255)
+    static let accentPurple = Color(red: 108/255, green: 55/255, blue: 143/255)
+    static let accentSilver = Color(red: 92/255, green: 102/255, blue: 112/255)
+    static let accentGold = Color(red: 184/255, green: 143/255, blue: 30/255)
     static let backgroundCream = Color(red: 252/255, green: 250/255, blue: 245/255)
 }
 
@@ -85,9 +85,9 @@ struct ParkButtonStyle: ButtonStyle {
             .padding()
             .background(color.opacity(configuration.isPressed ? 0.7 : 1.0))
             .foregroundColor(textColor)
-            .cornerRadius(25)
+            .cornerRadius(DesignSystem.CornerRadius.large)
             .overlay(
-                RoundedRectangle(cornerRadius: 25)
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large)
                     .stroke(Color.white.opacity(0.8), lineWidth: 2)
                     .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 2)
             )
@@ -107,10 +107,10 @@ extension View {
         self
             .padding()
             .background(theme.cardBackground)
-            .cornerRadius(15)
+            .cornerRadius(DesignSystem.CornerRadius.medium)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .overlay(
-                RoundedRectangle(cornerRadius: 15)
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
                     .stroke(theme.accentGold.opacity(0.3), lineWidth: 1)
             )
     }
