@@ -1,0 +1,38 @@
+{
+  "id": "wdw-base",
+  "name": "Walt Disney World — Base Pack",
+  "description": "The free base content pack: WDW parks, resorts, attractions, dining, and events.",
+  "isFree": true,
+  "version": 1,
+  "categories": {
+    "hotel": [
+      "All‑Star Movies Resort", "All‑Star Music Resort", "All‑Star Sports Resort",
+      "Art of Animation Resort", "Pop Century Resort",
+      "Caribbean Beach Resort", "Coronado Springs Resort",
+      "Port Orleans – Riverside", "Port Orleans – French Quarter", "Fort Wilderness Campground",
+      "Animal Kingdom Lodge", "Beach Club Resort", "BoardWalk Inn",
+      "Contemporary Resort", "Grand Floridian Resort & Spa",
+      "Polynesian Village Resort", "Wilderness Lodge", "Yacht Club Resort",
+      "Animal Kingdom Villas – Jambo House", "Kidani Village",
+      "Bay Lake Tower", "Boulder Ridge Villas", "Copper Creek Villas",
+      "Polynesian Villas & Bungalows", "Riviera Resort",
+      "Beach Club Villas", "BoardWalk Villas", "Old Key West Resort", "Saratoga Springs"
+    ],
+    "park": ["Magic Kingdom", "Epcot", "Hollywood Studios", "Animal Kingdom"],
+    "ride": [
+      "Seven Dwarfs Mine Train", "Space Mountain", "Big Thunder Mountain Railroad",
+      "Haunted Mansion", "Jungle Cruise", "Peter Pan's Flight", "Tron Lightcycle / Run",
+      "Spaceship Earth", "Soarin' Around the World", "Test Track", "Frozen Ever After",
+      "Remy's Ratatouille Adventure", "Guardians of the Galaxy: Cosmic Rewind",
+      "Star Wars: Rise of the Resistance", "Slinky Dog Dash", "Tower of Terror",
+      "Rock 'n' Roller Coaster", "Mickey & Minnie's Runaway Railway",
+      "Avatar Flight of Passage", "Kilimanjaro Safaris", "Expedition Everest",
+      "Kali River Rapids", "DINOSAUR", "it's Tough to be a Bug!"
+    ],
+    "food": ["Dole Whip", "Churros", "Le Cellier Steakhouse", "Mickey Ice Cream Bar", "Beignets (Port Orleans)", "Zebra Domes (AKL)"],
+    "beverage": ["Frozen Margarita (La Cava)", "School Bread (Kringla)", "Pongu Lumpia (AK)", "Mint Julep (MK)"],
+    "souvenir": ["Mickey Ear Hat", "Figment Plush", "MagicBand+", "Loungefly Backpack", "Spirit Jersey"],
+    "character": ["Meeting Cinderella", "Meeting Mickey", "Meet & Greet Buzz Lightyear", "Hugging Chewbacca", "Finding Winnie the Pooh"],
+    "event": ["Food & Wine Festival", "Not‑So‑Scary Halloween Party", "Festival of the Arts", "Flower & Garden Festival", "Candlelight Processional"]
+  }
+}

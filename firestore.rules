@@ -291,5 +291,12 @@ service cloud.firestore {
       // Only Cloud Functions can write security incidents
       allow read, write: if false;
     }
+
+    // Content Packs (prompt content: parks, rides, food, etc.)
+    // Seeded via admin scripts/Cloud Functions only - clients are read-only.
+    match /contentPacks/{packId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
   }
 }

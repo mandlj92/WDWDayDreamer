@@ -1,0 +1,13 @@
+{
+  "name": "wdw-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Operational scripts (Firestore seeding, etc.)",
+  "scripts": {
+    "seed": "node seed-content.mjs",
+    "seed:prod": "node seed-content.mjs --production"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
