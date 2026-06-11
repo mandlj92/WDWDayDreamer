@@ -75,9 +75,7 @@ struct SkeletonStoryCard: View {
                     .frame(width: CGFloat.random(in: 150...250))
             }
         }
-        .padding(DesignSystem.Spacing.xs)
-        .background(theme.cardBackground)
-        .cornerRadius(DesignSystem.CornerRadius.small)
+        .padding(.vertical, DesignSystem.Spacing.xs)
         .shimmer()
     }
 }
@@ -88,28 +86,15 @@ struct SkeletonPalCard: View {
     @Environment(\.theme) var theme: Theme
 
     var body: some View {
-        HStack {
-            // Avatar placeholder
-            Circle()
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+            RoundedRectangle(cornerRadius: 4)
                 .fill(theme.primaryBlue.opacity(0.15))
-                .frame(width: 50, height: 50)
-
-            // Name and info placeholders
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(theme.primaryBlue.opacity(0.15))
-                    .frame(width: 120, height: 16)
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(theme.secondaryText.opacity(0.1))
-                    .frame(width: 90, height: 12)
-            }
-
-            Spacer()
+                .frame(width: 120, height: 16)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(theme.secondaryText.opacity(0.1))
+                .frame(width: 90, height: 12)
         }
-        .padding()
-        .background(theme.cardBackground)
-        .cornerRadius(DesignSystem.CornerRadius.medium)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .padding(.vertical, DesignSystem.Spacing.sm)
         .shimmer()
     }
 }

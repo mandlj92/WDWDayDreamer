@@ -7,154 +7,114 @@ struct PalsView: View {
 
     @State private var showingInviteSheet = false
     @State private var showingJoinSheet = false
-    @State private var inviteCodeInput = ""
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                VStack(spacing: 8) {
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(theme.primaryBlue)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+                // Intro + actions
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                    Text("Connect with others to share daydreams. Invite a friend, or join with a code they've sent you.")
+                        .font(DesignSystem.Typography.subtext)
+                        .foregroundColor(theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Story Pals")
-                        .font(.parkTitle(28))
-                        .foregroundColor(theme.primaryBlue)
+                    HStack(spacing: DesignSystem.Spacing.lg) {
+                        Button("Invite a Pal") { showingInviteSheet = true }
+                            .buttonStyle(InlineActionButtonStyle(color: theme.primaryBlue))
 
-                    Text("Connect with others to share Daydreams")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-
-                // Action Buttons
-                HStack(spacing: 16) {
-                    Button(action: { showingInviteSheet = true }) {
-                        VStack {
-                            Image(systemName: "person.badge.plus")
-                                .font(.title2)
-                            Text("Invite Pal")
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(theme.primaryBlue)
-                        .foregroundColor(.white)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
-                    }
-
-                    Button(action: { showingJoinSheet = true }) {
-                        VStack {
-                            Image(systemName: "key.fill")
-                                .font(.title2)
-                            Text("Join with Code")
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(theme.accentGold)
-                        .foregroundColor(.white)
-                        .cornerRadius(DesignSystem.CornerRadius.medium)
+                        Button("Join with Code") { showingJoinSheet = true }
+                            .buttonStyle(InlineActionButtonStyle(color: theme.accentGold))
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+                .padding(.top, DesignSystem.Spacing.xs)
 
                 // Messages
                 if let errorMessage = palsViewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(theme.accentRed)
-                        .padding()
-                        .background(theme.accentRed.opacity(0.1))
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                        .padding(.horizontal)
+                    StatusLine(text: errorMessage, color: theme.accentRed)
                 }
 
                 if let successMessage = palsViewModel.successMessage {
-                    Text(successMessage)
-                        .font(.caption)
-                        .foregroundColor(.green)
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                        .padding(.horizontal)
+                    StatusLine(text: successMessage, color: theme.accentGreen)
                 }
 
                 // My Story Pals Section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("My Story Pals")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryBlue)
-                        .padding(.horizontal)
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    SectionLabel("My Story Pals")
+                        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+
+                    Hairline()
+                        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
 
                     if palsViewModel.isLoading {
                         SkeletonList(count: 3) {
                             SkeletonPalCard()
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                     } else if palsViewModel.partnerships.isEmpty {
-                        VStack(spacing: 8) {
-                            Image(systemName: "person.2.slash")
-                                .font(.largeTitle)
-                                .foregroundColor(.gray)
-                            Text("No story pals yet")
-                                .foregroundColor(.secondary)
-                            Text("Invite someone or join with a code to get started!")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
+                        Text("No story pals yet — invite someone or join with a code to get started.")
+                            .font(DesignSystem.Typography.subtext)
+                            .italic()
+                            .foregroundColor(theme.tertiaryText)
+                            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+                            .padding(.vertical, DesignSystem.Spacing.md)
                     } else {
-                        ForEach(palsViewModel.partnerships) { partnership in
-                            if let userId = authViewModel.userProfile?.id {
-                                PalCard(
-                                    partnerName: palsViewModel.getPartnerName(for: partnership, currentUserId: userId),
-                                    partnership: partnership,
-                                    onRemove: {
-                                        Task {
-                                            await palsViewModel.removePartnership(partnership, currentUserId: userId)
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(palsViewModel.partnerships) { partnership in
+                                if let userId = authViewModel.userProfile?.id {
+                                    PalCard(
+                                        partnerName: palsViewModel.getPartnerName(for: partnership, currentUserId: userId),
+                                        partnership: partnership,
+                                        onRemove: {
+                                            Task {
+                                                await palsViewModel.removePartnership(partnership, currentUserId: userId)
+                                            }
                                         }
+                                    )
+
+                                    if partnership.id != palsViewModel.partnerships.last?.id {
+                                        Hairline()
                                     }
-                                )
+                                }
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                     }
                 }
-                .padding(.top)
 
                 // My Invitations Section
                 let visibleInvitations = palsViewModel.myInvitations.filter { $0.status == .pending && !$0.isExpired }
-                if !visibleInvitations.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("My Invitations")
-                            .font(.headline)
-                            .foregroundColor(theme.primaryBlue)
-                            .padding(.horizontal)
+                if !palsViewModel.myInvitations.isEmpty {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                        SectionLabel("My Invitations")
+                            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
 
-                        ForEach(visibleInvitations) { invitation in
-                            InvitationCard(invitation: invitation)
-                                .padding(.horizontal)
+                        Hairline()
+                            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+
+                        if visibleInvitations.isEmpty {
+                            Text("No active invitations.")
+                                .font(DesignSystem.Typography.subtext)
+                                .italic()
+                                .foregroundColor(theme.tertiaryText)
+                                .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+                                .padding(.vertical, DesignSystem.Spacing.xs)
+                        } else {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(visibleInvitations) { invitation in
+                                    InvitationCard(invitation: invitation)
+
+                                    if invitation.id != visibleInvitations.last?.id {
+                                        Hairline()
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                         }
                     }
-                    .padding(.top)
-                } else if !palsViewModel.myInvitations.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("My Invitations")
-                            .font(.headline)
-                            .foregroundColor(theme.primaryBlue)
-                        Text("No active invitations (pending + not expired).")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical)
         }
         .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
@@ -183,6 +143,22 @@ struct PalsView: View {
     }
 }
 
+// MARK: - Status Line
+
+/// Inline status feedback — colored text, no boxed background.
+private struct StatusLine: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(DesignSystem.Typography.subtext)
+            .foregroundColor(color)
+            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+            .transition(.opacity)
+    }
+}
+
 // MARK: - Pal Card
 
 struct PalCard: View {
@@ -194,28 +170,20 @@ struct PalCard: View {
     @State private var showingRemoveAlert = false
 
     var body: some View {
-        HStack {
-            Image(systemName: "person.circle.fill")
-                .font(.largeTitle)
-                .foregroundColor(theme.primaryBlue)
-
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(partnerName)
-                    .font(.headline)
-                    .foregroundColor(theme.primaryBlue)
+                    .font(DesignSystem.Typography.sectionTitle)
+                    .foregroundColor(theme.primaryText)
 
-                Text("Connected \(partnership.createdAt, style: .date)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("Connected \(partnership.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(DesignSystem.Typography.meta)
+                    .foregroundColor(theme.secondaryText)
 
                 if let tripDate = partnership.sharedTripDate {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.caption)
-                        Text("Trip: \(tripDate, style: .date)")
-                            .font(.caption)
-                    }
-                    .foregroundColor(theme.accentGold)
+                    Text("Trip \(tripDate.formatted(date: .abbreviated, time: .omitted))")
+                        .font(DesignSystem.Typography.meta)
+                        .foregroundColor(theme.accentGold)
                 }
             }
 
@@ -223,13 +191,12 @@ struct PalCard: View {
 
             Button(action: { showingRemoveAlert = true }) {
                 Image(systemName: "trash")
+                    .font(.subheadline)
                     .foregroundColor(theme.accentRed)
             }
+            .accessibilityLabel("Remove \(partnerName)")
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(DesignSystem.CornerRadius.medium)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .padding(.vertical, DesignSystem.Spacing.sm)
         .alert("Remove Story Pal", isPresented: $showingRemoveAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Remove", role: .destructive) {
@@ -247,55 +214,39 @@ struct InvitationCard: View {
     let invitation: PalInvitation
 
     @Environment(\.theme) var theme: Theme
+    @State private var copied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "envelope.fill")
-                    .foregroundColor(theme.accentGold)
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(invitation.invitationCode)
+                    .font(.system(.title3, design: .monospaced).weight(.semibold))
+                    .foregroundColor(theme.primaryBlue)
+                    .tracking(2)
+                    .textSelection(.enabled)
 
-                Text("Invitation Code")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundColor(statusColor)
+                Text("Expires \(invitation.expiresAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(DesignSystem.Typography.meta)
+                    .foregroundColor(theme.secondaryText)
             }
 
-            Text(invitation.invitationCode)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(theme.primaryBlue)
-                .tracking(2)
+            Spacer()
 
-            Text("Expires \(invitation.expiresAt, style: .date)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            Button(action: copyCode) {
+                Text(copied ? "Copied" : "Copy")
+            }
+            .buttonStyle(InlineActionButtonStyle(color: copied ? theme.accentGreen : theme.primaryBlue))
+            .accessibilityLabel("Copy invitation code")
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(DesignSystem.CornerRadius.medium)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .padding(.vertical, DesignSystem.Spacing.sm)
     }
 
-    private var statusText: String {
-        switch invitation.status {
-        case .pending: return "Pending"
-        case .accepted: return "Accepted"
-        case .declined: return "Declined"
-        case .expired: return "Expired"
-        }
-    }
-
-    private var statusColor: Color {
-        switch invitation.status {
-        case .pending: return .orange
-        case .accepted: return .green
-        case .declined: return .red
-        case .expired: return .gray
+    private func copyCode() {
+        UIPasteboard.general.string = invitation.invitationCode
+        HapticManager.instance.notification(type: .success)
+        withAnimation(DesignSystem.Animation.quick) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(DesignSystem.Animation.quick) { copied = false }
         }
     }
 }
@@ -311,54 +262,43 @@ struct CreateInviteSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Image(systemName: "person.badge.plus.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(theme.primaryBlue)
-                    .padding(.top, 40)
-                    .onAppear {
-                        print("📋 CreateInviteSheet opened - userProfile: \(userProfile?.displayName ?? "nil")")
-                    }
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("Invite a Story Pal")
+                        .font(DesignSystem.Typography.pageTitle)
+                        .foregroundColor(theme.primaryText)
 
-                Text("Invite a Story Pal")
-                    .font(.parkTitle(24))
-                    .foregroundColor(theme.primaryBlue)
-
-                Text("Generate an invitation code to share with a friend")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    Text("Generate an invitation code to share with a friend. It expires in 7 days.")
+                        .font(DesignSystem.Typography.subtext)
+                        .foregroundColor(theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, DesignSystem.Spacing.lg)
 
                 if let code = palsViewModel.generatedInviteCode {
-                    VStack(spacing: 12) {
-                        Text("Your Invitation Code")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                        Hairline()
+
+                        SectionLabel("Your Invitation Code")
 
                         Text(code)
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
                             .foregroundColor(theme.primaryBlue)
                             .tracking(4)
-                            .padding()
-                            .background(theme.backgroundCream)
-                            .cornerRadius(DesignSystem.CornerRadius.medium)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, DesignSystem.Spacing.xs)
+
+                        Hairline()
 
                         Button(action: {
                             UIPasteboard.general.string = code
                             HapticManager.instance.notification(type: .success)
                         }) {
                             Label("Copy Code", systemImage: "doc.on.doc")
-                                .foregroundColor(theme.primaryBlue)
                         }
-
-                        Text("Share this code with your friend. It expires in 7 days.")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+                        .buttonStyle(InlineActionButtonStyle(color: theme.primaryBlue))
                     }
-                    .padding()
                 } else {
                     Button(action: {
                         Task {
@@ -370,21 +310,20 @@ struct CreateInviteSheet: View {
                         if palsViewModel.isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(maxWidth: .infinity)
                         } else {
                             Text("Generate Invitation Code")
+                                .frame(maxWidth: .infinity)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(theme.primaryBlue)
-                    .foregroundColor(.white)
-                    .cornerRadius(DesignSystem.CornerRadius.medium)
-                    .padding(.horizontal)
+                    .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                     .disabled(palsViewModel.isLoading)
                 }
 
                 Spacer()
             }
+            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+            .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -408,37 +347,42 @@ struct JoinWithCodeSheet: View {
     @Environment(\.theme) var theme: Theme
 
     @State private var inviteCode = ""
+    @FocusState private var codeFieldFocused: Bool
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Image(systemName: "key.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(theme.accentGold)
-                    .padding(.top, 40)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("Join with Code")
+                        .font(DesignSystem.Typography.pageTitle)
+                        .foregroundColor(theme.primaryText)
 
-                Text("Join with Code")
-                    .font(.parkTitle(24))
-                    .foregroundColor(theme.primaryBlue)
+                    Text("Enter the invitation code from your friend.")
+                        .font(DesignSystem.Typography.subtext)
+                        .foregroundColor(theme.secondaryText)
+                }
+                .padding(.top, DesignSystem.Spacing.lg)
 
-                Text("Enter the invitation code from your friend")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                    TextField("ABC123", text: $inviteCode)
+                        .focused($codeFieldFocused)
+                        .font(.system(.title2, design: .monospaced).weight(.semibold))
+                        .autocapitalization(.allCharacters)
+                        .autocorrectionDisabled()
+                        .textCase(.uppercase)
+                        .padding(.vertical, DesignSystem.Spacing.xs)
 
-                TextField("Enter Code", text: $inviteCode)
-                    .textFieldStyle(.roundedBorder)
-                    .autocapitalization(.allCharacters)
-                    .textCase(.uppercase)
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    Rectangle()
+                        .fill(codeFieldFocused ? theme.primaryBlue : theme.hairline)
+                        .frame(height: codeFieldFocused ? 2 : 1)
+                        .animation(DesignSystem.Animation.quick, value: codeFieldFocused)
+                }
 
                 Button(action: {
                     Task {
                         await palsViewModel.acceptInvitation(code: inviteCode.trimmingCharacters(in: .whitespaces), userId: userId, userName: userName)
                         if palsViewModel.errorMessage == nil {
+                            HapticManager.instance.success()
                             dismiss()
                         }
                     }
@@ -446,30 +390,26 @@ struct JoinWithCodeSheet: View {
                     if palsViewModel.isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(maxWidth: .infinity)
                     } else {
                         Text("Join")
+                            .frame(maxWidth: .infinity)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(inviteCode.isEmpty ? Color.gray : theme.accentGold)
-                .foregroundColor(.white)
-                .cornerRadius(DesignSystem.CornerRadius.medium)
-                .padding(.horizontal)
+                .buttonStyle(ParkButtonStyle(color: theme.accentGold))
                 .disabled(inviteCode.isEmpty || palsViewModel.isLoading)
+                .opacity(inviteCode.isEmpty ? 0.5 : 1)
 
                 if let errorMessage = palsViewModel.errorMessage {
                     Text(errorMessage)
-                        .font(.caption)
+                        .font(DesignSystem.Typography.subtext)
                         .foregroundColor(theme.accentRed)
-                        .padding()
-                        .background(theme.accentRed.opacity(0.1))
-                        .cornerRadius(DesignSystem.CornerRadius.small)
-                        .padding(.horizontal)
                 }
 
                 Spacer()
             }
+            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+            .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -478,6 +418,7 @@ struct JoinWithCodeSheet: View {
                     }
                 }
             }
+            .onAppear { codeFieldFocused = true }
         }
     }
 }

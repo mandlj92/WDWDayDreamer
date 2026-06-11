@@ -28,24 +28,6 @@ struct ContentView: View {
             currentTheme.backgroundCream
                 .edgesIgnoringSafeArea(.all)
 
-            // Background sparkle decoration
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 80))
-                        .foregroundColor(currentTheme.accentGold.opacity(0.1))
-                    Spacer()
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 60))
-                        .foregroundColor(currentTheme.primaryBlue.opacity(0.1))
-                    Spacer()
-                }
-                .offset(y: 20)
-            }
-            .edgesIgnoringSafeArea(.bottom)
-
             // Main Content
             if !authViewModel.isAuthenticated {
                 LoginView()
@@ -318,26 +300,17 @@ struct LoadingOverlayView: View {
     let theme: Theme
     
     var body: some View {
-        Color.black.opacity(0.4)
+        Color.black.opacity(0.55)
             .edgesIgnoringSafeArea(.all)
-        VStack {
-            Image(systemName: "sparkles")
-                .font(.system(size: 40))
-                .foregroundColor(theme.accentGold)
+        VStack(spacing: DesignSystem.Spacing.md) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(1.2)
-                .padding()
-            Text("Setting up your Daydreams...")
-                .font(.headline)
+            Text("Setting up your Daydreams…")
+                .font(DesignSystem.Typography.sectionTitle)
                 .foregroundColor(.white)
         }
-        .padding(30)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(theme.primaryBlue)
-                .shadow(radius: 10)
-        )
+        .padding(DesignSystem.Spacing.xl)
     }
 }
 

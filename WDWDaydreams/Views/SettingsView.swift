@@ -158,7 +158,6 @@ struct SettingsView: View {
 
             Form {
                 Group {
-                    titleSection
                     appearanceSection
                     notificationSection
                     privacySection
@@ -188,24 +187,6 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var titleSection: some View {
-        Section {
-            VStack(alignment: .center, spacing: 12) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 40))
-                    .foregroundColor(theme.primaryBlue)
-
-                Text("Daydreams Settings")
-                    .font(.parkTitle(18))
-                    .foregroundColor(theme.primaryBlue)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .listRowBackground(theme.backgroundCream)
-        }
-    }
-
     private var appearanceSection: some View {
         Section(header: SectionHeader(title: "Appearance", theme: theme)) {
             Picker("Theme", selection: $themeManager.selectedTheme) {
@@ -229,7 +210,7 @@ struct SettingsView: View {
                 NotificationManager.shared.requestPermission()
                 feedbackCenter.present(message: "Notification permission requested", style: .info)
             }
-            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
+            .foregroundColor(theme.primaryBlue)
         }
         .listRowBackground(theme.cardBackground)
     }
@@ -299,7 +280,7 @@ struct SettingsView: View {
             Button("Test Firebase Connection") {
                 testFirebaseConnection()
             }
-            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
+            .foregroundColor(theme.primaryBlue)
 
             if !testResults.isEmpty {
                 Text(testResults)
@@ -333,25 +314,14 @@ struct SettingsView: View {
     }
 
     private var dangerZoneSection: some View {
-        let headerText = Text("Danger Zone")
-            .foregroundColor(theme.accentRed)
-            .font(.headline)
-
-        return Section(header: headerText) {
-            Button(action: {
+        Section(header: SectionHeader(title: "Danger Zone", theme: theme, color: theme.accentRed)) {
+            Button(role: .destructive) {
                 showClearConfirmation = true
-            }) {
-                HStack {
-                    Image(systemName: "trash.fill")
-                    Text("Clear All Story History")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+            } label: {
+                Text("Clear All Story History")
             }
-            .buttonStyle(ParkButtonStyle(color: theme.accentRed))
-            .listRowBackground(theme.backgroundCream)
         }
+        .listRowBackground(theme.cardBackground)
     }
     
     // Local helper functions to replace ViewModel methods
@@ -386,11 +356,13 @@ struct SettingsView: View {
 struct SectionHeader: View {
     let title: String
     let theme: Theme
-    
+    var color: Color? = nil
+
     var body: some View {
-        Text(title)
-            .foregroundColor(theme.primaryBlue)
-            .font(.headline)
+        Text(title.uppercased())
+            .font(DesignSystem.Typography.label)
+            .tracking(1.2)
+            .foregroundColor(color ?? theme.secondaryText)
     }
 }
 
@@ -450,12 +422,16 @@ struct TripCountdownRow: View {
     let theme: Theme
     
     var body: some View {
-        HStack {
-            Image(systemName: "calendar.badge.clock")
-            Text("\(days) day\(days == 1 ? "" : "s") until your trip!")
-                .font(.headline)
+        HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.xs) {
+            Text("\(days)")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .foregroundColor(theme.accentGold)
+            Text("day\(days == 1 ? "" : "s") until your trip")
+                .font(DesignSystem.Typography.subtext)
+                .foregroundColor(theme.primaryText)
         }
-        .foregroundColor(theme.accentRed)
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }

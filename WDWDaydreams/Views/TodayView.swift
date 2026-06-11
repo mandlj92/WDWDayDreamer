@@ -9,45 +9,42 @@ struct TodayView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
                 if manager.isLoadingPartnership {
                     SkeletonList(count: 1) {
                         SkeletonStoryCard()
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                 } else if manager.selectedPartnership == nil {
-                    // No partnership selected - show guide
                     emptyStateView
                 } else {
-                    // Show partnership info and today's story
-                    VStack(spacing: 16) {
-                        // Partnership header
-                        partnershipHeader
+                    partnershipHeader
 
-                        // Today's story prompt
-                        if let prompt = manager.currentStoryPrompt {
-                            let partnerName = getPartnerName()
-                            ParkPromptView(
-                                prompt: prompt,
-                                isUsersTurn: isUsersTurn(for: prompt),
-                                partnerName: partnerName,
-                                onToggleFavorite: {
-                                    manager.toggleFavorite()
-                                },
-                                onSaveStory: { text in
-                                    Task {
-                                        manager.saveStoryText(text, for: prompt.id)
-                                    }
+                    if let prompt = manager.currentStoryPrompt {
+                        let partnerName = getPartnerName()
+                        ParkPromptView(
+                            prompt: prompt,
+                            isUsersTurn: isUsersTurn(for: prompt),
+                            partnerName: partnerName,
+                            onToggleFavorite: {
+                                manager.toggleFavorite()
+                            },
+                            onSaveStory: { text in
+                                Task {
+                                    manager.saveStoryText(text, for: prompt.id)
                                 }
-                            )
-                        } else {
-                            Text("No story for today yet")
-                                .foregroundColor(theme.secondaryText)
-                                .padding()
-                        }
+                            }
+                        )
+                    } else {
+                        Text("No story for today yet")
+                            .font(DesignSystem.Typography.subtext)
+                            .italic()
+                            .foregroundColor(theme.tertiaryText)
+                            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical)
         }
         .sheet(isPresented: $showingFirstPartnershipGuide) {
@@ -65,94 +62,67 @@ struct TodayView: View {
     // MARK: - Empty State View
 
     private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "person.2.fill")
-                .font(.system(size: 60))
-                .foregroundColor(theme.primaryBlue)
-
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             Text("Connect with a Story Pal")
-                .font(.parkTitle(24))
-                .foregroundColor(theme.primaryBlue)
-                .multilineTextAlignment(.center)
-
-            Text("To start creating daily Disney daydreams, you need to connect with a Story Pal. Go to the Pals tab to:")
-                .font(.body)
+                .font(DesignSystem.Typography.pageTitle)
                 .foregroundColor(theme.primaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .padding(.top, DesignSystem.Spacing.xl)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "1.circle.fill")
+            Text("To start creating daily Disney daydreams, connect with a Story Pal from the Pals tab.")
+                .font(DesignSystem.Typography.subtext)
+                .foregroundColor(theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.sm) {
+                    Text("1.")
+                        .font(DesignSystem.Typography.sectionTitle)
                         .foregroundColor(theme.accentGold)
                     Text("Invite someone to be your Story Pal")
+                        .font(DesignSystem.Typography.body)
                         .foregroundColor(theme.primaryText)
                 }
 
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "2.circle.fill")
+                HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.sm) {
+                    Text("2.")
+                        .font(DesignSystem.Typography.sectionTitle)
                         .foregroundColor(theme.accentGold)
                     Text("Or join using a friend's invitation code")
+                        .font(DesignSystem.Typography.body)
                         .foregroundColor(theme.primaryText)
                 }
             }
-            .padding()
-            .background(theme.cardBackground)
-            .cornerRadius(12)
-            .padding(.horizontal)
+            .padding(.vertical, DesignSystem.Spacing.xs)
 
-            Text("Once connected, you'll take turns creating magical Disney stories together!")
-                .font(.caption)
+            Text("Once connected, you'll take turns creating magical Disney stories together.")
+                .font(DesignSystem.Typography.meta)
                 .italic()
-                .foregroundColor(theme.secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .foregroundColor(theme.tertiaryText)
         }
-        .padding()
+        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
     }
 
     // MARK: - Partnership Header
 
+    @ViewBuilder
     private var partnershipHeader: some View {
-        VStack(spacing: 8) {
-            if let partnership = manager.selectedPartnership,
-               let currentUserId = authViewModel.userProfile?.id {
+        if let partnership = manager.selectedPartnership,
+           let currentUserId = authViewModel.userProfile?.id {
 
-                let partnerId = partnership.user1Id == currentUserId ? partnership.user2Id : partnership.user1Id
-                let partnerName = manager.partnerProfiles[partnerId]?.displayName ?? "Your Pal"
+            let partnerId = partnership.user1Id == currentUserId ? partnership.user2Id : partnership.user1Id
+            let partnerName = manager.partnerProfiles[partnerId]?.displayName ?? "Your Pal"
 
-                HStack {
-                    Image(systemName: "person.2.fill")
-                        .foregroundColor(theme.accentPurple)
+            VStack(alignment: .leading, spacing: 2) {
+                SectionLabel("Story with \(partnerName)", color: theme.accentPurple)
 
-                    Text("Story with \(partnerName)")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryText)
-
-                    Spacer()
-                }
-                .padding(.horizontal)
-
-                // Show trip date if available
                 if let tripDate = partnership.sharedTripDate {
-                    HStack {
-                        Image(systemName: "calendar.badge.clock")
-                            .foregroundColor(theme.accentGold)
-
-                        Text("Trip: \(tripDate, style: .date)")
-                            .font(.caption)
-                            .foregroundColor(theme.secondaryText)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal)
+                    Text("Trip \(tripDate.formatted(date: .abbreviated, time: .omitted))")
+                        .font(DesignSystem.Typography.meta)
+                        .foregroundColor(theme.secondaryText)
                 }
             }
+            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
         }
-        .padding(.vertical, 8)
-        .background(theme.cardBackground)
-        .cornerRadius(12)
-        .padding(.horizontal)
     }
 
     // MARK: - Helper Methods

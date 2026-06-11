@@ -201,9 +201,12 @@ struct ParkTextFieldStyle: TextFieldStyle {
         configuration
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white)
-                    .shadow(color: theme.primaryBlue.opacity(0.2), radius: 3, x: 0, y: 2)
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
+                    .fill(theme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
+                    .stroke(theme.hairline, lineWidth: 1)
             )
     }
 }

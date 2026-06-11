@@ -16,6 +16,15 @@ protocol Theme {
     var cardBackground: Color { get }
 }
 
+// MARK: - Derived Colors
+extension Theme {
+    /// 1px rule color for separating content regions
+    var hairline: Color { primaryText.opacity(0.12) }
+
+    /// De-emphasized text (timestamps, placeholders)
+    var tertiaryText: Color { secondaryText.opacity(0.7) }
+}
+
 // MARK: - Light Theme
 struct LightTheme: Theme {
     let primaryBlue = Color(red: 25/255, green: 113/255, blue: 184/255)
@@ -65,12 +74,11 @@ extension Font {
     static func parkTitle(_ size: CGFloat) -> Font {
         .system(size: size, weight: .bold, design: .rounded)
     }
-    static func parkBody(_ size: CGFloat) -> Font {
-        .system(size: size * 0.6, weight: .semibold, design: .rounded)
-    }
 }
 
 // MARK: - Park Button Style
+/// Flat, filled button: press feedback via opacity + subtle scale and a light
+/// haptic. No borders or drop shadows.
 struct ParkButtonStyle: ButtonStyle {
     var color: Color
     var textColor: Color = .white
@@ -79,20 +87,17 @@ struct ParkButtonStyle: ButtonStyle {
         self.color = color
         self.textColor = textColor
     }
-    
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding()
-            .background(color.opacity(configuration.isPressed ? 0.7 : 1.0))
+            .font(.system(.body, design: .rounded).weight(.semibold))
+            .padding(.vertical, 12)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .background(color.opacity(configuration.isPressed ? 0.8 : 1.0))
             .foregroundColor(textColor)
-            .cornerRadius(DesignSystem.CornerRadius.large)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large)
-                    .stroke(Color.white.opacity(0.8), lineWidth: 2)
-                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 2)
-            )
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(.spring(), value: configuration.isPressed)
+            .cornerRadius(DesignSystem.CornerRadius.medium)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(DesignSystem.Animation.quick, value: configuration.isPressed)
             .onChange(of: configuration.isPressed) {
                 if configuration.isPressed {
                     HapticManager.instance.impact(style: .light)
@@ -101,23 +106,16 @@ struct ParkButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Park UI Elements
-extension View {
-    func parkCard(theme: Theme) -> some View {
-        self
-            .padding()
-            .background(theme.cardBackground)
-            .cornerRadius(DesignSystem.CornerRadius.medium)
-            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
-                    .stroke(theme.accentGold.opacity(0.3), lineWidth: 1)
-            )
-    }
+// MARK: - Inline Action Button Style
+/// Text-only button for actions embedded in content. Hierarchy comes from
+/// color and weight, not from a filled container.
+struct InlineActionButtonStyle: ButtonStyle {
+    var color: Color
 
-    func parkHeader(theme: Theme) -> some View {
-        self
-            .font(.system(.headline, design: .rounded))
-            .foregroundColor(theme.primaryBlue)
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .foregroundColor(color.opacity(configuration.isPressed ? 0.5 : 1.0))
+            .animation(DesignSystem.Animation.quick, value: configuration.isPressed)
     }
 }
