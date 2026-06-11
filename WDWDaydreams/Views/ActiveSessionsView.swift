@@ -16,14 +16,18 @@ struct ActiveSessionsView: View {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             } else {
                 Section {
-                    Text("You're currently signed in on \(sessions.count) device\(sessions.count == 1 ? "" : "s").")
-                        .font(.subheadline)
+                    Text("Signed in on \(sessions.count) device\(sessions.count == 1 ? "" : "s").")
+                        .font(DesignSystem.Typography.subtext)
                         .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
 
-                Section("Active Devices") {
+                Section(header: SectionHeaderText("Active Devices")) {
                     ForEach(sessions) { session in
                         SessionRow(session: session, isCurrentDevice: isCurrentDevice(session))
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -42,38 +46,32 @@ struct ActiveSessionsView: View {
                     Button(role: .destructive) {
                         showRevokeAllAlert = true
                     } label: {
-                        HStack {
-                            Image(systemName: "xmark.circle.fill")
-                            Text("Sign Out All Other Devices")
-                        }
+                        Text("Sign Out All Other Devices")
                     }
                     .disabled(sessions.count <= 1)
                 }
 
                 Section {
-                    Text("For security, sessions expire after 30 days of inactivity. You'll be automatically signed out after 15 minutes of inactivity.")
-                        .font(.caption)
+                    Text("Sessions expire after 30 days of inactivity. You'll be automatically signed out after 15 minutes of inactivity.")
+                        .font(DesignSystem.Typography.meta)
                         .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Active Sessions")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            loadSessions()
-        }
-        .refreshable {
-            loadSessions()
-        }
+        .onAppear { loadSessions() }
+        .refreshable { loadSessions() }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(errorMessage)
         }
         .alert("Revoke Session?", isPresented: .constant(sessionToRevoke != nil)) {
-            Button("Cancel", role: .cancel) {
-                sessionToRevoke = nil
-            }
+            Button("Cancel", role: .cancel) { sessionToRevoke = nil }
             Button("Revoke", role: .destructive) {
                 if let session = sessionToRevoke {
                     revokeSession(session)
@@ -86,27 +84,23 @@ struct ActiveSessionsView: View {
         }
         .alert("Sign Out Other Devices?", isPresented: $showRevokeAllAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Sign Out", role: .destructive) {
-                revokeAllOtherSessions()
-            }
+            Button("Sign Out", role: .destructive) { revokeAllOtherSessions() }
         } message: {
-            Text("This will sign you out on all devices except this one. You'll need to sign in again on those devices.")
+            Text("This will sign you out on all devices except this one.")
         }
     }
 
     private func isCurrentDevice(_ session: UserSession) -> Bool {
-        let currentDeviceId = sessionManager.getDeviceFingerprint().deviceId
-        return session.deviceId == currentDeviceId
+        session.deviceId == sessionManager.getDeviceFingerprint().deviceId
     }
 
     private func loadSessions() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-
         Task {
             do {
-                let loadedSessions = try await sessionManager.getActiveSessions(userId: userId)
+                let loaded = try await sessionManager.getActiveSessions(userId: userId)
                 await MainActor.run {
-                    sessions = loadedSessions
+                    sessions = loaded
                     isLoading = false
                 }
             } catch {
@@ -122,7 +116,6 @@ struct ActiveSessionsView: View {
     private func revokeSession(_ session: UserSession) {
         guard let userId = Auth.auth().currentUser?.uid,
               let sessionId = session.id else { return }
-
         Task {
             do {
                 try await sessionManager.revokeSession(userId: userId, sessionId: sessionId)
@@ -142,13 +135,10 @@ struct ActiveSessionsView: View {
 
     private func revokeAllOtherSessions() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-
         Task {
             do {
                 try await sessionManager.revokeAllOtherSessions(userId: userId)
-                await MainActor.run {
-                    loadSessions()
-                }
+                await MainActor.run { loadSessions() }
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
@@ -159,74 +149,54 @@ struct ActiveSessionsView: View {
     }
 }
 
+// MARK: - Session Row
+
 struct SessionRow: View {
     let session: UserSession
     let isCurrentDevice: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Device icon
-            Image(systemName: deviceIcon)
-                .font(.title2)
-                .foregroundColor(.blue)
-                .frame(width: 40)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.xs) {
+                Text(session.deviceName)
+                    .font(DesignSystem.Typography.sectionTitle)
+                    .foregroundColor(.primary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(session.deviceName)
-                        .font(.body)
-                        .fontWeight(.medium)
-
-                    if isCurrentDevice {
-                        Text("This Device")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(Color.blue)
-                            .cornerRadius(4)
-                    }
-                }
-
-                Text("\(session.deviceModel) • \(session.osVersion)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text("Last active: \(session.lastActiveDescription)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                if let ipAddress = session.ipAddress, ipAddress != "unknown" {
-                    Text("IP: \(ipAddress)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                if isCurrentDevice {
+                    Text("This device")
+                        .font(DesignSystem.Typography.meta)
+                        .foregroundColor(ThemeColors.primaryBlue)
                 }
             }
 
-            Spacer()
+            Text("\(session.deviceModel) · \(session.osVersion)")
+                .font(DesignSystem.Typography.meta)
+                .foregroundColor(.secondary)
 
-            if !isCurrentDevice {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
+            Text("Last active \(session.lastActiveDescription)")
+                .font(DesignSystem.Typography.meta)
+                .foregroundColor(.secondary)
+
+            if let ip = session.ipAddress, ip != "unknown" {
+                Text("IP \(ip)")
+                    .font(DesignSystem.Typography.meta)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, DesignSystem.Spacing.xxs)
     }
+}
 
-    private var deviceIcon: String {
-        let model = session.deviceModel.lowercased()
+// MARK: - Private helpers
 
-        if model.contains("ipad") {
-            return "ipad"
-        } else if model.contains("iphone") {
-            return "iphone"
-        } else if model.contains("mac") {
-            return "laptopcomputer"
-        } else if model.contains("watch") {
-            return "applewatch"
-        } else {
-            return "desktopcomputer"
-        }
+private struct SectionHeaderText: View {
+    let title: String
+    init(_ title: String) { self.title = title }
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(DesignSystem.Typography.label)
+            .tracking(1.2)
+            .foregroundColor(.secondary)
     }
 }

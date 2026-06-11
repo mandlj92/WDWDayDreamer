@@ -1,10 +1,3 @@
-//
-//  AccountSettingsView.swift
-//  WDWDaydreams
-//
-//  Created on 12/5/2025.
-//
-
 import SwiftUI
 import FirebaseAuth
 
@@ -15,7 +8,6 @@ struct AccountSettingsView: View {
 
     @State private var showingPrivacyPolicy = false
     @State private var showingTermsOfService = false
-    @State private var showingDataExport = false
     @State private var showingDeleteConfirmation = false
     @State private var isExportingData = false
     @State private var exportError: String?
@@ -29,108 +21,62 @@ struct AccountSettingsView: View {
                     .edgesIgnoringSafeArea(.all)
 
                 Form {
-                    // Account Information
-                    Section(header: Text("Account Information").foregroundColor(theme.primaryBlue)) {
+                    Section(header: SectionHeader(title: "Account Information", theme: theme)) {
                         if let user = Auth.auth().currentUser {
-                            HStack {
-                                Text("Email")
-                                    .foregroundColor(theme.primaryText)
-                                Spacer()
-                                Text(user.email ?? "Not available")
-                                    .foregroundColor(.gray)
-                            }
-
-                            HStack {
-                                Text("User ID")
-                                    .foregroundColor(theme.primaryText)
-                                Spacer()
-                                Text(String(user.uid.prefix(8)) + "...")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            }
+                            LabeledFormRow(label: "Email", value: user.email ?? "Not available", theme: theme)
+                            LabeledFormRow(label: "User ID", value: String(user.uid.prefix(8)) + "…", theme: theme)
                         }
                     }
                     .listRowBackground(theme.cardBackground)
 
-                    // Privacy & Legal
-                    Section(header: Text("Privacy & Legal").foregroundColor(theme.primaryBlue)) {
-                        Button(action: {
-                            showingPrivacyPolicy = true
-                        }) {
-                            HStack {
-                                Image(systemName: "hand.raised.fill")
-                                    .foregroundColor(theme.primaryBlue)
-                                Text("Privacy Policy")
-                                    .foregroundColor(theme.primaryText)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            }
+                    Section(header: SectionHeader(title: "Privacy & Legal", theme: theme)) {
+                        Button(action: { showingPrivacyPolicy = true }) {
+                            Text("Privacy Policy")
+                                .foregroundColor(theme.primaryText)
                         }
 
-                        Button(action: {
-                            showingTermsOfService = true
-                        }) {
-                            HStack {
-                                Image(systemName: "doc.text.fill")
-                                    .foregroundColor(theme.primaryBlue)
-                                Text("Terms of Service")
-                                    .foregroundColor(theme.primaryText)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            }
+                        Button(action: { showingTermsOfService = true }) {
+                            Text("Terms of Service")
+                                .foregroundColor(theme.primaryText)
                         }
                     }
                     .listRowBackground(theme.cardBackground)
 
-                    // Your Data
-                    Section(header: Text("Your Data").foregroundColor(theme.primaryBlue),
-                            footer: Text("Download a copy of all your data including stories, partnerships, and settings.")
-                        .font(.caption)
-                        .foregroundColor(.gray)) {
-                        Button(action: {
-                            exportUserData()
-                        }) {
-                            HStack {
+                    Section(
+                        header: SectionHeader(title: "Your Data", theme: theme),
+                        footer: Text("Download a copy of all your data including stories, partnerships, and settings.")
+                            .font(DesignSystem.Typography.meta)
+                            .foregroundColor(theme.tertiaryText)
+                    ) {
+                        Button(action: exportUserData) {
+                            HStack(spacing: DesignSystem.Spacing.xs) {
                                 if isExportingData {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "arrow.down.doc.fill")
-                                        .foregroundColor(theme.primaryBlue)
+                                    ProgressView().scaleEffect(0.8)
                                 }
                                 Text("Download My Data")
-                                    .foregroundColor(theme.primaryText)
                             }
+                            .foregroundColor(theme.primaryBlue)
                         }
                         .disabled(isExportingData)
 
                         if let error = exportError {
                             Text(error)
-                                .font(.caption)
-                                .foregroundColor(.red)
+                                .font(DesignSystem.Typography.subtext)
+                                .foregroundColor(theme.accentRed)
                         }
                     }
                     .listRowBackground(theme.cardBackground)
 
-                    // Danger Zone
-                    Section(header: Text("Danger Zone").foregroundColor(theme.accentRed),
-                            footer: Text("Account deletion is permanent and cannot be undone. All your stories, partnerships, and data will be permanently deleted.")
-                        .font(.caption)
-                        .foregroundColor(.gray)) {
-                        Button(action: {
+                    Section(
+                        header: SectionHeader(title: "Danger Zone", theme: theme, color: theme.accentRed),
+                        footer: Text("Account deletion is permanent. All your stories, partnerships, and data will be permanently deleted.")
+                            .font(DesignSystem.Typography.meta)
+                            .foregroundColor(theme.tertiaryText)
+                    ) {
+                        Button(role: .destructive) {
                             showingDeleteConfirmation = true
-                        }) {
-                            HStack {
-                                Image(systemName: "trash.fill")
-                                    .foregroundColor(theme.accentRed)
-                                Text("Delete Account")
-                                    .foregroundColor(theme.accentRed)
-                                    .fontWeight(.semibold)
-                            }
+                        } label: {
+                            Text("Delete Account")
                         }
                     }
                     .listRowBackground(theme.cardBackground)
@@ -165,7 +111,7 @@ struct AccountSettingsView: View {
                 deleteAccount()
             }
         } message: {
-            Text("Are you sure you want to delete your account? This action cannot be undone. All your stories, partnerships, and data will be permanently deleted.")
+            Text("This action cannot be undone. All your stories, partnerships, and data will be permanently deleted.")
         }
     }
 
@@ -203,14 +149,10 @@ struct AccountSettingsView: View {
 
         Task {
             do {
-                // Delete user data from Firestore
                 let dataExportService = DataExportService()
                 try await dataExportService.deleteUserData(userId: userId)
-
-                // Delete Firebase Auth account
                 try await Auth.auth().currentUser?.delete()
 
-                // Sign out
                 await MainActor.run {
                     try? Auth.auth().signOut()
                     dismiss()
@@ -224,14 +166,33 @@ struct AccountSettingsView: View {
     }
 }
 
-// MARK: - Share Sheet for iOS
+// MARK: - Labeled Form Row
+
+/// A label/value pair for use inside a Form — no HStack boilerplate at each call site.
+private struct LabeledFormRow: View {
+    let label: String
+    let value: String
+    let theme: Theme
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .foregroundColor(theme.primaryText)
+            Spacer()
+            Text(value)
+                .font(DesignSystem.Typography.subtext)
+                .foregroundColor(theme.secondaryText)
+        }
+    }
+}
+
+// MARK: - Share Sheet
 
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        return controller
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

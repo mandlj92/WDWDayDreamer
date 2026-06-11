@@ -13,45 +13,49 @@ struct ReauthenticateView: View {
     @State private var isAuthenticating = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @FocusState private var passwordFocused: Bool
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.shield")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
-
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                     Text("Verify It's You")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(DesignSystem.Typography.pageTitle)
+                        .foregroundColor(.primary)
+                        .padding(.top, DesignSystem.Spacing.xl)
 
                     Text(operationDescription)
-                        .font(.subheadline)
+                        .font(DesignSystem.Typography.subtext)
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.top, 32)
 
-                // Password field
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Password")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                    SectionLabel("Password")
 
                     SecureField("Enter your password", text: $password)
-                        .textFieldStyle(.roundedBorder)
+                        .focused($passwordFocused)
+                        .font(DesignSystem.Typography.body)
                         .textContentType(.password)
                         .autocapitalization(.none)
                         .disabled(isAuthenticating)
+                        .padding(.vertical, DesignSystem.Spacing.xs)
+
+                    Rectangle()
+                        .fill(passwordFocused ? ThemeColors.primaryBlue : Color.primary.opacity(0.12))
+                        .frame(height: passwordFocused ? 2 : 1)
+                        .animation(DesignSystem.Animation.quick, value: passwordFocused)
                 }
-                .padding(.horizontal)
+
+                if showError {
+                    Text(errorMessage)
+                        .font(DesignSystem.Typography.subtext)
+                        .foregroundColor(ThemeColors.accentRed)
+                        .transition(.opacity)
+                }
 
                 Spacer()
 
-                // Verify button
                 Button {
                     reauthenticate()
                 } label: {
@@ -61,34 +65,24 @@ struct ReauthenticateView: View {
                                 .progressViewStyle(.circular)
                                 .tint(.white)
                         }
-
                         Text("Verify")
-                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(password.isEmpty || isAuthenticating ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
                 }
+                .buttonStyle(ParkButtonStyle(color: password.isEmpty || isAuthenticating ? .gray : ThemeColors.primaryBlue))
                 .disabled(password.isEmpty || isAuthenticating)
-                .padding(.horizontal)
-                .padding(.bottom, 32)
+                .opacity(password.isEmpty ? 0.5 : 1)
+                .padding(.bottom, DesignSystem.Spacing.xl)
             }
+            .padding(.horizontal, DesignSystem.Spacing.pageMargin)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .disabled(isAuthenticating)
+                    Button("Cancel") { dismiss() }
+                        .disabled(isAuthenticating)
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
+            .onAppear { passwordFocused = true }
         }
     }
 
@@ -110,7 +104,7 @@ struct ReauthenticateView: View {
     private func reauthenticate() {
         guard let user = Auth.auth().currentUser,
               let email = user.email else {
-            errorMessage = "Could not get current user information"
+            errorMessage = "Could not get current user information."
             showError = true
             return
         }
@@ -132,7 +126,7 @@ struct ReauthenticateView: View {
             } catch {
                 await MainActor.run {
                     isAuthenticating = false
-                    errorMessage = getErrorMessage(error)
+                    errorMessage = errorDescription(error)
                     showError = true
                     password = ""
                 }
@@ -140,10 +134,10 @@ struct ReauthenticateView: View {
         }
     }
 
-    private func getErrorMessage(_ error: Error) -> String {
-        let nsError = error as NSError
+    private func errorDescription(_ error: Error) -> String {
+        let code = (error as NSError).code
 
-        switch nsError.code {
+        switch code {
         case AuthErrorCode.wrongPassword.rawValue:
             return "Incorrect password. Please try again."
         case AuthErrorCode.userNotFound.rawValue:

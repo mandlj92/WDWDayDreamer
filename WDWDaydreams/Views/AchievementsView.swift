@@ -7,35 +7,41 @@ struct AchievementsView: View {
 
     var body: some View {
         List {
-            Section(header: Text("Your Achievements")) {
+            Section(header: SectionHeader(title: "Your Achievements", theme: theme)) {
                 ForEach(Badge.allBadges) { badge in
-                    HStack(spacing: 12) {
-                        Text(badge.icon)
-                            .font(.system(size: 28))
+                    let unlocked = auth.userProfile?.achievements.contains(badge.id) ?? false
 
-                        VStack(alignment: .leading) {
+                    HStack(alignment: .firstTextBaseline, spacing: DesignSystem.Spacing.sm) {
+                        Text(badge.icon)
+                            .font(.title3)
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(badge.name)
-                                .font(.headline)
+                                .font(DesignSystem.Typography.sectionTitle)
+                                .foregroundColor(unlocked ? theme.primaryText : theme.secondaryText)
                             Text(badge.description)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                                .font(DesignSystem.Typography.meta)
+                                .foregroundColor(theme.tertiaryText)
                         }
 
                         Spacer()
 
-                        if auth.userProfile?.achievements.contains(badge.id) ?? false {
-                            Image(systemName: "checkmark.seal.fill")
-                                .foregroundColor(.green)
-                        } else {
-                            Image(systemName: "lock.fill")
-                                .foregroundColor(.gray)
+                        if unlocked {
+                            Image(systemName: "checkmark")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(theme.accentGreen)
                         }
                     }
-                    .padding(.vertical, 8)
+                    .padding(.vertical, DesignSystem.Spacing.xxs)
+                    .opacity(unlocked ? 1 : 0.5)
                 }
             }
+            .listRowBackground(Color.clear)
         }
+        .listStyle(.plain)
         .navigationTitle("Achievements")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

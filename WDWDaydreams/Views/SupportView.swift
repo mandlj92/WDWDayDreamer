@@ -7,19 +7,29 @@ struct SupportView: View {
     var body: some View {
         NavigationView {
             List {
-                Section(header: Text("FAQ")) {
+                Section(header: SectionHeader(title: "FAQ", theme: theme)) {
                     Text("How do I reset my password?")
+                        .font(DesignSystem.Typography.body)
                     Text("How do I pair with a partner?")
+                        .font(DesignSystem.Typography.body)
                     Text("How is my data used?")
+                        .font(DesignSystem.Typography.body)
                 }
+                .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
 
-                Section(header: Text("Contact")) {
+                Section(header: SectionHeader(title: "Contact", theme: theme)) {
                     Link("Email support", destination: URL(string: "mailto:support@parkdaydreams.com")!)
-                    Link("View privacy policy", destination: URL(string: "https://parkdaydreams.com/privacy")!)
+                        .font(DesignSystem.Typography.body)
+                        .foregroundColor(theme.primaryBlue)
+                    Link("Privacy policy", destination: URL(string: "https://parkdaydreams.com/privacy")!)
+                        .font(DesignSystem.Typography.body)
+                        .foregroundColor(theme.primaryBlue)
                 }
+                .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
             }
-            .listStyle(InsetGroupedListStyle())
+            .listStyle(.insetGrouped)
             .navigationTitle("Help & Support")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

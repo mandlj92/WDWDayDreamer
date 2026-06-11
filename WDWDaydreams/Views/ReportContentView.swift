@@ -21,8 +21,9 @@ struct ReportContentView: View {
             Form {
                 Section {
                     Text("Help us understand what's wrong with this content.")
-                        .font(.subheadline)
+                        .font(DesignSystem.Typography.subtext)
                         .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
                 }
 
                 Section("Reason") {
@@ -36,33 +37,30 @@ struct ReportContentView: View {
 
                 Section("Additional Details (Optional)") {
                     TextEditor(text: $details)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                        )
                 }
 
                 Section {
                     Text("Your report will be reviewed by our moderation team. False reports may result in account restrictions.")
-                        .font(.caption)
+                        .font(DesignSystem.Typography.meta)
                         .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
                 }
             }
             .navigationTitle("Report Content")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Submit") {
-                        submitReport()
+                    if isSubmitting {
+                        ProgressView()
+                    } else {
+                        Button("Submit") { submitReport() }
                     }
-                    .disabled(isSubmitting)
                 }
             }
             .alert("Error", isPresented: $showError) {
@@ -71,19 +69,9 @@ struct ReportContentView: View {
                 Text(errorMessage)
             }
             .alert("Report Submitted", isPresented: $showSuccess) {
-                Button("OK") {
-                    dismiss()
-                }
+                Button("OK") { dismiss() }
             } message: {
-                Text("Thank you for your report. Our moderation team will review it shortly.")
-            }
-            .overlay {
-                if isSubmitting {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.3))
-                }
+                Text("Thank you. Our moderation team will review your report shortly.")
             }
         }
     }

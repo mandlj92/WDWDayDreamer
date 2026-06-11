@@ -1,7 +1,6 @@
 import SwiftUI
 
 // MARK: - Welcome Tour View
-/// Multi-page welcome tour shown to new users before onboarding preferences
 struct WelcomeTourView: View {
     @Binding var showTour: Bool
     @State private var currentPage = 0
@@ -9,143 +8,125 @@ struct WelcomeTourView: View {
 
     private let pages: [WelcomePage] = [
         WelcomePage(
-            icon: "sparkles",
-            title: "Welcome to Daydreams!",
+            title: "Welcome to Daydreams",
             description: "Create magical theme park stories with friends and family. Each day brings a new creative prompt to inspire your imagination.",
-            primaryColor: .blue
+            accent: ThemeColors.primaryBlue
         ),
         WelcomePage(
-            icon: "person.2.fill",
             title: "Connect with Story Pals",
             description: "Invite friends or family to be your Story Pal. Take turns writing stories inspired by theme parks, characters, and memories.",
-            primaryColor: .purple
+            accent: ThemeColors.accentPurple
         ),
         WelcomePage(
-            icon: "wand.and.stars",
             title: "Daily Magical Prompts",
             description: "Every day, you'll receive a unique story prompt combining rides, foods, characters, and more from across theme parks.",
-            primaryColor: .orange
+            accent: ThemeColors.accentGold
         ),
         WelcomePage(
-            icon: "heart.text.square.fill",
             title: "Save Your Favorites",
             description: "Build a collection of your favorite theme park stories. Export, share, and relive your magical moments anytime.",
-            primaryColor: .pink
+            accent: ThemeColors.accentPink
         )
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Page Content
+        VStack(alignment: .leading, spacing: 0) {
+            // Page content
             TabView(selection: $currentPage) {
                 ForEach(0..<pages.count, id: \.self) { index in
-                    WelcomePageView(page: pages[index])
+                    WelcomePageView(page: pages[index], pageIndex: index, total: pages.count)
                         .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Custom Page Indicator
-            HStack(spacing: 8) {
-                ForEach(0..<pages.count, id: \.self) { index in
-                    Circle()
-                        .fill(currentPage == index ? theme.primaryBlue : Color.gray.opacity(0.3))
-                        .frame(width: 8, height: 8)
-                        .animation(.easeInOut, value: currentPage)
-                }
-            }
-            .padding(.bottom, 20)
+            // Controls
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                Hairline()
 
-            // Navigation Buttons
-            HStack(spacing: 16) {
-                if currentPage > 0 {
-                    Button(action: previousPage) {
-                        Text("Back")
-                            .foregroundColor(theme.primaryBlue)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(12)
+                HStack(alignment: .center) {
+                    // Dot indicator
+                    HStack(spacing: DesignSystem.Spacing.xs) {
+                        ForEach(0..<pages.count, id: \.self) { index in
+                            Capsule()
+                                .fill(currentPage == index ? theme.primaryBlue : theme.hairline)
+                                .frame(width: currentPage == index ? 16 : 6, height: 6)
+                                .animation(DesignSystem.Animation.spring, value: currentPage)
+                        }
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: DesignSystem.Spacing.lg) {
+                        if currentPage > 0 {
+                            Button("Back", action: previousPage)
+                                .buttonStyle(InlineActionButtonStyle(color: theme.secondaryText))
+                        }
+
+                        Button(currentPage == pages.count - 1 ? "Get Started" : "Next", action: nextPageOrFinish)
+                            .buttonStyle(InlineActionButtonStyle(color: theme.primaryBlue))
                     }
                 }
-
-                Button(action: nextPageOrFinish) {
-                    Text(currentPage == pages.count - 1 ? "Get Started" : "Next")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(theme.primaryBlue)
-                        .cornerRadius(12)
-                }
+                .padding(.horizontal, DesignSystem.Spacing.pageMargin)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
+            .padding(.bottom, DesignSystem.Spacing.xl)
         }
         .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
     }
 
     private func previousPage() {
-        withAnimation {
-            currentPage -= 1
-        }
+        withAnimation(DesignSystem.Animation.standard) { currentPage -= 1 }
     }
 
     private func nextPageOrFinish() {
+        HapticManager.instance.impact(style: .light)
         if currentPage < pages.count - 1 {
-            withAnimation {
-                currentPage += 1
-            }
+            withAnimation(DesignSystem.Animation.standard) { currentPage += 1 }
         } else {
-            // Finish tour
-            withAnimation {
-                showTour = false
-            }
+            withAnimation(DesignSystem.Animation.standard) { showTour = false }
         }
     }
 }
 
 // MARK: - Welcome Page Model
 struct WelcomePage {
-    let icon: String
     let title: String
     let description: String
-    let primaryColor: Color
+    let accent: Color
 }
 
 // MARK: - Individual Welcome Page View
 struct WelcomePageView: View {
     let page: WelcomePage
+    let pageIndex: Int
+    let total: Int
     @Environment(\.theme) var theme: Theme
 
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             Spacer()
 
-            // Icon
-            Image(systemName: page.icon)
-                .font(.system(size: 80))
-                .foregroundColor(page.primaryColor)
-                .padding(.bottom, 20)
+            // Page counter — typographic position indicator instead of icon
+            Text("\(pageIndex + 1) of \(total)")
+                .font(DesignSystem.Typography.meta)
+                .tracking(1)
+                .foregroundColor(page.accent)
 
-            // Title
             Text(page.title)
-                .font(.parkTitle(28))
-                .foregroundColor(theme.primaryBlue)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 30)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundColor(theme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
 
-            // Description
             Text(page.description)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .font(DesignSystem.Typography.subtext)
+                .foregroundColor(theme.secondaryText)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, DesignSystem.Spacing.pageMargin)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 

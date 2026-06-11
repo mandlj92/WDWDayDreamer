@@ -1,10 +1,3 @@
-//
-//  LegalDocumentView.swift
-//  WDWDaydreams
-//
-//  Created on 12/5/2025.
-//
-
 import SwiftUI
 
 struct LegalDocumentView: View {
@@ -17,19 +10,15 @@ struct LegalDocumentView: View {
 
         var title: String {
             switch self {
-            case .privacyPolicy:
-                return "Privacy Policy"
-            case .termsOfService:
-                return "Terms of Service"
+            case .privacyPolicy: return "Privacy Policy"
+            case .termsOfService: return "Terms of Service"
             }
         }
 
         var filename: String {
             switch self {
-            case .privacyPolicy:
-                return "PRIVACY_POLICY"
-            case .termsOfService:
-                return "TERMS_OF_SERVICE"
+            case .privacyPolicy: return "PRIVACY_POLICY"
+            case .termsOfService: return "TERMS_OF_SERVICE"
             }
         }
     }
@@ -42,29 +31,25 @@ struct LegalDocumentView: View {
         NavigationView {
             Group {
                 if isLoading {
-                    ProgressView("Loading...")
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(.orange)
-
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                         Text("Unable to load document")
-                            .font(.headline)
+                            .font(DesignSystem.Typography.sectionTitle)
 
                         Text(error)
-                            .font(.subheadline)
+                            .font(DesignSystem.Typography.subtext)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
                     }
+                    .padding(DesignSystem.Spacing.pageMargin)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(documentContent)
-                                .font(.system(size: 14))
-                                .padding()
-                        }
+                        Text(documentContent)
+                            .font(.system(size: 14))
+                            .padding(DesignSystem.Spacing.pageMargin)
+                            .textSelection(.enabled)
                     }
                 }
             }
@@ -72,52 +57,37 @@ struct LegalDocumentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
         }
-        .onAppear {
-            loadDocument()
-        }
+        .onAppear { loadDocument() }
     }
 
     private func loadDocument() {
         isLoading = true
         errorMessage = nil
 
-        // Try to load from bundle first
         if let filepath = Bundle.main.path(forResource: documentType.filename, ofType: "md") {
             do {
-                let contents = try String(contentsOfFile: filepath, encoding: .utf8)
-                documentContent = contents
+                documentContent = try String(contentsOfFile: filepath, encoding: .utf8)
                 isLoading = false
             } catch {
                 errorMessage = "Error reading document: \(error.localizedDescription)"
                 isLoading = false
             }
         } else {
-            // Fallback to placeholder text if file not found
-            documentContent = getPlaceholderContent()
+            documentContent = placeholderContent
             isLoading = false
         }
     }
 
-    private func getPlaceholderContent() -> String {
+    private var placeholderContent: String {
         switch documentType {
         case .privacyPolicy:
-            return """
-            # Privacy Policy
-
-            Our Privacy Policy is being updated. Please check back soon or contact us for more information.
-            """
+            return "# Privacy Policy\n\nOur Privacy Policy is being updated. Please check back soon or contact us for more information."
         case .termsOfService:
-            return """
-            # Terms of Service
-
-            Our Terms of Service are being updated. Please check back soon or contact us for more information.
-            """
+            return "# Terms of Service\n\nOur Terms of Service are being updated. Please check back soon or contact us for more information."
         }
     }
 }

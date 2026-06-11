@@ -12,94 +12,96 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            // Main Onboarding Form
             NavigationView {
                 Form {
-                Section(header: Text("Stay in the loop")) {
-                    Toggle("Story reminders", isOn: binding(for: \.notifications.storyReminders))
-                    Toggle("Connection requests", isOn: binding(for: \.notifications.connectionRequests))
-                    Toggle("New story alerts", isOn: binding(for: \.notifications.newStoryNotifications))
-                    Toggle("Weekly digest", isOn: binding(for: \.notifications.weeklyDigest))
-                    Button(action: requestNotifications) {
-                        HStack {
-                            if isRequestingNotifications { ProgressView() }
-                            Text("Allow Notifications")
-                        }
-                    }
-                }
-
-                Section(header: Text("Privacy")) {
-                    Picker("Profile visibility", selection: binding(for: \.privacy.profileVisibility)) {
-                        ForEach(ProfileVisibility.allCases, id: \.self) { option in
-                            Text(option.displayName).tag(option)
-                        }
-                    }
-                    Toggle("Allow story sharing", isOn: binding(for: \.privacy.allowStorySharing))
-                    Toggle("Allow discovery", isOn: binding(for: \.privacy.allowConnectionDiscovery))
-                }
-
-                Section(header: Text("Prompt categories")) {
-                    ForEach(Category.allCases) { category in
-                        Toggle(category.rawValue.capitalized, isOn: Binding(
-                            get: { preferences.storyCategories.contains(category.rawValue) },
-                            set: { newValue in
-                                if newValue {
-                                    if !preferences.storyCategories.contains(category.rawValue) {
-                                        preferences.storyCategories.append(category.rawValue)
-                                    }
-                                } else {
-                                    preferences.storyCategories.removeAll { $0 == category.rawValue }
-                                }
-                            }
-                        ))
-                    }
-                }
-
-                Section(header: Text("Trip planning")) {
-                    DatePicker("Next visit", selection: Binding(
-                        get: { preferences.tripDate ?? Date() },
-                        set: { preferences.tripDate = $0 }
-                    ), displayedComponents: .date)
-                }
-
-                Section(header: Text("Ready to begin?")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("You're all set!")
-                            .font(.headline)
-                            .foregroundColor(theme.primaryBlue)
-
-                        Text("Next step: Invite a Story Pal to start creating magical theme park stories together.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        Button(action: savePreferences) {
+                    Section(header: SectionHeader(title: "Stay in the Loop", theme: theme)) {
+                        Toggle("Story reminders", isOn: binding(for: \.notifications.storyReminders))
+                        Toggle("Connection requests", isOn: binding(for: \.notifications.connectionRequests))
+                        Toggle("New story alerts", isOn: binding(for: \.notifications.newStoryNotifications))
+                        Toggle("Weekly digest", isOn: binding(for: \.notifications.weeklyDigest))
+                        Button(action: requestNotifications) {
                             HStack {
-                                if isSaving {
-                                    ProgressView()
-                                        .tint(.white)
-                                }
-                                Text(isSaving ? "Saving..." : "Complete Setup")
-                                    .fontWeight(.semibold)
+                                if isRequestingNotifications { ProgressView().scaleEffect(0.8) }
+                                Text("Allow Notifications")
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .foregroundColor(.white)
-                            .background(theme.primaryBlue)
-                            .cornerRadius(12)
                         }
-                        .disabled(isSaving)
-                        .buttonStyle(PlainButtonStyle())
+                        .foregroundColor(theme.primaryBlue)
                     }
-                    .padding(.vertical, 8)
-                    .listRowBackground(theme.backgroundCream)
+                    .listRowBackground(theme.cardBackground)
+
+                    Section(header: SectionHeader(title: "Privacy", theme: theme)) {
+                        Picker("Profile visibility", selection: binding(for: \.privacy.profileVisibility)) {
+                            ForEach(ProfileVisibility.allCases, id: \.self) { option in
+                                Text(option.displayName).tag(option)
+                            }
+                        }
+                        Toggle("Allow story sharing", isOn: binding(for: \.privacy.allowStorySharing))
+                        Toggle("Allow discovery", isOn: binding(for: \.privacy.allowConnectionDiscovery))
+                    }
+                    .listRowBackground(theme.cardBackground)
+
+                    Section(header: SectionHeader(title: "Prompt Categories", theme: theme)) {
+                        ForEach(Category.allCases) { category in
+                            Toggle(category.rawValue.capitalized, isOn: Binding(
+                                get: { preferences.storyCategories.contains(category.rawValue) },
+                                set: { newValue in
+                                    if newValue {
+                                        if !preferences.storyCategories.contains(category.rawValue) {
+                                            preferences.storyCategories.append(category.rawValue)
+                                        }
+                                    } else {
+                                        preferences.storyCategories.removeAll { $0 == category.rawValue }
+                                    }
+                                }
+                            ))
+                        }
+                    }
+                    .listRowBackground(theme.cardBackground)
+
+                    Section(header: SectionHeader(title: "Trip Planning", theme: theme)) {
+                        DatePicker("Next visit", selection: Binding(
+                            get: { preferences.tripDate ?? Date() },
+                            set: { preferences.tripDate = $0 }
+                        ), displayedComponents: .date)
+                    }
+                    .listRowBackground(theme.cardBackground)
+
+                    Section(header: SectionHeader(title: "Ready to Begin", theme: theme)) {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                            Text("You're all set!")
+                                .font(DesignSystem.Typography.sectionTitle)
+                                .foregroundColor(theme.primaryText)
+
+                            Text("Next step: invite a Story Pal to start creating magical theme park stories together.")
+                                .font(DesignSystem.Typography.subtext)
+                                .foregroundColor(theme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Button(action: savePreferences) {
+                                HStack {
+                                    if isSaving {
+                                        ProgressView()
+                                            .progressViewStyle(.circular)
+                                            .tint(.white)
+                                    }
+                                    Text(isSaving ? "Saving…" : "Complete Setup")
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
+                            .disabled(isSaving)
+                            .padding(.top, DesignSystem.Spacing.xs)
+                        }
+                        .padding(.vertical, DesignSystem.Spacing.xs)
+                        .listRowBackground(theme.backgroundCream)
+                    }
                 }
-            }
-            .navigationTitle("Set Up Your Profile")
-            .scrollContentBackground(.hidden)
-            .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
+                .navigationTitle("Set Up Your Profile")
+                .navigationBarTitleDisplayMode(.inline)
+                .scrollContentBackground(.hidden)
+                .background(theme.backgroundCream.edgesIgnoringSafeArea(.all))
             }
 
-            // Welcome Tour Overlay
             if showWelcomeTour {
                 WelcomeTourView(showTour: $showWelcomeTour)
                     .transition(.opacity)
@@ -133,15 +135,12 @@ struct OnboardingView: View {
         isSaving = true
         Task {
             if authViewModel.currentUser != nil {
-                // Map stored category strings to Category enum values
                 let categories = preferences.storyCategories.compactMap { Category(rawValue: $0) }
                 FirebaseDataService.shared.saveUserSettings(enabledCategories: categories, tripDate: preferences.tripDate) { success in
                     DispatchQueue.main.async {
                         if success {
                             authViewModel.requiresOnboarding = false
                             feedbackCenter.present(message: "Preferences saved", style: .success)
-
-                            // Show partnership creation guide after a short delay
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 NotificationCenter.default.post(
                                     name: NSNotification.Name("ShowFirstPartnershipGuide"),
@@ -166,5 +165,5 @@ struct OnboardingView: View {
     OnboardingView()
         .environmentObject(AuthViewModel())
         .environmentObject(ThemeManager())
-    .environmentObject(UIFeedbackCenter.shared)
+        .environmentObject(UIFeedbackCenter.shared)
 }

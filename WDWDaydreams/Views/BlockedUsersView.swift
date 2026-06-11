@@ -13,52 +13,40 @@ struct BlockedUsersView: View {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             } else if blockedUserIds.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "person.slash")
-                        .font(.system(size: 48))
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                    Text("No blocked users")
+                        .font(DesignSystem.Typography.sectionTitle)
+                    Text("You haven't blocked anyone.")
+                        .font(DesignSystem.Typography.subtext)
                         .foregroundColor(.secondary)
-
-                    Text("No Blocked Users")
-                        .font(.headline)
-
-                    Text("You haven't blocked anyone yet.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding()
+                .padding(.vertical, DesignSystem.Spacing.xl)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             } else {
                 ForEach(blockedUserIds, id: \.self) { userId in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(userId)
-                                .font(.body)
-
-                            Text("Blocked")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(userId)
+                            .font(DesignSystem.Typography.body)
 
                         Spacer()
 
-                        Button {
+                        Button("Unblock") {
                             unblockUser(userId)
-                        } label: {
-                            Text("Unblock")
-                                .foregroundColor(.blue)
                         }
+                        .buttonStyle(InlineActionButtonStyle(color: ThemeColors.primaryBlue))
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, DesignSystem.Spacing.xxs)
                 }
             }
         }
+        .listStyle(.plain)
         .navigationTitle("Blocked Users")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            loadBlockedUsers()
-        }
+        .onAppear { loadBlockedUsers() }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {

@@ -9,134 +9,117 @@ struct LoginView: View {
     @State private var displayName = ""
     @State private var isSignUpMode = false
     @State private var showingForgotPassword = false
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 theme.backgroundCream
                     .edgesIgnoringSafeArea(.all)
-                
+
                 ScrollView {
-                    VStack(spacing: 30) {
-                        // Disney-themed header
-                        VStack(spacing: 15) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 80))
-                                .foregroundColor(theme.primaryBlue)
-                            
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xl) {
+                        // Wordmark
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                             Text("Park DayDreams")
-                                .font(.parkTitle(32))
-                                .foregroundColor(theme.primaryBlue)
-                            
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundColor(theme.primaryText)
+
                             Text("Share magical theme park moments with your partner")
-                                .font(.subheadline)
-                                .foregroundColor(theme.primaryBlue.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
+                                .font(DesignSystem.Typography.subtext)
+                                .foregroundColor(theme.secondaryText)
                         }
-                        
-                        // Social Sign-In Buttons
-                        VStack(spacing: 15) {
-                            // Apple Sign In
+                        .padding(.top, DesignSystem.Spacing.xl)
+
+                        // SSO buttons
+                        VStack(spacing: DesignSystem.Spacing.sm) {
                             Button(action: {
                                 authViewModel.signInWithApple()
                             }) {
-                                HStack {
+                                HStack(spacing: DesignSystem.Spacing.xs) {
                                     Image(systemName: "applelogo")
-                                        .font(.title2)
+                                        .font(.body.weight(.medium))
                                     Text("Continue with Apple")
-                                        .font(.headline)
+                                        .font(.system(.body, design: .default).weight(.semibold))
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.black)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
                             }
+                            .buttonStyle(ParkButtonStyle(color: Color(white: 0.05)))
                             .disabled(authViewModel.isLoading)
-                            
-                            // Google Sign In
+
                             Button(action: {
                                 authViewModel.signInWithGoogle()
                             }) {
-                                HStack {
+                                HStack(spacing: DesignSystem.Spacing.xs) {
                                     Image(systemName: "globe")
-                                        .font(.title2)
+                                        .font(.body.weight(.medium))
                                     Text("Continue with Google")
-                                        .font(.headline)
+                                        .font(.system(.body, design: .default).weight(.semibold))
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.white)
-                                .foregroundColor(.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                )
-                                .cornerRadius(10)
                             }
+                            .buttonStyle(ParkButtonStyle(color: theme.cardBackground, textColor: theme.primaryText))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
+                                    .stroke(theme.hairline, lineWidth: 1)
+                            )
                             .disabled(authViewModel.isLoading)
                         }
-                        .padding(.horizontal)
-                        
+
                         // Divider
-                        HStack {
-                            VStack { Divider() }
+                        HStack(spacing: DesignSystem.Spacing.sm) {
+                            Hairline().frame(maxWidth: .infinity)
                             Text("or")
-                                .foregroundColor(theme.primaryBlue.opacity(0.6))
-                                .padding(.horizontal, 8)
-                            VStack { Divider() }
+                                .font(DesignSystem.Typography.meta)
+                                .foregroundColor(theme.tertiaryText)
+                            Hairline().frame(maxWidth: .infinity)
                         }
-                        .padding(.horizontal)
-                        
-                        // Email/Password Form
-                        VStack(spacing: 15) {
+
+                        // Email/Password form
+                        VStack(spacing: DesignSystem.Spacing.md) {
                             if isSignUpMode {
-                                TextField("Display Name", text: $displayName)
-                                    .textFieldStyle(ParkTextFieldStyle(theme: theme))
+                                UnderlineTextField(
+                                    placeholder: "Display Name",
+                                    text: $displayName,
+                                    theme: theme
+                                )
                             }
-                            
-                            TextField("Email", text: $email)
-                                .textFieldStyle(ParkTextFieldStyle(theme: theme))
-                                .autocapitalization(.none)
-                                .keyboardType(.emailAddress)
-                                .onChange(of: email) { _, _ in
-                                    // Clear error when user starts typing
-                                    if !authViewModel.errorMessage.isEmpty {
-                                        authViewModel.errorMessage = ""
-                                    }
-                                }
 
-                            SecureField("Password", text: $password)
-                                .textFieldStyle(ParkTextFieldStyle(theme: theme))
-                                .onChange(of: password) { _, _ in
-                                    // Clear error when user starts typing
-                                    if !authViewModel.errorMessage.isEmpty {
-                                        authViewModel.errorMessage = ""
-                                    }
+                            UnderlineTextField(
+                                placeholder: "Email",
+                                text: $email,
+                                theme: theme,
+                                keyboardType: .emailAddress
+                            )
+                            .autocapitalization(.none)
+                            .onChange(of: email) { _, _ in
+                                if !authViewModel.errorMessage.isEmpty {
+                                    authViewModel.errorMessage = ""
                                 }
+                            }
+
+                            UnderlineTextField(
+                                placeholder: "Password",
+                                text: $password,
+                                theme: theme,
+                                isSecure: true
+                            )
+                            .onChange(of: password) { _, _ in
+                                if !authViewModel.errorMessage.isEmpty {
+                                    authViewModel.errorMessage = ""
+                                }
+                            }
                         }
-                        .padding(.horizontal)
-                        
-                        // Error Message Display
+
+                        // Error
                         if !authViewModel.errorMessage.isEmpty {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(theme.accentRed)
-                                Text(authViewModel.errorMessage)
-                                    .font(.caption)
-                                    .foregroundColor(theme.accentRed)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(theme.accentRed.opacity(0.1))
-                            .cornerRadius(8)
-                            .padding(.horizontal)
+                            Text(authViewModel.errorMessage)
+                                .font(DesignSystem.Typography.subtext)
+                                .foregroundColor(theme.accentRed)
+                                .transition(.opacity)
                         }
 
-                        // Email/Password Action buttons
-                        VStack(spacing: 15) {
+                        // Actions
+                        VStack(spacing: DesignSystem.Spacing.sm) {
                             Button(action: {
                                 Task {
                                     if isSignUpMode {
@@ -153,35 +136,39 @@ struct LoginView: View {
                                             .scaleEffect(0.8)
                                     }
                                     Text(isSignUpMode ? "Create Account" : "Sign In")
+                                        .frame(maxWidth: .infinity)
                                 }
                             }
                             .buttonStyle(ParkButtonStyle(color: theme.primaryBlue))
                             .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || (isSignUpMode && displayName.isEmpty))
-                            
-                            Button(action: {
-                                isSignUpMode.toggle()
-                                email = ""
-                                password = ""
-                                displayName = ""
-                            }) {
-                                Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                                    .font(.footnote)
-                                    .foregroundColor(theme.primaryBlue)
-                            }
-                            
-                            if !isSignUpMode {
-                                Button("Forgot Password?") {
-                                    showingForgotPassword = true
+                            .opacity((email.isEmpty || password.isEmpty || (isSignUpMode && displayName.isEmpty)) ? 0.5 : 1)
+
+                            HStack(spacing: DesignSystem.Spacing.lg) {
+                                Button(action: {
+                                    isSignUpMode.toggle()
+                                    email = ""
+                                    password = ""
+                                    displayName = ""
+                                }) {
+                                    Text(isSignUpMode ? "Already have an account? Sign in" : "No account? Sign up")
+                                        .font(DesignSystem.Typography.subtext)
+                                        .foregroundColor(theme.primaryBlue)
                                 }
-                                .font(.footnote)
-                                .foregroundColor(theme.primaryBlue.opacity(0.7))
+
+                                if !isSignUpMode {
+                                    Spacer()
+                                    Button("Forgot Password?") {
+                                        showingForgotPassword = true
+                                    }
+                                    .font(DesignSystem.Typography.subtext)
+                                    .foregroundColor(theme.secondaryText)
+                                }
                             }
                         }
-                        .padding(.horizontal)
-                        
+
                         Spacer(minLength: 50)
                     }
-                    .padding(.top)
+                    .padding(.horizontal, DesignSystem.Spacing.pageMargin)
                 }
             }
         }
@@ -192,11 +179,44 @@ struct LoginView: View {
     }
 }
 
-// MARK: - Custom Text Field Style
+// MARK: - Underline Text Field
+/// Text field with a single underline — no container, no box, no shadow.
+/// The underline thickens and tints when focused, giving clear state feedback.
+struct UnderlineTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    let theme: Theme
+    var keyboardType: UIKeyboardType = .default
+    var isSecure: Bool = false
+    @FocusState private var isFocused: Bool
 
+    var body: some View {
+        VStack(spacing: DesignSystem.Spacing.xxs) {
+            Group {
+                if isSecure {
+                    SecureField(placeholder, text: $text)
+                } else {
+                    TextField(placeholder, text: $text)
+                        .keyboardType(keyboardType)
+                }
+            }
+            .focused($isFocused)
+            .font(DesignSystem.Typography.body)
+            .autocorrectionDisabled()
+            .padding(.vertical, DesignSystem.Spacing.xs)
+
+            Rectangle()
+                .fill(isFocused ? theme.primaryBlue : theme.hairline)
+                .frame(height: isFocused ? 2 : 1)
+                .animation(DesignSystem.Animation.quick, value: isFocused)
+        }
+    }
+}
+
+// MARK: - Park Text Field Style (kept for compatibility)
 struct ParkTextFieldStyle: TextFieldStyle {
     let theme: Theme
-    
+
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .padding()
@@ -220,83 +240,81 @@ struct ForgotPasswordView: View {
     @State private var isLoading = false
     @State private var message = ""
     @State private var showingAlert = false
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 theme.backgroundCream
                     .edgesIgnoringSafeArea(.all)
-                
-                VStack(spacing: 20) {
+
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
                     Text("Reset Password")
-                        .font(.parkTitle(24))
-                        .foregroundColor(theme.primaryBlue)
-                    
+                        .font(DesignSystem.Typography.pageTitle)
+                        .foregroundColor(theme.primaryText)
+                        .padding(.top, DesignSystem.Spacing.lg)
+
                     Text("Enter your email address and we'll send you a password reset link.")
-                        .font(.subheadline)
-                        .foregroundColor(theme.primaryBlue.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                    
-                    TextField("Email", text: $email)
-                        .textFieldStyle(ParkTextFieldStyle(theme: theme))
-                        .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
-                    
+                        .font(DesignSystem.Typography.subtext)
+                        .foregroundColor(theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    UnderlineTextField(
+                        placeholder: "Email",
+                        text: $email,
+                        theme: theme,
+                        keyboardType: .emailAddress
+                    )
+                    .autocapitalization(.none)
+
                     Button("Send Reset Link") {
                         Task {
                             await resetPassword()
                         }
                     }
-                    .buttonStyle(ParkButtonStyle(color: email.isEmpty ? .gray : theme.primaryBlue))
+                    .buttonStyle(ParkButtonStyle(color: email.isEmpty ? Color.gray : theme.primaryBlue))
                     .disabled(email.isEmpty || isLoading)
-                    
+                    .opacity(email.isEmpty ? 0.5 : 1)
+
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: theme.primaryBlue))
                     }
-                    
+
                     Spacer()
                 }
-                .padding()
+                .padding(.horizontal, DesignSystem.Spacing.pageMargin)
             }
-            .navigationTitle("Reset Password")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(theme.primaryBlue)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(theme.primaryBlue)
                 }
             }
-        }
-        .alert("Password Reset", isPresented: $showingAlert) {
-            Button("OK") {
-                if message.contains("sent") {
-                    dismiss()
-                }
+            .alert("Password Reset", isPresented: $showingAlert) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text(message)
             }
-        } message: {
-            Text(message)
         }
     }
-    
+
     private func resetPassword() async {
         isLoading = true
-        
         do {
-            try await Auth.auth().sendPasswordReset(withEmail: email)
-            message = "Password reset link sent to \(email)"
+            try await FirebaseAuth.Auth.auth().sendPasswordReset(withEmail: email)
+            await MainActor.run {
+                message = "Reset link sent to \(email)."
+                showingAlert = true
+                isLoading = false
+            }
         } catch {
-            message = "Error: \(error.localizedDescription)"
+            await MainActor.run {
+                message = error.localizedDescription
+                showingAlert = true
+                isLoading = false
+            }
         }
-        
-        isLoading = false
-        showingAlert = true
     }
-}
-
-#Preview {
-    LoginView()
-        .environmentObject(AuthViewModel())
 }
