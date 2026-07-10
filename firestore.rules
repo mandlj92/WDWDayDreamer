@@ -1,150 +1,177 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if user owns the resource
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Helper function to count pending invitations for rate limiting
-    function getPendingInvitationCount(userId) {
-      // Note: This requires querying which is not directly supported in rules
-      // Instead, we'll validate on the client side and use timestamps
-      return true; // Placeholder - actual validation done client-side
+    function timestampIsRecent(value) {
+      return value >= request.time - duration.value(1, 'm') &&
+             value <= request.time + duration.value(1, 'm');
     }
 
-    // Helper function to check invitation creation rate (max 5 per hour)
-    function canCreateInvitation() {
-      // Check if invitation has valid timestamp
-      let now = request.time;
-      let createdAt = request.resource.data.createdAt;
-
-      // Ensure createdAt is within 1 minute of now (prevents timestamp manipulation)
-      return createdAt >= now - duration.value(1, 'm') &&
-             createdAt <= now + duration.value(1, 'm');
-    }
-
-    // Helper function to check if user is part of a partnership
-    function isPartnershipMember(partnershipId) {
-      let partnership = get(/databases/$(database)/documents/partnerships/$(partnershipId)).data;
-      return partnership.user1Id == request.auth.uid ||
-             partnership.user2Id == request.auth.uid;
-    }
-
-    // Helper function to compute a deterministic partnership doc ID from two UIDs.
-    // This enables rules to check partnership existence without needing a query.
     function partnershipDocId(userA, userB) {
       return userA < userB ? userA + "_" + userB : userB + "_" + userA;
     }
 
-    // Helper function to check if two users are partners (connected via a partnership doc).
+    function isPartnershipMember(partnershipId) {
+      let partnership = get(/databases/$(database)/documents/partnerships/$(partnershipId)).data;
+      return isAuthenticated() &&
+             (partnership.user1Id == request.auth.uid ||
+              partnership.user2Id == request.auth.uid);
+    }
+
     function arePartners(userA, userB) {
       return exists(/databases/$(database)/documents/partnerships/$(partnershipDocId(userA, userB)));
     }
 
-    // User profiles
+    function validProfileVisibility(value) {
+      return value in ['private', 'connectionsOnly', 'everyone'];
+    }
+
     match /users/{userId} {
-      // Users can read profiles based on privacy settings:
-      // 1. Their own profile (always allowed)
-      // 2. Profiles set to "everyone" visibility
-      // 3. Profiles of users they're connected to (via connectionIds or partnerships)
       allow read: if isOwner(userId) ||
-                     resource.data.preferences.privacy.profileVisibility == 'everyone' ||
+                     (isAuthenticated() &&
+                      resource.data.preferences.privacy.profileVisibility == 'everyone') ||
                      (isAuthenticated() &&
                       resource.data.preferences.privacy.profileVisibility == 'connectionsOnly' &&
                       (request.auth.uid in resource.data.connectionIds ||
                        arePartners(userId, request.auth.uid)));
 
-      // Users can only create and update their own profile
-      allow create, update: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        request.resource.data.id == userId &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() >= 1 &&
+        request.resource.data.displayName.size() <= 80 &&
+        (!request.resource.data.keys().hasAny(['bio']) ||
+          (request.resource.data.bio is string && request.resource.data.bio.size() <= 500)) &&
+        request.resource.data.connectionIds is list &&
+        request.resource.data.achievements is list &&
+        validProfileVisibility(request.resource.data.preferences.privacy.profileVisibility);
 
-      // Users can delete their own profile
+      allow update: if isOwner(userId) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() >= 1 &&
+        request.resource.data.displayName.size() <= 80 &&
+        (!request.resource.data.keys().hasAny(['bio']) ||
+          (request.resource.data.bio is string && request.resource.data.bio.size() <= 500)) &&
+        request.resource.data.connectionIds is list &&
+        request.resource.data.achievements == resource.data.achievements &&
+        validProfileVisibility(request.resource.data.preferences.privacy.profileVisibility);
+
       allow delete: if isOwner(userId);
 
-      // SECURITY: Private subcollection for sensitive data (FCM tokens, etc.)
       match /private/{document} {
-        // Only the user can access their own private data
         allow read, write: if isOwner(userId);
       }
 
-      // Session Management: Active sessions per device
       match /sessions/{sessionId} {
-        // Users can read and manage their own sessions
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
 
-        // Validate session data on create
         allow create: if isOwner(userId) &&
-          request.resource.data.keys().hasAll(['deviceId', 'deviceName', 'deviceModel', 'osVersion', 'appVersion', 'lastActiveAt', 'createdAt', 'isActive']) &&
-          request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
-          request.resource.data.createdAt <= request.time + duration.value(1, 'm');
+          request.resource.data.keys().hasAll([
+            'deviceId', 'deviceName', 'deviceModel', 'osVersion',
+            'appVersion', 'lastActiveAt', 'createdAt', 'isActive'
+          ]) &&
+          request.resource.data.deviceId is string &&
+          request.resource.data.deviceName is string &&
+          request.resource.data.deviceModel is string &&
+          request.resource.data.osVersion is string &&
+          request.resource.data.appVersion is string &&
+          request.resource.data.isActive is bool &&
+          timestampIsRecent(request.resource.data.createdAt) &&
+          timestampIsRecent(request.resource.data.lastActiveAt);
+
+        allow update: if isOwner(userId) &&
+          request.resource.data.deviceId == resource.data.deviceId &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.lastActiveAt >= resource.data.lastActiveAt &&
+          timestampIsRecent(request.resource.data.lastActiveAt);
+
+        allow delete: if isOwner(userId);
+      }
+
+      match /blockedUsers/{blockedUserId} {
+        allow read, write: if isOwner(userId) && blockedUserId != userId;
       }
     }
 
-    // Partnerships
     match /partnerships/{partnershipId} {
-      // Users can read partnerships they're part of
       allow read: if isAuthenticated() &&
         (resource.data.user1Id == request.auth.uid ||
          resource.data.user2Id == request.auth.uid);
 
-      // Users can create partnerships
       allow create: if isAuthenticated() &&
-        (request.resource.data.user1Id == request.auth.uid ||
-         request.resource.data.user2Id == request.auth.uid);
+        request.resource.data.keys().hasAll([
+          'id', 'user1Id', 'user2Id', 'createdAt',
+          'enabledCategories', 'nextAuthorId'
+        ]) &&
+        partnershipId == partnershipDocId(
+          request.resource.data.user1Id,
+          request.resource.data.user2Id
+        ) &&
+        request.resource.data.id == partnershipId &&
+        request.resource.data.user1Id != request.resource.data.user2Id &&
+        request.resource.data.user2Id == request.auth.uid &&
+        request.resource.data.nextAuthorId == request.resource.data.user1Id &&
+        request.resource.data.enabledCategories is list &&
+        request.resource.data.enabledCategories.size() > 0 &&
+        request.resource.data.enabledCategories.size() <= 5 &&
+        timestampIsRecent(request.resource.data.createdAt);
 
-      // Users can update partnerships they're part of
       allow update: if isAuthenticated() &&
         (resource.data.user1Id == request.auth.uid ||
-         resource.data.user2Id == request.auth.uid);
+         resource.data.user2Id == request.auth.uid) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.user1Id == resource.data.user1Id &&
+        request.resource.data.user2Id == resource.data.user2Id &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.enabledCategories is list &&
+        request.resource.data.enabledCategories.size() > 0 &&
+        request.resource.data.enabledCategories.size() <= 5 &&
+        (!request.resource.data.keys().hasAny(['nextAuthorId']) ||
+          request.resource.data.nextAuthorId in [resource.data.user1Id, resource.data.user2Id]);
 
-      // Users can delete partnerships they're part of
       allow delete: if isAuthenticated() &&
         (resource.data.user1Id == request.auth.uid ||
          resource.data.user2Id == request.auth.uid);
 
-      // Partnership Stories subcollection
       match /stories/{storyId} {
-        // Users can ONLY read stories in partnerships they're part of
-        allow read: if isAuthenticated() && isPartnershipMember(partnershipId);
+        allow read: if isPartnershipMember(partnershipId);
 
-        // SECURITY: Users can ONLY create stories if they are the assigned author
-        // This prevents partners from writing stories for each other or corrupting turn-based system
-        allow create: if isAuthenticated() &&
-          isPartnershipMember(partnershipId) &&
-          request.resource.data.authorId == request.auth.uid;
+        allow create: if isPartnershipMember(partnershipId) &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.authorId ==
+            get(/databases/$(database)/documents/partnerships/$(partnershipId)).data.nextAuthorId &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 20000;
 
-        // SECURITY: Users can ONLY update stories if they are the assigned author
-        // Prevents malicious clients from overwriting partner's stories
-        allow update: if isAuthenticated() &&
-          isPartnershipMember(partnershipId) &&
+        allow update: if isPartnershipMember(partnershipId) &&
           resource.data.authorId == request.auth.uid &&
-          // Ensure authorId cannot be changed during update
-          request.resource.data.authorId == resource.data.authorId;
+          request.resource.data.authorId == resource.data.authorId &&
+          request.resource.data.date == resource.data.date &&
+          request.resource.data.items == resource.data.items &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 20000;
 
-        // Users can ONLY delete their own stories in partnerships they're part of
-        allow delete: if isAuthenticated() &&
-          isPartnershipMember(partnershipId) &&
+        allow delete: if isPartnershipMember(partnershipId) &&
           resource.data.authorId == request.auth.uid;
       }
     }
 
-    // Pal Invitations
     match /palInvitations/{invitationId} {
       function isValidInvitationCode() {
         return invitationId.matches('^[A-Z0-9]{6}$');
       }
 
-      // SECURITY: Keep list access restricted (prevents enumeration), but allow
-      // direct reads by invitation code so a recipient can accept a code.
-      // NOTE: For a non-existent document, `resource` is null. We allow `get` on a
-      // valid code even when the doc doesn't exist so the client receives `notFound`
-      // (instead of a permissions error) for invalid codes.
       allow get: if isAuthenticated() && isValidInvitationCode() &&
         (resource == null ||
          resource.data.fromUserId == request.auth.uid ||
@@ -157,30 +184,27 @@ service cloud.firestore {
         (resource.data.fromUserId == request.auth.uid ||
          resource.data.toUserId == request.auth.uid);
 
-      // Rate-limited invitation creation with validation
       allow create: if isAuthenticated() &&
         invitationId == request.resource.data.invitationCode &&
         request.resource.data.invitationCode.matches('^[A-Z0-9]{6}$') &&
         request.resource.data.fromUserId == request.auth.uid &&
-        canCreateInvitation() &&
-        // Ensure required fields are present
-        request.resource.data.keys().hasAll(['fromUserId', 'fromUserName', 'fromUserEmail', 'invitationCode', 'status', 'createdAt', 'expiresAt']) &&
-        // Ensure status is pending for new invitations
+        request.resource.data.fromUserEmail == request.auth.token.email &&
+        request.resource.data.keys().hasAll([
+          'fromUserId', 'fromUserName', 'fromUserEmail',
+          'invitationCode', 'status', 'createdAt', 'expiresAt'
+        ]) &&
         request.resource.data.status == 'pending' &&
-        // Ensure expiration is set correctly (7 days)
+        timestampIsRecent(request.resource.data.createdAt) &&
         request.resource.data.expiresAt > request.time &&
         request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
 
-      // Only the creator or the acceptor can update invitations, with strict field constraints.
       allow update: if isAuthenticated() &&
         isValidInvitationCode() &&
         resource.data.invitationCode == invitationId &&
         (
-          // Creator can decline/expire a pending invitation.
           (resource.data.fromUserId == request.auth.uid &&
            resource.data.status == 'pending' &&
            request.resource.data.status in ['declined', 'expired'] &&
-           // Immutable fields must not change
            request.resource.data.fromUserId == resource.data.fromUserId &&
            request.resource.data.fromUserName == resource.data.fromUserName &&
            request.resource.data.fromUserEmail == resource.data.fromUserEmail &&
@@ -188,14 +212,12 @@ service cloud.firestore {
            request.resource.data.createdAt == resource.data.createdAt &&
            request.resource.data.expiresAt == resource.data.expiresAt &&
            request.resource.data.toUserId == resource.data.toUserId) ||
-
-          // Acceptor can accept a pending invitation.
           (resource.data.fromUserId != request.auth.uid &&
            resource.data.status == 'pending' &&
+           resource.data.expiresAt > request.time &&
            (resource.data.toUserId == null || resource.data.toUserId == request.auth.uid) &&
            request.resource.data.status == 'accepted' &&
            request.resource.data.toUserId == request.auth.uid &&
-           // Immutable fields must not change
            request.resource.data.fromUserId == resource.data.fromUserId &&
            request.resource.data.fromUserName == resource.data.fromUserName &&
            request.resource.data.fromUserEmail == resource.data.fromUserEmail &&
@@ -204,96 +226,80 @@ service cloud.firestore {
            request.resource.data.expiresAt == resource.data.expiresAt)
         );
 
-      // Only the creator can delete invitations
       allow delete: if isAuthenticated() &&
         resource.data.fromUserId == request.auth.uid;
     }
 
-    // User Stories (Favorites and personal collections)
     match /userStories/{userId}/{collection}/{storyId} {
-      // Users can only access their own stories
       allow read, write: if isOwner(userId);
     }
 
-    // User Settings
     match /userSettings/{userId} {
-      // Users can only access their own settings
       allow read, write: if isOwner(userId);
     }
 
-    // Notification Queue (written by client, processed by Cloud Functions)
     match /notificationQueue/{queueId} {
-      // SECURITY: Users can only create notifications as themselves
-      // Prevents notification spoofing and unauthorized sender impersonation
       allow create: if isAuthenticated() &&
         request.resource.data.requesterId == request.auth.uid &&
-        // Validate required fields are present
-        request.resource.data.keys().hasAll(['requesterId', 'targetToken', 'title', 'body']) &&
-        // Ensure timestamp is valid (within 1 minute of server time)
-        request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
-        request.resource.data.createdAt <= request.time + duration.value(1, 'm') &&
-        // Ensure processed flag is false on creation
-        (!request.resource.data.keys().hasAny(['processed']) || request.resource.data.processed == false);
+        request.resource.data.keys().hasAll([
+          'requesterId', 'targetUserId', 'type', 'createdAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'requesterId', 'targetUserId', 'type', 'partnershipId',
+          'storyId', 'createdAt', 'processed'
+        ]) &&
+        request.resource.data.targetUserId is string &&
+        request.resource.data.targetUserId != request.auth.uid &&
+        request.resource.data.type in ['story_completed', 'new_prompt'] &&
+        request.resource.data.partnershipId is string &&
+        isPartnershipMember(request.resource.data.partnershipId) &&
+        request.resource.data.targetUserId in [
+          get(/databases/$(database)/documents/partnerships/$(request.resource.data.partnershipId)).data.user1Id,
+          get(/databases/$(database)/documents/partnerships/$(request.resource.data.partnershipId)).data.user2Id
+        ] &&
+        timestampIsRecent(request.resource.data.createdAt) &&
+        (!request.resource.data.keys().hasAny(['processed']) ||
+          request.resource.data.processed == false);
 
-      // Only Cloud Functions can read and update
-      // (they run with admin privileges)
-      allow read, update: if false;
+      allow read, update, delete: if false;
     }
 
-    // Legacy data - sharedStories (for migration purposes)
-    // These rules allow reading old data but prevent new writes
     match /sharedStories/{storyId} {
-      // Allow reading for migration purposes
       allow read: if isAuthenticated();
-
-      // Prevent new writes - use partnerships instead
       allow write: if false;
     }
 
-    // Connection Test documents (for debugging)
     match /connectionTest/{userId} {
       allow read, write: if isOwner(userId);
     }
 
-    // ===== CONTENT MODERATION =====
-
-    // Moderation Queue (admin only - managed by Cloud Functions)
     match /moderationQueue/{queueId} {
-      // Only Cloud Functions can write to the moderation queue
       allow read, write: if false;
     }
 
-    // Content Reports (user-submitted reports)
     match /contentReports/{reportId} {
-      // Users can create reports
       allow create: if isAuthenticated() &&
         request.resource.data.reporterId == request.auth.uid &&
-        request.resource.data.keys().hasAll(['reporterId', 'contentType', 'contentId', 'reportedUserId', 'reason', 'createdAt']) &&
-        request.resource.data.createdAt >= request.time - duration.value(1, 'm') &&
-        request.resource.data.createdAt <= request.time + duration.value(1, 'm');
+        request.resource.data.reportedUserId != request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'reporterId', 'contentType', 'contentId',
+          'reportedUserId', 'reason', 'createdAt'
+        ]) &&
+        request.resource.data.contentType in ['story', 'profile'] &&
+        request.resource.data.reason is string &&
+        request.resource.data.reason.size() >= 1 &&
+        request.resource.data.reason.size() <= 500 &&
+        timestampIsRecent(request.resource.data.createdAt);
 
-      // Users can read their own reports
       allow read: if isAuthenticated() &&
         resource.data.reporterId == request.auth.uid;
-
-      // Only Cloud Functions can update/delete reports
       allow update, delete: if false;
     }
 
-    // Blocked Users (per-user subcollection)
-    match /users/{userId}/blockedUsers/{blockedUserId} {
-      // Users can manage their own blocked list
-      allow read, write: if isOwner(userId);
-    }
-
-    // Security Incidents (admin only - logged by Cloud Functions)
     match /securityIncidents/{incidentId} {
-      // Only Cloud Functions can write security incidents
       allow read, write: if false;
     }
 
-    // Content Packs (prompt content: parks, rides, food, etc.)
-    // Seeded via admin scripts/Cloud Functions only - clients are read-only.
     match /contentPacks/{packId} {
       allow read: if isAuthenticated();
       allow write: if false;
