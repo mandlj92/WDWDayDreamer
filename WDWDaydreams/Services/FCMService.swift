@@ -102,12 +102,11 @@ final class FCMService: NSObject, ObservableObject {
         partnershipId: String,
         storyDate: String
     ) {
-        queueNotification(
-            targetUserId: partnerUserId,
-            type: "story_completed",
-            partnershipId: partnershipId,
-            storyId: storyDate
-        )
+        // Story-completion notifications are sent by the authoritative
+        // onStoryCompleted Firestore trigger. Keeping this method as a no-op
+        // preserves the existing ScenarioManager call site without sending a
+        // second notification through notificationQueue.
+        print("ℹ️ FCM: Story completion notification delegated to server trigger")
     }
 
     func notifyPartnerOfNewPrompt(
