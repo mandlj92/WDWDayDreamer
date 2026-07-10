@@ -1,258 +1,184 @@
-//
-//  FCMService.swift
-//  WDWDaydreams
-//
-//  Created by Jonathan Mandl on 9/21/25.
-//
-
-// Services/FCMService.swift
 import Foundation
 import FirebaseMessaging
 import FirebaseFirestore
 import FirebaseAuth
 import UserNotifications
 
-class FCMService: NSObject, ObservableObject {
+/// Manages FCM registration and queues semantic notification requests.
+///
+/// The client never reads another user's FCM token and never supplies notification
+/// title/body text. Cloud Functions validate the relationship, resolve the target
+/// token, and generate approved notification copy.
+final class FCMService: NSObject, ObservableObject {
     static let shared = FCMService()
-    
+
     private let db = Firestore.firestore()
+
     @Published var fcmToken: String?
-    @Published var hasPermission: Bool = false
-    
+    @Published var hasPermission = false
+
     private override init() {
         super.init()
         setupFCM()
     }
-    
-    // MARK: - Setup and Configuration
-    
+
+    // MARK: - Setup
+
     private func setupFCM() {
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
-        
-        // Request notification permissions
         requestNotificationPermission()
-        
-        // Get initial token
         retrieveFCMToken()
     }
-    
+
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .sound, .badge]
         ) { [weak self] granted, error in
             DispatchQueue.main.async {
                 self?.hasPermission = granted
-
-                if granted {
-                    print("🔔 FCM: Notification permission granted")
-                    // Note: Remote notifications require a paid Apple Developer account
-                    // Commenting out to avoid errors with free account
-                    // DispatchQueue.main.async {
-                    //     UIApplication.shared.registerForRemoteNotifications()
-                    // }
+                if let error {
+                    print("❌ FCM: Permission error: \(error.localizedDescription)")
                 } else {
-                    print("❌ FCM: Notification permission denied")
-                    if let error = error {
-                        print("❌ FCM: Permission error: \(error.localizedDescription)")
-                    }
+                    print(granted ? "🔔 FCM: Notification permission granted" : "ℹ️ FCM: Notification permission denied")
                 }
             }
         }
     }
-    
-    // MARK: - Token Management
-    
+
+    // MARK: - Token management
+
     func retrieveFCMToken() {
         Messaging.messaging().token { [weak self] token, error in
-            if let error = error {
+            if let error {
                 print("❌ FCM: Error fetching token: \(error.localizedDescription)")
                 return
             }
-            
-            guard let token = token else {
+
+            guard let token else {
                 print("❌ FCM: No token received")
                 return
             }
-            
-            print("✅ FCM: Token retrieved: \(token.prefix(20))...")
-            
+
             DispatchQueue.main.async {
                 self?.fcmToken = token
                 self?.saveFCMToken(token)
             }
         }
     }
-    
-    /// SECURITY: Save FCM token to secure private subcollection
-    /// Tokens are stored in /users/{userId}/private/notifications for privacy
+
     private func saveFCMToken(_ token: String) {
-        guard let currentUser = Auth.auth().currentUser else {
-            print("❌ FCM: No authenticated user to save token for")
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("ℹ️ FCM: Deferring token save until authentication")
             return
         }
 
-        let userId = currentUser.uid
-
-        // SECURITY: Store token in private subcollection with restricted access
-        let privateTokenRef = db.collection("users")
+        let tokenRef = db.collection("users")
             .document(userId)
             .collection("private")
             .document("notifications")
 
-        let tokenData: [String: Any] = [
+        tokenRef.setData([
             "fcmToken": token,
             "platform": "ios",
-            "lastUpdated": Timestamp(date: Date()),
-            "tokenVersion": 1, // For future token rotation
-            "createdAt": Timestamp(date: Date())
-        ]
-
-        privateTokenRef.setData(tokenData, merge: true) { [weak self] error in
-            if let error = error {
-                print("❌ FCM: Error saving token to secure storage: \(error.localizedDescription)")
-            } else {
-                print("✅ FCM: Token saved to secure private subcollection")
-
-                // Also update a flag in the main user document to indicate token exists
-                // This doesn't expose the actual token
-                self?.updateUserTokenStatus(userId: userId, hasToken: true)
-            }
-        }
-    }
-
-    /// Update user's token status without exposing the actual token
-    private func updateUserTokenStatus(userId: String, hasToken: Bool) {
-        let userRef = db.collection("users").document(userId)
-
-        userRef.setData([
-            "hasNotificationToken": hasToken,
-            "lastTokenUpdate": Timestamp(date: Date())
+            "lastUpdated": FieldValue.serverTimestamp(),
+            "tokenVersion": 1,
+            "createdAt": FieldValue.serverTimestamp()
         ], merge: true) { error in
-            if let error = error {
-                print("❌ FCM: Error updating token status: \(error.localizedDescription)")
+            if let error {
+                print("❌ FCM: Error saving token: \(error.localizedDescription)")
+            } else {
+                print("✅ FCM: Token saved to private storage")
             }
         }
     }
-    
-    // MARK: - Partner Token Retrieval
 
-    /// Retrieves a user's FCM token from secure private subcollection
-    /// - Parameters:
-    ///   - userId: The user ID whose FCM token to retrieve
-    ///   - completion: Completion handler with the FCM token (or nil if not found)
-    func getUserFCMToken(userId: String, completion: @escaping (String?) -> Void) {
-        // SECURITY: Read from secure private subcollection instead of public user document
-        db.collection("users")
-            .document(userId)
-            .collection("private")
-            .document("notifications")
-            .getDocument { document, error in
-                if let error = error {
-                    print("❌ FCM: Error fetching secure token: \(error.localizedDescription)")
-                    completion(nil)
-                    return
-                }
+    // MARK: - Notification requests
 
-                guard let document = document, document.exists else {
-                    print("❌ FCM: No secure token document found for userId: \(userId)")
-                    completion(nil)
-                    return
-                }
-
-                let token = document.data()?["fcmToken"] as? String
-                print("✅ FCM: Retrieved token from secure storage: \(token?.prefix(20) ?? "nil")...")
-                completion(token)
-            }
-    }
-    
-    // MARK: - Send Notifications
-    
-    func notifyPartnerOfStoryCompletion(authorName: String, storyPrompt: String, partnerUserId: String, partnershipId: String, storyDate: String) {
-        getUserFCMToken(userId: partnerUserId) { [weak self] partnerToken in
-            guard let partnerToken = partnerToken else {
-                print("❌ FCM: No partner token available for notification")
-                return
-            }
-
-            self?.sendPushNotification(
-                to: partnerToken,
-                title: "Story Complete! ✨",
-                body: "\(authorName) just finished their Daydream! Read it now!",
-                data: [
-                    "type": "story_completed",
-                    "author": authorName,
-                    "prompt": storyPrompt,
-                    "partnershipId": partnershipId,
-                    "storyDate": storyDate
-                ]
-            )
-        }
+    func notifyPartnerOfStoryCompletion(
+        authorName: String,
+        storyPrompt: String,
+        partnerUserId: String,
+        partnershipId: String,
+        storyDate: String
+    ) {
+        queueNotification(
+            targetUserId: partnerUserId,
+            type: "story_completed",
+            partnershipId: partnershipId,
+            storyId: storyDate
+        )
     }
 
-    func notifyPartnerOfNewPrompt(assignedAuthor: String, promptPreview: String, partnerUserId: String) {
-        getUserFCMToken(userId: partnerUserId) { [weak self] partnerToken in
-            guard let partnerToken = partnerToken else {
-                print("❌ FCM: No partner token available for notification")
-                return
-            }
-
-            let title = "New Daydream! ✨"
-            let body = "It's \(assignedAuthor)'s turn to write today's story!"
-
-            self?.sendPushNotification(
-                to: partnerToken,
-                title: title,
-                body: body,
-                data: [
-                    "type": "new_prompt",
-                    "assigned_author": assignedAuthor,
-                    "prompt_preview": promptPreview
-                ]
-            )
-        }
-    }
-    
-    private func sendPushNotification(to token: String, title: String, body: String, data: [String: String] = [:]) {
-        // This will be handled by Cloud Functions
-        // For now, we'll save the notification request to Firestore
-        // and let Cloud Functions pick it up and send it
-
+    func notifyPartnerOfNewPrompt(
+        assignedAuthor: String,
+        promptPreview: String,
+        partnerUserId: String
+    ) {
         guard let currentUserId = Auth.auth().currentUser?.uid else {
-            print("❌ FCM: No authenticated user to send notification from")
+            print("❌ FCM: No authenticated user")
             return
         }
 
-        // SECURITY: Include requesterId for audit trail and spam prevention
-        let notificationData: [String: Any] = [
-            "targetToken": token,
-            "title": title,
-            "body": body,
-            "data": data,
-            "requesterId": currentUserId, // SECURITY: Track who requested this notification
-            "timestamp": Timestamp(date: Date()),
+        let partnershipId = Self.partnershipId(userA: currentUserId, userB: partnerUserId)
+        queueNotification(
+            targetUserId: partnerUserId,
+            type: "new_prompt",
+            partnershipId: partnershipId,
+            storyId: nil
+        )
+    }
+
+    private func queueNotification(
+        targetUserId: String,
+        type: String,
+        partnershipId: String,
+        storyId: String?
+    ) {
+        guard let requesterId = Auth.auth().currentUser?.uid else {
+            print("❌ FCM: No authenticated user to queue notification")
+            return
+        }
+
+        guard targetUserId != requesterId else {
+            print("❌ FCM: Refusing self-targeted notification")
+            return
+        }
+
+        var request: [String: Any] = [
+            "requesterId": requesterId,
+            "targetUserId": targetUserId,
+            "type": type,
+            "partnershipId": partnershipId,
+            "createdAt": Timestamp(date: Date()),
             "processed": false
         ]
 
-        db.collection("notificationQueue").addDocument(data: notificationData) { error in
-            if let error = error {
+        if let storyId, !storyId.isEmpty {
+            request["storyId"] = storyId
+        }
+
+        db.collection("notificationQueue").addDocument(data: request) { error in
+            if let error {
                 print("❌ FCM: Error queuing notification: \(error.localizedDescription)")
             } else {
-                print("✅ FCM: Notification queued with requester ID for security validation")
+                print("✅ FCM: Semantic notification request queued")
             }
         }
     }
-    
-    // MARK: - Handle Incoming Notifications
-    
+
+    private static func partnershipId(userA: String, userB: String) -> String {
+        userA < userB ? "\(userA)_\(userB)" : "\(userB)_\(userA)"
+    }
+
+    // MARK: - Incoming notifications
+
     func handleNotificationPayload(_ userInfo: [AnyHashable: Any]) {
-        print("🔔 FCM: Received notification payload: \(userInfo)")
-        
         guard let type = userInfo["type"] as? String else {
-            print("❌ FCM: No notification type found")
+            print("❌ FCM: Notification type missing")
             return
         }
-        
+
         switch type {
         case "story_completed":
             handleStoryCompletedNotification(userInfo)
@@ -260,22 +186,25 @@ class FCMService: NSObject, ObservableObject {
             handleNewPromptNotification(userInfo)
         case "daily_reminder":
             handleDailyReminderNotification(userInfo)
+        case "moderation_review":
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ModerationReviewReceived"),
+                object: nil,
+                userInfo: userInfo
+            )
         default:
             print("❌ FCM: Unknown notification type: \(type)")
         }
     }
-    
+
     private func handleStoryCompletedNotification(_ userInfo: [AnyHashable: Any]) {
-        let authorName = userInfo["author"] as? String ?? "Your partner"
+        let authorName = userInfo["authorName"] as? String
+            ?? userInfo["author"] as? String
+            ?? "Your partner"
 
         DispatchQueue.main.async {
-            // Trigger haptic feedback
             HapticManager.instance.notification(type: .success)
-
-            // Show local notification if app is active
             NotificationManager.shared.sendLocalCompletionNotification(from: authorName)
-            
-            // Post notification for the app to refresh data
             NotificationCenter.default.post(
                 name: NSNotification.Name("StoryCompletedRemotely"),
                 object: nil,
@@ -283,13 +212,10 @@ class FCMService: NSObject, ObservableObject {
             )
         }
     }
-    
+
     private func handleNewPromptNotification(_ userInfo: [AnyHashable: Any]) {
         DispatchQueue.main.async {
-            // Trigger haptic feedback
             HapticManager.instance.notification(type: .success)
-
-            // Post notification for the app to refresh data
             NotificationCenter.default.post(
                 name: NSNotification.Name("NewPromptAvailable"),
                 object: nil,
@@ -297,10 +223,9 @@ class FCMService: NSObject, ObservableObject {
             )
         }
     }
-    
+
     private func handleDailyReminderNotification(_ userInfo: [AnyHashable: Any]) {
         DispatchQueue.main.async {
-            // Post notification for the app to handle daily reminder
             NotificationCenter.default.post(
                 name: NSNotification.Name("DailyReminderReceived"),
                 object: nil,
@@ -310,44 +235,37 @@ class FCMService: NSObject, ObservableObject {
     }
 }
 
-// MARK: - Messaging Delegate
+// MARK: - MessagingDelegate
+
 extension FCMService: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("✅ FCM: Registration token updated: \(fcmToken?.prefix(20) ?? "nil")...")
-        
         DispatchQueue.main.async {
             self.fcmToken = fcmToken
-            if let token = fcmToken {
-                self.saveFCMToken(token)
+            if let fcmToken {
+                self.saveFCMToken(fcmToken)
             }
         }
     }
 }
 
-// MARK: - Notification Center Delegate
+// MARK: - UNUserNotificationCenterDelegate
+
 extension FCMService: UNUserNotificationCenterDelegate {
-    // Handle notification when app is in foreground
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        let userInfo = notification.request.content.userInfo
-        handleNotificationPayload(userInfo)
-        
-        // Show the notification even when app is in foreground
+        handleNotificationPayload(notification.request.content.userInfo)
         completionHandler([.banner, .sound, .badge])
     }
-    
-    // Handle notification tap
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let userInfo = response.notification.request.content.userInfo
-        handleNotificationPayload(userInfo)
-        
+        handleNotificationPayload(response.notification.request.content.userInfo)
         completionHandler()
     }
 }
